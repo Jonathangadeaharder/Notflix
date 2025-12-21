@@ -1,0 +1,20 @@
+[tool.ruff]
+select = ["E", "F", "B", "S"]
+ignore = []
+line-length = 88
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "C0114", # missing-module-docstring
+    "C0115", # missing-class-docstring
+    "C0116", # missing-function-docstring
+]
+# Specifically flag global statements as requested
+enable = ["global-statement"]
+
+[tool.bandit]
+exclude_dirs = ["venv", "tests"]
+skips = ["B101"] # Skip assert checks in non-test files if desired, but we exclude tests dir anyway

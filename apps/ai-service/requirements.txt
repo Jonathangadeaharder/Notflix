@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+faster-whisper
+spacy
+transformers
+sentencepiece
+sacremoses
+torchaudio
+python-multipart
+pydantic
+structlog
