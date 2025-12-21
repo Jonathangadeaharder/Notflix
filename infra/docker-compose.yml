@@ -1,0 +1,54 @@
+services:
+  # Data Persistence
+  postgres:
+    image: postgres:16-alpine
+    container_name: notflix-db
+    ports: [ "5432:5432" ]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-main_db}
+    volumes: [ "pg_data:/var/lib/postgresql/data" ]
+
+  # The Host Platform (SvelteKit)
+  platform:
+    image: notflix-platform
+    build:
+      context: ..
+      dockerfile: apps/platform/Dockerfile
+    ports: [ "5173:5173" ]
+    volumes:
+      - ../apps/platform:/app/apps/platform
+      - ../packages/database:/app/packages/database
+      - /app/apps/platform/node_modules
+      - /app/packages/database/node_modules
+      - ../media:/app/media
+    command: /bin/sh -c "chmod -R +x /app/apps/platform/node_modules && npm run dev -- --host"
+    environment:
+      - DATABASE_URL=postgres://admin:password@postgres:5432/main_db
+      - AI_SERVICE_URL=http://ai-service:8000
+      - AI_SERVICE_API_KEY=dev_secret_key
+      - UPLOAD_DIR=/app/media/uploads
+      - BETTER_AUTH_SECRET=long_secret_key_for_dev_only_1234567890
+    depends_on:
+      - postgres
+      - ai-service
+
+  # The AI Microservice (FastAPI)
+  ai-service:
+    image: notflix-ai-service
+    build:
+      context: ..
+      dockerfile: apps/ai-service/Dockerfile
+    volumes:
+      - ../apps/ai-service:/app
+      - ../media:/app/media
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AI_SERVICE_API_KEY=dev_secret_key
+    ports: [ "8000:8000" ]
+    depends_on:
+      - postgres
+
+volumes:
+  pg_data:

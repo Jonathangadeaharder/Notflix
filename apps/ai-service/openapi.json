@@ -1,0 +1,503 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI Service",
+    "version": "1.0.0",
+    "description": "Stateless AI worker for transcription, translation and linguistic analysis."
+  },
+  "servers": [
+    {
+      "url": "http://ai-service:8000",
+      "description": "Internal Docker Network"
+    }
+  ],
+  "paths": {
+    "/generate_thumbnail": {
+      "post": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Generate Thumbnail",
+        "description": "Generates a thumbnail from a video file using FFmpeg.",
+        "operationId": "generate_thumbnail_generate_thumbnail_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThumbnailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThumbnailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/transcribe": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Transcribe",
+        "description": "Transcribes an audio file using Faster-Whisper.",
+        "operationId": "transcribe_transcribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/translate": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Translate",
+        "description": "Translates a batch of texts using MarianMT models.",
+        "operationId": "translate_translate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/filter": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Filter Text",
+        "description": "Analyzes a batch of texts using SpaCy for linguistic filtering.",
+        "operationId": "filter_text_filter_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health",
+        "description": "Health check endpoint.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FilterRequest": {
+        "properties": {
+          "texts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Texts"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "es"
+          }
+        },
+        "type": "object",
+        "required": [
+          "texts"
+        ],
+        "title": "FilterRequest"
+      },
+      "FilterResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/TokenAnalysis"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "FilterResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Segment": {
+        "properties": {
+          "start": {
+            "type": "number",
+            "title": "Start"
+          },
+          "end": {
+            "type": "number",
+            "title": "End"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "text"
+        ],
+        "title": "Segment"
+      },
+      "ThumbnailRequest": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path"
+        ],
+        "title": "ThumbnailRequest"
+      },
+      "ThumbnailResponse": {
+        "properties": {
+          "thumbnail_path": {
+            "type": "string",
+            "title": "Thumbnail Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thumbnail_path"
+        ],
+        "title": "ThumbnailResponse"
+      },
+      "TokenAnalysis": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "lemma": {
+            "type": "string",
+            "title": "Lemma"
+          },
+          "pos": {
+            "type": "string",
+            "title": "Pos"
+          },
+          "is_stop": {
+            "type": "boolean",
+            "title": "Is Stop"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "lemma",
+          "pos",
+          "is_stop"
+        ],
+        "title": "TokenAnalysis"
+      },
+      "TranscriptionRequest": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "es"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path"
+        ],
+        "title": "TranscriptionRequest"
+      },
+      "TranscriptionResponse": {
+        "properties": {
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "language_probability": {
+            "type": "number",
+            "title": "Language Probability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments",
+          "language",
+          "language_probability"
+        ],
+        "title": "TranscriptionResponse"
+      },
+      "TranslationRequest": {
+        "properties": {
+          "texts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Texts"
+          },
+          "source_lang": {
+            "type": "string",
+            "title": "Source Lang",
+            "default": "es"
+          },
+          "target_lang": {
+            "type": "string",
+            "title": "Target Lang",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "texts"
+        ],
+        "title": "TranslationRequest"
+      },
+      "TranslationResponse": {
+        "properties": {
+          "translations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Translations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "translations"
+        ],
+        "title": "TranslationResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "AI",
+      "description": "AI-powered linguistic services (Whisper, SpaCy, MarianMT)."
+    },
+    {
+      "name": "Media",
+      "description": "Media processing services (FFmpeg)."
+    },
+    {
+      "name": "System",
+      "description": "Infrastructure and health check endpoints."
+    }
+  ]
+}
