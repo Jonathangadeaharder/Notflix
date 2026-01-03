@@ -1,0 +1,11 @@
+.git
+node_modules
+**/node_modules
+venv
+**/venv
+media
+apps/platform/.svelte-kit
+apps/ai-service/__pycache__
+*.log
+.pytest_cache
+.ruff_cache

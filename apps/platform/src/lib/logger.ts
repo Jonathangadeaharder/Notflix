@@ -4,6 +4,15 @@ import pino from 'pino';
 export const logger = pino({
     level: 'info',
     transport: {
-        target: 'pino/file' // 'pino/file' effectively writes to stdout in Docker
+        targets: [
+            {
+                target: 'pino/file',
+                options: { destination: 1 } // stdout for Docker/Console
+            },
+            {
+                target: 'pino/file',
+                options: { destination: '../../logs/platform.log', mkdir: true }
+            }
+        ]
     }
 });

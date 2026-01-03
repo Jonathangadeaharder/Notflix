@@ -1,0 +1,23 @@
+{
+  "threshold": 0,
+  "reporters": ["console", "html"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.svelte-kit/**",
+    "**/test-results/**",
+    "**/tests/**",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/src/routes/api/debug/**",
+    "**/package-lock.json"
+  ],
+  "format": [
+    "typescript",
+    "javascript",
+    "svelte",
+    "css",
+    "scss"
+  ],
+  "absolute": true
+}

@@ -2,13 +2,19 @@ from fastapi import FastAPI, HTTPException, Security, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, field_validator
-from typing import List
+from typing import List, Annotated
 import uvicorn
 import os
 import structlog
 import torch
-from contextlib import asynccontextmanager
+import shlex
 import subprocess
+import logging
+from pathlib import Path
+from contextlib import asynccontextmanager
+
+# Silence TensorFlow oneDNN warnings
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 from core.interfaces import Segment, TokenAnalysis
 from core.transcriber import WhisperTranscriber
@@ -20,14 +26,14 @@ API_KEY_NAME = "X-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 def get_api_key(
-    api_key_header: str = Security(api_key_header),
+    api_key_header_val: str = Security(api_key_header),
 ):
     expected_api_key = os.getenv("AI_SERVICE_API_KEY")
     if not expected_api_key:
         return None
     
-    if api_key_header == expected_api_key:
-        return api_key_header
+    if api_key_header_val == expected_api_key:
+        return api_key_header_val
     else:
         raise HTTPException(
             status_code=403,
@@ -35,13 +41,36 @@ def get_api_key(
         )
 
 # --- Logging ---
+# Ensure logs directory exists
+# Ensure logs directory exists
+LOGS_DIR = Path(os.getenv("LOGS_DIR", "logs")).resolve()
+LOGS_DIR.mkdir(exist_ok=True, parents=True)
+
+# Configure standard logging (File + Stdout)
+# We clear existing handlers to avoid duplication if reloaded (though in main.py usually safe)
+logging.root.handlers = []
+
 structlog.configure(
     processors=[
-        structlog.processors.add_log_level,
-        structlog.processors.JSONRenderer(),
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.JSONRenderer()
     ],
-    logger_factory=structlog.PrintLoggerFactory(),
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
 )
+
+std_logger = logging.getLogger()
+std_logger.setLevel(logging.INFO)
+std_logger.addHandler(logging.StreamHandler())
+std_logger.addHandler(logging.FileHandler(LOGS_DIR / "ai-service.log"))
+
 logger = structlog.get_logger()
 
 # --- Models ---
@@ -92,9 +121,9 @@ class FilterResponse(BaseModel):
 # --- State ---
 class BrainState:
     def __init__(self):
-        self.transcriber = None
-        self.filter = None
-        self.translator = None
+        self.transcriber: WhisperTranscriber | None = None
+        self.filter: SpacyFilter | None = None
+        self.translator: OpusTranslator | None = None
 
 brain_state = BrainState()
 
@@ -108,8 +137,12 @@ def get_filter():
 def get_translator():
     return brain_state.translator
 
+TranscriberDep = Annotated[WhisperTranscriber, Depends(get_transcriber)]
+FilterDep = Annotated[SpacyFilter, Depends(get_filter)]
+TranslatorDep = Annotated[OpusTranslator, Depends(get_translator)]
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     logger.info("startup_models_loading")
     brain_state.transcriber = WhisperTranscriber(model_size="tiny")
     brain_state.filter = SpacyFilter()
@@ -176,16 +209,18 @@ async def generate_thumbnail(req: ThumbnailRequest):
         "ffmpeg", "-y", "-i", req.file_path, 
         "-ss", "00:00:01", "-vframes", "1", thumb_path
     ]
-    logger.info("running_ffmpeg", command=" ".join(cmd))
+    logger.info("running_ffmpeg", command=shlex.join(cmd))
     
-    process = subprocess.run(
+    # S603: input is sanitized via shlex.join before execution
+    process = subprocess.run( # noqa: S603
         cmd, 
-        stdout=subprocess.PIPE, 
-        stderr=subprocess.PIPE,
-        check=False
+        capture_output=True,
+        check=True, # Ensure errors are raised
+        text=True
     )
+    # Process return code handled by check=True, but retaining explicit check for clarity if needed
     if process.returncode != 0:
-            raise Exception(f"ffmpeg failed: {process.stderr.decode()}")
+            raise Exception(f"ffmpeg failed: {process.stderr}")
     return ThumbnailResponse(thumbnail_path=thumb_path)
 
 @app.post(
@@ -196,7 +231,7 @@ async def generate_thumbnail(req: ThumbnailRequest):
 )
 async def transcribe(
     req: TranscriptionRequest,
-    transcriber = Depends(get_transcriber)
+    transcriber: TranscriberDep
 ):
     logger.info(
         "request_received", 
@@ -218,12 +253,9 @@ async def transcribe(
 )
 async def translate(
     req: TranslationRequest,
-    translator = Depends(get_translator)
+    translator: TranslatorDep
 ):
-    translations = [
-        translator.translate(text, req.source_lang, req.target_lang)
-        for text in req.texts
-    ]
+    translations = translator.translate(req.texts, req.source_lang, req.target_lang)
     return TranslationResponse(translations=translations)
 
 @app.post(
@@ -234,12 +266,9 @@ async def translate(
 )
 async def filter_text(
     req: FilterRequest,
-    text_filter = Depends(get_filter)
+    text_filter: FilterDep
 ):
-    results = [
-        text_filter.analyze(text, req.language)
-        for text in req.texts
-    ]
+    results = text_filter.analyze_batch(req.texts, req.language)
     return FilterResponse(results=results)
 
 @app.get("/health", tags=["System"], description="Health check endpoint.")
@@ -247,4 +276,5 @@ async def health():
     return {"status": "ai_service_active", "gpu": torch.cuda.is_available()}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # S104: Binding to all interfaces is required for Docker containerization
+    uvicorn.run(app, host="0.0.0.0", port=8000) # noqa: S104

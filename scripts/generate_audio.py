@@ -1,5 +1,4 @@
 from gtts import gTTS
-import os
 
 text = "Hola mundo. Esto es una prueba de transcripcion y analisis de vocabulario. El gato corre."
 lang = 'es'

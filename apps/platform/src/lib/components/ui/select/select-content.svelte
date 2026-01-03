@@ -4,13 +4,14 @@
 	import SelectScrollUpButton from "./select-scroll-up-button.svelte";
 	import SelectScrollDownButton from "./select-scroll-down-button.svelte";
 	import { cn, type WithoutChild } from "$lib/utils.js";
+	import { UI } from '$lib/constants';
 	import type { ComponentProps } from "svelte";
 	import type { WithoutChildrenOrChild } from "$lib/utils.js";
 
 	let {
 		ref = $bindable(null),
 		class: className,
-		sideOffset = 4,
+		sideOffset = UI.POPOVER_OFFSET,
 		portalProps,
 		children,
 		preventScroll = true,

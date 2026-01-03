@@ -1,11 +1,14 @@
 import { db } from '$lib/server/infrastructure/database';
-import { videoProcessing, knownWords, type DbTokenAnalysis } from '@notflix/database';
-import { and, eq, inArray } from 'drizzle-orm';
+import { videoProcessing, type DbTokenAnalysis } from '@notflix/database';
+import { and, eq } from 'drizzle-orm';
 import type { VttSegment } from './video-orchestrator.service';
+import { getKnownLemmas } from './knowledge.service';
+import { INDICES } from '$lib/constants';
 
 // Types for our deck
 export type GameCard = {
     lemma: string;
+    lang: string;
     original: string;
     contextSentence: string;
     cefr: string; // A1-C2
@@ -15,13 +18,15 @@ export type GameCard = {
 
 type CandidateWithMetadata = DbTokenAnalysis & { context: string };
 
+const DEFAULT_DECK_LIMIT = 15;
+
 export async function generateDeck(
     userId: string,
     videoId: string,
     startTime: number,
     endTime: number,
     targetLang: string,
-    limit = 15
+    limit = DEFAULT_DECK_LIMIT
 ): Promise<GameCard[]> {
     const vttData = await fetchVttData(videoId, targetLang);
     if (!vttData) return [];
@@ -30,7 +35,7 @@ export async function generateDeck(
     if (candidates.length === 0) return [];
 
     const knownSet = await fetchKnownLemmas(userId, targetLang, candidates);
-    const deck = buildUniqueCards(candidates, knownSet);
+    const deck = buildUniqueCards(candidates, knownSet, targetLang);
 
     return sortAndSliceDeck(deck, limit);
 }
@@ -52,9 +57,19 @@ function extractCandidates(vttData: VttSegment[], startTime: number, endTime: nu
     const candidates: CandidateWithMetadata[] = [];
     const CONTENT_POS = ['NOUN', 'VERB', 'ADJ'];
 
+
+
     for (const segment of vttData) {
-        if (segment.start < startTime || segment.end >= endTime) continue;
-        if (!segment.tokens) continue;
+        // Include segments that START within the chunk window
+        if (segment.start < startTime || segment.start >= endTime) {
+            continue;
+        }
+        if (!segment.tokens) {
+
+            continue;
+        }
+
+
 
         for (const token of segment.tokens) {
             if (CONTENT_POS.includes(token.pos)) {
@@ -70,29 +85,20 @@ function extractCandidates(vttData: VttSegment[], startTime: number, endTime: nu
 
 async function fetchKnownLemmas(userId: string, targetLang: string, candidates: CandidateWithMetadata[]): Promise<Set<string>> {
     const lemmaArray = Array.from(new Set(candidates.map(c => c.lemma)));
-    if (lemmaArray.length === 0) return new Set();
-
-    const knownInChunk = await db.select({ lemma: knownWords.lemma })
-        .from(knownWords)
-        .where(and(
-            eq(knownWords.userId, userId),
-            eq(knownWords.lang, targetLang),
-            inArray(knownWords.lemma, lemmaArray)
-        ));
-    
-    return new Set(knownInChunk.map(k => k.lemma));
+    return getKnownLemmas(userId, targetLang, lemmaArray, db);
 }
 
-function buildUniqueCards(candidates: CandidateWithMetadata[], knownSet: Set<string>): GameCard[] {
+function buildUniqueCards(candidates: CandidateWithMetadata[], knownSet: Set<string>, targetLang: string): GameCard[] {
     const lemmaGroups = new Map<string, GameCard>();
 
     for (const c of candidates) {
         if (!lemmaGroups.has(c.lemma)) {
             lemmaGroups.set(c.lemma, {
                 lemma: c.lemma,
+                lang: targetLang,
                 original: c.text,
                 contextSentence: c.context,
-                cefr: '?', 
+                cefr: '?',
                 translation: c.translation || '...',
                 isKnown: knownSet.has(c.lemma)
             });
@@ -104,7 +110,7 @@ function buildUniqueCards(candidates: CandidateWithMetadata[], knownSet: Set<str
 function sortAndSliceDeck(cards: GameCard[], limit: number): GameCard[] {
     return cards
         .sort((a, b) => {
-            if (a.isKnown !== b.isKnown) return a.isKnown ? 1 : -1;
+            if (a.isKnown !== b.isKnown) return a.isKnown ? 1 : INDICES.NOT_FOUND;
             return 0;
         })
         .slice(0, limit);

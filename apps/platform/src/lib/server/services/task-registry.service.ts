@@ -9,7 +9,7 @@ class TaskRegistry {
      * log the outcome of fire-and-forget operations.
      */
     register(name: string, promise: Promise<unknown>) {
-        const taskId = Math.random().toString(36).substring(7);
+        const taskId = crypto.randomUUID();
         const context = { task: name, taskId };
         
         logger.info(context, 'Background task registered');

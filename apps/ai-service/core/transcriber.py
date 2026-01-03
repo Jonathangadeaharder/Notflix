@@ -1,7 +1,10 @@
 from typing import Optional
 import torch
+import structlog
 from faster_whisper import WhisperModel
 from .interfaces import ITranscriber, TranscriptionResult, Segment
+
+logger = structlog.get_logger()
 
 class WhisperTranscriber(ITranscriber):
     def __init__(self, model_size="tiny", device=None, compute_type="float32"):
@@ -24,8 +27,11 @@ class WhisperTranscriber(ITranscriber):
         for s in segments:
             result_segments.append(Segment(start=s.start, end=s.end, text=s.text))
 
-        print(f"Detected language '{info.language}' "
-              f"with probability {info.language_probability}")
+        logger.info(
+            "whisper_detected_language",
+            language=info.language,
+            probability=info.language_probability
+        )
 
         return TranscriptionResult(
             segments=result_segments,
@@ -40,8 +46,11 @@ class WhisperTranscriber(ITranscriber):
             beam_size=5
         )
 
-        print(f"Stream: Detected language '{info.language}' "
-              f"with probability {info.language_probability}")
+        logger.info(
+            "whisper_stream_detected_language",
+            language=info.language,
+            probability=info.language_probability
+        )
 
         # Yield initial info
         yield {"language": info.language, "probability": info.language_probability}

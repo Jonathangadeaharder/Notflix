@@ -4,22 +4,24 @@ WORKDIR /app
 
 # Copy shared packages first (dependencies)
 # We assume the build context is the repository root
-COPY packages/db packages/db
+COPY packages/database packages/database
 
-# Install dependencies for packages/db
-WORKDIR /app/packages/db
-# If packages/db has dependencies, install them. 
-# Assuming it's a simple package, but 'npm install' is safe.
+# Install dependencies for packages/database
+WORKDIR /app/packages/database
 RUN npm install
 
 # Setup Web App
-WORKDIR /app/apps/web
-COPY apps/web/package.json .
-COPY apps/web/package-lock.json .
-RUN npm install
+WORKDIR /app/apps/platform
+COPY apps/platform/package.json .
+# SKIP: COPY apps/platform/package-lock.json .
+RUN npm install --legacy-peer-deps && npm cache clean --force
 
 # Copy source
-COPY apps/web .
+COPY apps/platform .
+
+# Create non-root user for security
+RUN useradd -m appuser && chown -R appuser /app
+USER appuser
 
 # Expose Vite port
 EXPOSE 5173

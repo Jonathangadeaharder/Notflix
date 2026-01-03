@@ -1,0 +1,55 @@
+export const UI = {
+    OPACITY_INACTIVE: 0.5,
+    TABINDEX_DISABLED: -1,
+    POPOVER_OFFSET: 4,
+    INDENT_SPACES: 4,
+} as const;
+
+export const HTTP_STATUS = {
+    OK: 200,
+    SEE_OTHER: 303,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    UNPROCESSABLE_ENTITY: 422,
+    INTERNAL_SERVER_ERROR: 500
+} as const;
+
+export const TIME = {
+    MS_DIGITS: 3,
+    PADDING_DIGITS: 2,
+    ONE_MINUTE_MS: 60000,
+    ANIMATION_DELAY_MS: 500,
+    POLLING_INTERVAL_MS: 3000,
+    ONE_HOUR_MS: 3600000,
+    DEFAULT_WAIT_TIMEOUT: 60000,
+} as const;
+
+export const GAME = {
+    DEFAULT_INTERVAL_MINUTES: 10,
+    MAX_INTERVAL_MINUTES: 60,
+    DEFAULT_DECK_LIMIT: 15,
+} as const;
+
+export const LINT = {
+    MAX_COGNITIVE_COMPLEXITY: 15,
+    MAX_CYCLOMATIC_COMPLEXITY: 10,
+    MAX_LINES_PER_FUNCTION: 50,
+} as const;
+
+export const LIMITS = {
+    MAX_UNKNOWN_FOR_LEARNING: 3,
+    MAX_RATIO_FOR_LEARNING: 0.4,
+    HARD_UNKNOWN_THRESHOLD: 4,
+    RETRY_DELAY_SEC: 2,
+    MAX_RETRIES: 5,
+    PERCENT_COMPLETE: 100,
+    MAX_TITLE_LENGTH: 100,
+} as const;
+
+export const INDICES = {
+    NOT_FOUND: -1,
+    FIRST: 0,
+    SECOND: 1,
+} as const;

@@ -31,6 +31,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         targetLang
     );
 
+    console.log(`[API] Generated ${cards.length} cards for video ${videoId} (chunk ${start}-${end}s)`);
+
     return json({
         nextChunkStart: end,
         cards

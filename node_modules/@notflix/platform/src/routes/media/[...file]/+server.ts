@@ -1,12 +1,13 @@
 import { error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import fs from 'fs';
 import path from 'path';
+import fs from 'fs';
 import { CONFIG } from '$lib/server/infrastructure/config';
+import type { RequestHandler } from './$types';
+import { HTTP_STATUS } from '$lib/constants';
 
 export const GET: RequestHandler = async ({ params }) => {
     const filePath = params.file;
-    if (!filePath) throw error(400, 'Missing file path');
+    if (!filePath) throw error(HTTP_STATUS.BAD_REQUEST, 'Missing file path');
 
     // The filePath from params is relative to the 'media' root in URLs
     // e.g. /media/uploads/123.mp4 -> params.file = "uploads/123.mp4"
@@ -19,11 +20,11 @@ export const GET: RequestHandler = async ({ params }) => {
 
     // Security: Ensure the resolved path is still within the media root
     if (!fullPath.startsWith(mediaRoot)) {
-        throw error(403, 'Forbidden');
+        throw error(HTTP_STATUS.FORBIDDEN, 'Forbidden');
     }
 
     if (!fs.existsSync(fullPath)) {
-        throw error(404, 'File not found');
+        throw error(HTTP_STATUS.NOT_FOUND, 'File not found');
     }
 
     const stat = fs.statSync(fullPath);

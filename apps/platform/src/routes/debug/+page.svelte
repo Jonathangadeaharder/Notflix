@@ -1,42 +1,52 @@
 <script lang="ts">
-    let activeTab = 'transcribe'; // transcribe, filter, translate, pipeline
-    let isLoading = false;
-    let progress = 0; 
-    let statusMessage = '';
+    /* eslint-disable sonarjs/no-duplicate-string */
+
+    let activeTab = $state('transcribe'); // transcribe, filter, translate, pipeline
+    let isLoading = $state(false);
+    let progress = $state(0); 
+    let statusMessage = $state('');
+
+    const FILE_INPUT_CLASSES = "block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700";
+    const TEXT_INPUT_CLASSES = "bg-black/50 border border-zinc-700 text-white p-2 rounded w-full max-w-xs";
+    const ACTION_BUTTON_CLASSES = "bg-red-600 text-white px-6 py-2 rounded-full font-bold hover:bg-red-700 disabled:opacity-50 transition-colors";
 
     const PROGRESS_INITIAL = 0;
     const PROGRESS_MID = 50;
     const PROGRESS_COMPLETE = 100;
 
     // Transcribe
-    let transcribeFile: FileList;
-    let transcribeLang = 'es';
-    let videoPreviewUrl: string | null = null;
+    let transcribeFile = $state<FileList>();
+    let transcribeLang = $state('es');
+    let videoPreviewUrl = $state<string | null>(null);
 
     // Filter
-    let filterFile: FileList;
-    let filterLang = 'es';
+    let filterFile = $state<FileList>();
+    let filterLang = $state('es');
 
     // Translate
-    let translateFile: FileList;
-    let sourceLang = 'de';
-    let targetLang = 'es';
+    let translateFile = $state<FileList>();
+    let sourceLang = $state('de');
+    let targetLang = $state('es');
 
     // Pipeline
-    let pipelineFile: FileList;
-    let pipelineSourceLang = 'es';
-    let pipelineTargetLang = 'en';
-    let pipelineVideoPreviewUrl: string | null = null;
+    let pipelineFile = $state<FileList>();
+    let pipelineSourceLang = $state('es');
+    let pipelineTargetLang = $state('en');
+    let pipelineVideoPreviewUrl = $state<string | null>(null);
 
-    $: if (transcribeFile && transcribeFile[0]) {
-        if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
-        videoPreviewUrl = URL.createObjectURL(transcribeFile[0]);
-    }
+    $effect(() => {
+        if (transcribeFile && transcribeFile[0]) {
+            if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+            videoPreviewUrl = URL.createObjectURL(transcribeFile[0]);
+        }
+    });
 
-    $: if (pipelineFile && pipelineFile[0]) {
-        if (pipelineVideoPreviewUrl) URL.revokeObjectURL(pipelineVideoPreviewUrl);
-        pipelineVideoPreviewUrl = URL.createObjectURL(pipelineFile[0]);
-    }
+    $effect(() => {
+        if (pipelineFile && pipelineFile[0]) {
+            if (pipelineVideoPreviewUrl) URL.revokeObjectURL(pipelineVideoPreviewUrl);
+            pipelineVideoPreviewUrl = URL.createObjectURL(pipelineFile[0]);
+        }
+    });
 
     async function handleTranscribe() {
         if (!transcribeFile || transcribeFile.length === 0) return;
@@ -127,6 +137,20 @@
         progress = currentProgress;
     }
 
+    async function executeRequest(url: string, data: Record<string, FormDataValue>): Promise<Blob> {
+        const res = await fetch(url, {
+            method: 'POST',
+            body: createFormData(data)
+        });
+
+        if (!res.ok) {
+            const errorJson = await res.json();
+            throw new Error(errorJson.error || res.statusText);
+        }
+
+        return res.blob();
+    }
+
     async function runProcess(
         url: string, 
         data: Record<string, FormDataValue>, 
@@ -139,17 +163,8 @@
         }
         
         try {
-            const res = await fetch(url, {
-                method: 'POST',
-                body: createFormData(data)
-            });
-
-            if (!res.ok) {
-                const errorJson = await res.json();
-                throw new Error(errorJson.error || res.statusText);
-            }
-
-            const blob = await res.blob();
+            const blob = await executeRequest(url, data);
+            
             if (downloadName) triggerDownload(blob, downloadName);
             
             if (autoStopLoading) {
@@ -186,22 +201,22 @@
     <div class="flex mb-4 border-b border-zinc-800">
         <button 
             class="px-4 py-2 mr-2 {activeTab === 'transcribe' ? 'border-b-2 border-red-500 font-bold text-white' : 'text-zinc-400'}"
-            on:click={() => activeTab = 'transcribe'}>
+            onclick={() => activeTab = 'transcribe'}>
             Transcribe
         </button>
         <button 
             class="px-4 py-2 mr-2 {activeTab === 'filter' ? 'border-b-2 border-red-500 font-bold text-white' : 'text-zinc-400'}"
-            on:click={() => activeTab = 'filter'}>
+            onclick={() => activeTab = 'filter'}>
             Filter (Analyze)
         </button>
         <button 
             class="px-4 py-2 mr-2 {activeTab === 'translate' ? 'border-b-2 border-red-500 font-bold text-white' : 'text-zinc-400'}"
-            on:click={() => activeTab = 'translate'}>
+            onclick={() => activeTab = 'translate'}>
             Translate
         </button>
         <button 
             class="px-4 py-2 {activeTab === 'pipeline' ? 'border-b-2 border-red-500 font-bold text-white' : 'text-zinc-400'}"
-            on:click={() => activeTab = 'pipeline'}>
+            onclick={() => activeTab = 'pipeline'}>
             Full Pipeline
         </button>
     </div>
@@ -212,7 +227,7 @@
             <div class="mb-4">
                 <label class="block">
                     <span class="block mb-2 font-medium text-zinc-300">Video File</span>
-                    <input type="file" accept="video/*,audio/*" on:change={(e) => transcribeFile = e.currentTarget.files!} class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700"/>
+                    <input type="file" accept="video/*,audio/*" onchange={(e) => transcribeFile = e.currentTarget.files!} class={FILE_INPUT_CLASSES}/>
                 </label>
             </div>
 
@@ -226,10 +241,10 @@
             <div class="mb-4">
                 <label class="block">
                     <span class="block mb-2 font-medium text-zinc-300">Language (e.g. es, en)</span>
-                    <input type="text" bind:value={transcribeLang} class="bg-black/50 border border-zinc-700 text-white p-2 rounded w-full max-w-xs"/>
+                    <input type="text" bind:value={transcribeLang} class={TEXT_INPUT_CLASSES}/>
                 </label>
             </div>
-            <button on:click={handleTranscribe} disabled={isLoading} class="bg-red-600 text-white px-6 py-2 rounded-full font-bold hover:bg-red-700 disabled:opacity-50 transition-colors">
+            <button onclick={handleTranscribe} disabled={isLoading} class={ACTION_BUTTON_CLASSES}>
                 Start Transcription
             </button>
 
@@ -238,16 +253,16 @@
             <div class="mb-4">
                 <label class="block">
                     <span class="block mb-2 font-medium text-zinc-300">SRT File</span>
-                    <input type="file" accept=".srt" on:change={(e) => filterFile = e.currentTarget.files!} class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700"/>
+                    <input type="file" accept=".srt" onchange={(e) => filterFile = e.currentTarget.files!} class={FILE_INPUT_CLASSES}/>
                 </label>
             </div>
             <div class="mb-4">
                 <label class="block">
                     <span class="block mb-2 font-medium text-zinc-300">Language (of SRT)</span>
-                    <input type="text" bind:value={filterLang} class="bg-black/50 border border-zinc-700 text-white p-2 rounded w-full max-w-xs"/>
+                    <input type="text" bind:value={filterLang} class={TEXT_INPUT_CLASSES}/>
                 </label>
             </div>
-            <button on:click={handleFilter} disabled={isLoading} class="bg-red-600 text-white px-6 py-2 rounded-full font-bold hover:bg-red-700 disabled:opacity-50 transition-colors">
+            <button onclick={handleFilter} disabled={isLoading} class={ACTION_BUTTON_CLASSES}>
                 Start Analysis
             </button>
 
@@ -256,7 +271,7 @@
             <div class="mb-4">
                 <label class="block">
                     <span class="block mb-2 font-medium text-zinc-300">SRT File</span>
-                    <input type="file" accept=".srt" on:change={(e) => translateFile = e.currentTarget.files!} class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700"/>
+                    <input type="file" accept=".srt" onchange={(e) => translateFile = e.currentTarget.files!} class={FILE_INPUT_CLASSES}/>
                 </label>
             </div>
             <div class="grid grid-cols-2 gap-4 mb-4 max-w-md">
@@ -273,7 +288,7 @@
                     </label>
                 </div>
             </div>
-            <button on:click={handleTranslate} disabled={isLoading} class="bg-red-600 text-white px-6 py-2 rounded-full font-bold hover:bg-red-700 disabled:opacity-50 transition-colors">
+            <button onclick={handleTranslate} disabled={isLoading} class={ACTION_BUTTON_CLASSES}>
                 Start Translation
             </button>
 
@@ -282,7 +297,7 @@
             <div class="mb-4">
                 <label class="block">
                     <span class="block mb-2 font-medium text-zinc-300">Video File</span>
-                    <input type="file" accept="video/*,audio/*" on:change={(e) => pipelineFile = e.currentTarget.files!} class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700"/>
+                    <input type="file" accept="video/*,audio/*" onchange={(e) => pipelineFile = e.currentTarget.files!} class={FILE_INPUT_CLASSES}/>
                 </label>
             </div>
 
@@ -307,7 +322,7 @@
                     </label>
                 </div>
             </div>
-            <button on:click={handlePipeline} disabled={isLoading} class="bg-red-600 text-white px-6 py-2 rounded-full font-bold hover:bg-red-700 disabled:opacity-50 transition-colors">
+            <button onclick={handlePipeline} disabled={isLoading} class={ACTION_BUTTON_CLASSES}>
                 Run Full Pipeline
             </button>
         {/if}

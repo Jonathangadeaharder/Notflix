@@ -19,7 +19,11 @@ export class PlayerPage {
 
     async waitForPlayback() {
         await expect(this.videoPlayer).toBeVisible();
-        // Check if playing? - maybe just visible for now
+        // Force play via JS to ensure it starts
+        await this.page.evaluate(() => {
+            const v = document.querySelector('video') as HTMLVideoElement;
+            if (v) v.play().catch(e => console.error(e));
+        });
     }
 
     async waitForGameOverlay() {
@@ -33,7 +37,8 @@ export class PlayerPage {
             // Swipe Right (Know it)
             await this.swipeRightButton.click();
             // Small delay to allow animation/transition if needed
-            await this.page.waitForTimeout(500);
+            const ANIMATION_DELAY_MS = 500;
+            await this.page.waitForTimeout(ANIMATION_DELAY_MS);
         }
         // Expect overlay to disappear if finished?
         // await expect(this.gameOverlay).not.toBeVisible();

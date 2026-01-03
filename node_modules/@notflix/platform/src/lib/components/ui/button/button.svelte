@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import { cn, type WithElementRef } from "$lib/utils.js";
+	import { UI } from '$lib/constants';
 	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from "svelte/elements";
 	import { type VariantProps, tv } from "tailwind-variants";
 
@@ -42,6 +43,7 @@
 </script>
 
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve */
 	let {
 		class: className,
 		variant = "default",
@@ -63,7 +65,7 @@
 		href={disabled ? undefined : href}
 		aria-disabled={disabled}
 		role={disabled ? "link" : undefined}
-		tabindex={disabled ? -1 : undefined}
+		tabindex={disabled ? UI.TABINDEX_DISABLED : undefined}
 		{...restProps}
 	>
 		{@render children?.()}

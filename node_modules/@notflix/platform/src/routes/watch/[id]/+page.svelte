@@ -1,9 +1,9 @@
 <script lang="ts">
     import GameOverlay from "$lib/components/GameOverlay.svelte";
     import { onMount } from "svelte";
-    import { base } from '$app/paths';
+    import { base } from "$app/paths";
     import { Button } from "$lib/components/ui/button";
-    import { ChevronLeft } from 'lucide-svelte';
+    import { ChevronLeft } from "lucide-svelte";
 
     let { data } = $props();
 
@@ -14,7 +14,15 @@
     let nextInterruptTime = $state(Infinity);
 
     const SECONDS_IN_MINUTE = 60;
-    const intervalSeconds = $derived((data.profile?.gameIntervalMinutes || 0) * SECONDS_IN_MINUTE);
+    const PERCENT_COMPLETE = 100;
+    import { GAME } from "$lib/constants";
+
+    // ...
+
+    const intervalSeconds = $derived(
+        (data.gameInterval || GAME.DEFAULT_INTERVAL_MINUTES) *
+            SECONDS_IN_MINUTE,
+    );
 
     function initNextInterrupt() {
         if (intervalSeconds > 0) {
@@ -26,19 +34,26 @@
 
     onMount(() => {
         initNextInterrupt();
+        console.log(
+            `[Client] Inited. Interval: ${intervalSeconds}s, Next: ${nextInterruptTime}s`,
+        );
     });
 
     async function handleTimeUpdate() {
         if (!videoElement || showOverlay || intervalSeconds === 0) return;
 
         if (videoElement.currentTime >= nextInterruptTime) {
+            console.log(
+                `[Client] Interrupt Triggered! Time: ${videoElement.currentTime} >= ${nextInterruptTime}`,
+            );
             videoElement.pause();
 
             const query = new URLSearchParams({
-                videoId: data.video?.id || '',
+                videoId: data.video?.id || "",
                 chunkIndex: chunkIndex.toString(),
                 start: (nextInterruptTime - intervalSeconds).toString(),
-                end: nextInterruptTime.toString()
+                end: nextInterruptTime.toString(),
+                targetLang: data.video?.targetLang || "es",
             });
 
             try {
@@ -52,7 +67,9 @@
                     // Skip if no cards to show
                     chunkIndex++;
                     initNextInterrupt();
-                    videoElement.play().catch(err => console.error("Play failed:", err));
+                    videoElement
+                        .play()
+                        .catch((err) => console.error("Play failed:", err));
                 }
             } catch (e) {
                 console.error("Game generation failed", e);
@@ -61,31 +78,50 @@
         }
     }
 
+    function getHeatmapColor(type: string) {
+        if (type === "EASY") return "bg-green-500/50";
+        if (type === "LEARNING") return "bg-yellow-500/80";
+        return "bg-red-500/50";
+    }
+
     function handleGameComplete() {
         showOverlay = false;
         chunkIndex++;
         initNextInterrupt();
-        videoElement?.play().catch(err => console.error("Play failed:", err));
+        videoElement?.play().catch((err) => console.error("Play failed:", err));
     }
 </script>
 
 <div class="min-h-screen bg-black text-white pb-20">
     <!-- Header/Nav -->
-    <div class="p-4 flex items-center gap-4 border-b border-white/10 bg-zinc-950/50 sticky top-0 z-50 backdrop-blur-md">
-        <Button variant="ghost" size="icon" href="{base}/studio" class="text-zinc-400 hover:text-white">
+    <div
+        class="p-4 flex items-center gap-4 border-b border-white/10 bg-zinc-950/50 sticky top-0 z-50 backdrop-blur-md"
+    >
+        <Button
+            variant="ghost"
+            size="icon"
+            href="{base}/studio"
+            class="text-zinc-400 hover:text-white"
+        >
             <ChevronLeft class="h-6 w-6" />
         </Button>
         {#if data.video}
             <div>
-                <h1 class="font-bold text-lg leading-none">{data.video.title}</h1>
-                <p class="text-xs text-zinc-500 mt-1">Watching in {data.video.targetLang?.toUpperCase() || 'ES'}</p>
+                <h1 class="font-bold text-lg leading-none">
+                    {data.video.title}
+                </h1>
+                <p class="text-xs text-zinc-500 mt-1">
+                    Watching in {data.video.targetLang?.toUpperCase() || "ES"}
+                </p>
             </div>
         {/if}
     </div>
 
     <div class="max-w-6xl mx-auto p-4 lg:p-8">
         {#if data.video}
-            <div class="group relative aspect-video bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+            <div
+                class="group relative aspect-video bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
+            >
                 <!-- svelte-ignore a11y_media_has_caption -->
                 <video
                     bind:this={videoElement}
@@ -96,53 +132,124 @@
                     class="w-full h-full"
                     ontimeupdate={handleTimeUpdate}
                 >
-                    <track 
-                        kind="subtitles" 
-                        srclang={data.video.targetLang || 'es'} 
-                        label="Native ({data.video.targetLang?.toUpperCase() || 'ES'})" 
-                        src="{base}/api/videos/{data.video.id}/subtitles?mode=native" 
+                    <track
+                        kind="subtitles"
+                        srclang={data.video.targetLang || "es"}
+                        label="Native ({data.video.targetLang?.toUpperCase() ||
+                            'ES'})"
+                        src="{base}/api/videos/{data.video
+                            .id}/subtitles?mode=native"
                         default
                     />
-                    <track 
-                        kind="subtitles" 
-                        srclang={data.profile?.nativeLang || 'en'} 
-                        label="Filtered & Translated" 
-                        src="{base}/api/videos/{data.video.id}/subtitles?mode=translated" 
+                    <track
+                        kind="subtitles"
+                        srclang={data.profile?.nativeLang || "en"}
+                        label="Filtered & Translated"
+                        src="{base}/api/videos/{data.video
+                            .id}/subtitles?mode=translated"
                     />
-                    <track 
-                        kind="subtitles" 
-                        srclang="multi" 
-                        label="Bilingual" 
-                        src="{base}/api/videos/{data.video.id}/subtitles?mode=bilingual" 
+                    <track
+                        kind="subtitles"
+                        srclang="multi"
+                        label="Bilingual"
+                        src="{base}/api/videos/{data.video
+                            .id}/subtitles?mode=bilingual"
                     />
                 </video>
 
                 {#if showOverlay}
-                    <div class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8">
-                        <GameOverlay cards={gameCards} onComplete={handleGameComplete} />
+                    <div
+                        class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
+                        data-testid="game-overlay"
+                    >
+                        <GameOverlay
+                            cards={gameCards}
+                            onComplete={handleGameComplete}
+                        />
                     </div>
                 {/if}
             </div>
 
-            <div class="mt-8 flex flex-col md:flex-row gap-8 justify-between items-start">
+            <!-- Heatmap Visualization -->
+            {#if data.heatmap && data.heatmap.length > 0 && videoElement}
+                <div
+                    class="mt-4 h-4 w-full bg-zinc-800 rounded-full overflow-hidden flex relative"
+                >
+                    {#each data.heatmap as seg, i (i)}
+                        <div
+                            class="absolute h-full {getHeatmapColor(seg.type)}"
+                            style="left: {(seg.start /
+                                (data.video.duration || 1)) *
+                                PERCENT_COMPLETE}%; width: {((seg.end -
+                                seg.start) /
+                                (data.video.duration || 1)) *
+                                PERCENT_COMPLETE}%;"
+                            title="{seg.type} ({Math.round(
+                                seg.start,
+                            )}s - {Math.round(seg.end)}s)"
+                        ></div>
+                    {/each}
+                </div>
+                <div class="flex justify-between text-xs text-zinc-500 mt-1">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-green-500/50 rounded-full"></div>
+                        Easy (Known)
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="w-2 h-2 bg-yellow-500/80 rounded-full"
+                        ></div>
+                        Learning (Target)
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-red-500/50 rounded-full"></div>
+                        Hard (Too many unknowns)
+                    </div>
+                </div>
+            {/if}
+
+            <div
+                class="mt-8 flex flex-col md:flex-row gap-8 justify-between items-start"
+            >
                 <div class="flex-1">
-                    <h2 class="text-3xl font-bold tracking-tight mb-2">{data.video.title}</h2>
+                    <h2 class="text-3xl font-bold tracking-tight mb-2">
+                        {data.video.title}
+                    </h2>
                     <div class="flex items-center gap-4 text-zinc-500 text-sm">
-                        <span>{new Date(data.video.createdAt).toLocaleDateString()}</span>
+                        <span
+                            >{new Date(
+                                data.video.createdAt,
+                            ).toLocaleDateString()}</span
+                        >
                         <span>•</span>
                         <span>{data.video.views} views</span>
                     </div>
                 </div>
-                
-                <div class="bg-zinc-900/50 border border-white/5 p-4 rounded-xl flex items-center gap-4">
+
+                <div
+                    class="bg-zinc-900/50 border border-white/5 p-4 rounded-xl flex items-center gap-4"
+                >
                     <div class="h-10 w-1 bg-red-600 rounded-full"></div>
                     <div>
-                        <p class="text-xs font-bold text-zinc-500 uppercase tracking-widest">Learning Goal</p>
+                        <p
+                            class="text-xs font-bold text-zinc-500 uppercase tracking-widest"
+                        >
+                            Learning Goal
+                        </p>
                         <p class="text-sm text-zinc-300">
-                             Intermission every <span class="text-white font-bold">{data.profile?.gameIntervalMinutes || 10}m</span>
+                            Intermission every <span
+                                class="text-white font-bold"
+                                >{data.gameInterval ||
+                                    GAME.DEFAULT_INTERVAL_MINUTES}m</span
+                            >
                         </p>
                     </div>
-                    <Button variant="outline" size="sm" href="{base}/profile" class="ml-4 border-white/10 hover:bg-white/5">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        href="{base}/profile"
+                        class="ml-4 border-white/10 hover:bg-white/5"
+                    >
                         Change
                     </Button>
                 </div>
@@ -152,9 +259,16 @@
                 <div class="bg-zinc-900 p-8 rounded-full mb-6">
                     <ChevronLeft class="h-12 w-12 text-zinc-700" />
                 </div>
-                <h2 class="text-2xl font-bold text-white mb-2">Video not found</h2>
-                <p class="text-zinc-500 mb-8">This video might have been removed or is still processing.</p>
-                <Button href="{base}/studio" class="bg-white text-black hover:bg-zinc-200 px-8 font-bold rounded-full">
+                <h2 class="text-2xl font-bold text-white mb-2">
+                    Video not found
+                </h2>
+                <p class="text-zinc-500 mb-8">
+                    This video might have been removed or is still processing.
+                </p>
+                <Button
+                    href="{base}/studio"
+                    class="bg-white text-black hover:bg-zinc-200 px-8 font-bold rounded-full"
+                >
                     Return to Studio
                 </Button>
             </div>

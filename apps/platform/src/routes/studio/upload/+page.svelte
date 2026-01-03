@@ -15,15 +15,17 @@
     let { data, form }: Props = $props();
 
     // Manual form state using Svelte 5 runes
-    let title = $state(data.initialData?.title || '');
-    let targetLang = $state(data.initialData?.targetLang || 'es');
+    let title = $state("");
+    let targetLang = $state("es");
     let isSubmitting = $state(false);
 
     // Sync local state when server data changes
     $effect(() => {
         if (data.initialData) {
-            title = data.initialData.title;
-            targetLang = data.initialData.targetLang;
+            const nextTitle = data.initialData.title;
+            const nextLang = data.initialData.targetLang;
+            title = nextTitle;
+            targetLang = nextLang;
         }
     });
 
