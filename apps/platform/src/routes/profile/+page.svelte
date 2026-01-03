@@ -5,6 +5,7 @@
     import { CheckCircle2 } from 'lucide-svelte';
     import { enhance } from '$app/forms';
     import type { PageData, ActionData } from './$types';
+    import { untrack } from 'svelte';
 
     interface Props {
         data: PageData & { initialData: { gameInterval: string } };
@@ -14,12 +15,15 @@
     let { data, form }: Props = $props();
 
     // Manual form state using Svelte 5 runes
-    let gameInterval = $state(data.initialData.gameInterval);
+    let gameInterval = $state("");
     let isSubmitting = $state(false);
 
     // Sync local state when server data changes (e.g. after a redirect or invalidation)
     $effect(() => {
-        gameInterval = data.initialData.gameInterval;
+        const nextValue = data.initialData.gameInterval;
+        untrack(() => {
+            gameInterval = nextValue;
+        });
     });
 
     function getIntervalLabel(value: string) {

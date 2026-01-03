@@ -1,0 +1,31 @@
+# Docker Compose override for E2E testing
+# Usage: docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --wait
+
+services:
+  platform:
+    environment:
+      - PLAYWRIGHT_TEST=true
+      - TEST_GAME_INTERVAL=0.1
+      - RUNNING_IN_DOCKER=true
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:5173/api/health || exit 1" ]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  ai-service:
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  postgres:
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d main_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

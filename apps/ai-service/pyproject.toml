@@ -1,7 +1,6 @@
-[tool.ruff]
+[tool.ruff.lint]
 select = ["E", "F", "B", "S"]
-ignore = []
-line-length = 88
+ignore = ["E501"] # Ignore Line too long
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
@@ -18,3 +17,14 @@ enable = ["global-statement"]
 [tool.bandit]
 exclude_dirs = ["venv", "tests"]
 skips = ["B101"] # Skip assert checks in non-test files if desired, but we exclude tests dir anyway
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+
+filterwarnings = [
+    "ignore::DeprecationWarning:importlib.*:",      # Ignore importlib/SWIG DeprecationWarnings
+    "ignore:.*builtin type SwigPyPacked.*:DeprecationWarning",
+    "ignore:.*builtin type SwigPyObject.*:DeprecationWarning",
+    "ignore:.*builtin type swigvarlink.*:DeprecationWarning"
+]
+

@@ -18,7 +18,7 @@ declare global {
 		interface ActionData {
             success?: boolean;
             errors?: Record<string, string[]>;
-            data?: any;
+            data?: Record<string, unknown>;
         }
 		interface Platform {
 			env?: Record<string, string>;

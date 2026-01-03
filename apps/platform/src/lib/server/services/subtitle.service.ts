@@ -1,14 +1,14 @@
 import { db as defaultDb } from '../infrastructure/database';
 import { videoProcessing, type DbVttSegment, type DbTokenAnalysis } from '@notflix/database';
 import { eq } from 'drizzle-orm';
-import { generateSrt, secondsToSrtTime } from '../utils/subtitle-utils';
+import { generateVtt, secondsToSrtTime } from '../utils/subtitle-utils';
 
 export type SubtitleMode = 'native' | 'translated' | 'bilingual';
 
 export class SubtitleService {
-    constructor(private db = defaultDb) {}
+    constructor(private db = defaultDb) { }
 
-    async getSrt(videoId: string, mode: SubtitleMode = 'native'): Promise<string | null> {
+    async generateVtt(videoId: string, mode: SubtitleMode = 'native'): Promise<string | null> {
         const [processing] = await this.db.select()
             .from(videoProcessing)
             .where(eq(videoProcessing.videoId, videoId))
@@ -19,11 +19,13 @@ export class SubtitleService {
         }
 
         const segments = processing.vttJson as DbVttSegment[];
-        
+
         const srtSegments = segments.map((seg, i) => {
             const nativeText = seg.text;
-            const translatedText = seg.tokens
-                .map((t: DbTokenAnalysis & { isKnown?: boolean }) => t.isKnown ? t.text : `[${t.translation || t.text}]`)
+            // Use full sentence translation if available (populated by Orchestrator)
+            // Fallback to token reconstruction if missing (legacy/partial)
+            const translatedText = (seg as any).translation || seg.tokens
+                .map((t: DbTokenAnalysis & { translation?: string }) => t.translation || t.text)
                 .join('');
 
             let text = '';
@@ -43,6 +45,6 @@ export class SubtitleService {
             };
         });
 
-        return generateSrt(srtSegments);
+        return generateVtt(srtSegments);
     }
 }

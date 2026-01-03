@@ -3,22 +3,28 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-# ffmpeg is often required for audio processing (faster-whisper/pydub)
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg=7.1* \
-    git=1:2.39* \
+    ffmpeg \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY apps/linguistics/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/ai-service/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /root/.cache/pip
 
 # Pre-download models
 RUN python -m spacy download es_core_news_lg && \
-    python -m spacy download en_core_web_sm
+    python -m spacy download en_core_web_sm && \
+    rm -rf /root/.cache/pip
 
 # Copy source code
-COPY apps/linguistics .
+COPY apps/ai-service/ .
+
+# Create non-root user for security
+RUN useradd -m appuser && chown -R appuser /app
+USER appuser
 
 # Expose API port
 EXPOSE 8000

@@ -10,13 +10,16 @@ import { z } from 'zod';
 import { taskRegistry } from '$lib/server/services/task-registry.service';
 import type { User } from '$lib/server/infrastructure/auth';
 
+import { HTTP_STATUS, LIMITS } from '$lib/constants';
+
+const MIN_LANG_LEN = 2;
+const MAX_LANG_LEN = 5;
+
 // Define schema for validation
 const uploadSchema = z.object({
-    title: z.string().min(1, 'Title is required').max(100),
-    targetLang: z.string().min(2).max(5).default('es'),
+    title: z.string().min(1, 'Title is required').max(LIMITS.MAX_TITLE_LENGTH),
+    targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default('es'),
 });
-
-const HTTP_STATUS_SEE_OTHER = 303;
 
 export const load = async () => {
     return {
@@ -42,7 +45,7 @@ export const actions = {
             const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
             const fileErrors = (!file || file.size === 0) ? ['File is required'] : [];
             
-            return fail(400, { 
+            return fail(HTTP_STATUS.BAD_REQUEST, { 
                 errors: {
                     ...fieldErrors,
                     file: fileErrors.length > 0 ? fileErrors : undefined
@@ -65,7 +68,7 @@ export const actions = {
 
         queueProcessing(videoId, result.data.targetLang, session?.user);
 
-        throw redirect(HTTP_STATUS_SEE_OTHER, '/studio');
+        throw redirect(HTTP_STATUS.SEE_OTHER, '/studio'); // 303 is standard for redirects after post
     }
 };
 

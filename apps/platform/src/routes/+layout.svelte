@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve */
 	import '../app.css';
 	import favicon from "$lib/assets/favicon.svg";
 	import { Clapperboard, User, LayoutGrid } from 'lucide-svelte';

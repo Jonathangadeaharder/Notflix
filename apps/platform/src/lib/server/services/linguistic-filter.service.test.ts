@@ -1,6 +1,8 @@
+/* eslint-disable test-smells/assertion-roulette */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SmartFilter, SegmentClassification } from './linguistic-filter.service';
 import { db } from '../infrastructure/database';
+import { LIMITS } from '$lib/constants';
 
 vi.mock('../infrastructure/database', () => ({
     db: {
@@ -17,7 +19,7 @@ describe('LinguisticFilterService', () => {
 
     it('should classify a segment as EASY if all content words are known', async () => {
         // --- ARRANGE ---
-        const mockedDb = db as any;
+        const mockedDb = db as unknown as { where: { mockResolvedValueOnce: (val: unknown) => void } };
         const mockTokens = [
             { text: 'Hola', lemma: 'hola', pos: 'INTJ', is_stop: false },
             { text: '!', lemma: '!', pos: 'PUNCT', is_stop: false }
@@ -26,10 +28,10 @@ describe('LinguisticFilterService', () => {
         // Mock DB returns 'hola' as known
         mockedDb.where.mockResolvedValueOnce([{ lemma: 'hola' }]);
 
-        const filter = new SmartFilter(db as any);
+        const filter = new SmartFilter(db as unknown as ConstructorParameters<typeof SmartFilter>[0]);
 
         // --- ACT ---
-        const result = await filter.filterSegment(mockTokens, 'u1', 'es');
+        const result = await filter.filterSegment(mockTokens as unknown as Parameters<typeof filter.filterSegment>[0], 'u1', 'es');
 
         // --- ASSERT ---
         expect(result.classification).toBe(SegmentClassification.EASY);
@@ -39,7 +41,7 @@ describe('LinguisticFilterService', () => {
 
     it('should classify a segment as LEARNING if there are few unknown words', async () => {
         // --- ARRANGE ---
-        const mockedDb = db as any;
+        const mockedDb = db as unknown as { where: { mockResolvedValueOnce: (val: unknown) => void } };
         const mockTokens = [
             { text: 'El', lemma: 'el', pos: 'DET', is_stop: true },
             { text: 'gato', lemma: 'gato', pos: 'NOUN', is_stop: false }, // Unknown
@@ -55,10 +57,10 @@ describe('LinguisticFilterService', () => {
             { lemma: 'hoy' }
         ]);
 
-        const filter = new SmartFilter(db as any);
+        const filter = new SmartFilter(db as unknown as ConstructorParameters<typeof SmartFilter>[0]);
 
         // --- ACT ---
-        const result = await filter.filterSegment(mockTokens, 'u1', 'es');
+        const result = await filter.filterSegment(mockTokens as unknown as Parameters<typeof filter.filterSegment>[0], 'u1', 'es');
 
         // --- ASSERT ---
         expect(result.classification).toBe(SegmentClassification.LEARNING);
@@ -68,24 +70,19 @@ describe('LinguisticFilterService', () => {
 
     it('should classify a segment as HARD if many words are unknown', async () => {
         // --- ARRANGE ---
-        const mockedDb = db as any;
+        const mockedDb = db as unknown as { where: { mockResolvedValueOnce: (val: unknown) => void } };
         // 4 unknown content words
-        const mockTokens = [
-            { text: 'Word1', lemma: 'w1', pos: 'NOUN', is_stop: false },
-            { text: 'Word2', lemma: 'w2', pos: 'NOUN', is_stop: false },
-            { text: 'Word3', lemma: 'w3', pos: 'NOUN', is_stop: false },
-            { text: 'Word4', lemma: 'w4', pos: 'NOUN', is_stop: false }
-        ];
+        const mockTokens = Array(LIMITS.HARD_UNKNOWN_THRESHOLD).fill({ text: 'Word', lemma: 'w', pos: 'NOUN', is_stop: false });
         
         mockedDb.where.mockResolvedValueOnce([]); // Nothing known
 
-        const filter = new SmartFilter(db as any);
+        const filter = new SmartFilter(db as unknown as ConstructorParameters<typeof SmartFilter>[0]);
 
         // --- ACT ---
-        const result = await filter.filterSegment(mockTokens, 'u1', 'es');
+        const result = await filter.filterSegment(mockTokens as unknown as Parameters<typeof filter.filterSegment>[0], 'u1', 'es');
 
         // --- ASSERT ---
         expect(result.classification).toBe(SegmentClassification.HARD);
-        expect(result.unknownCount).toBe(4);
+        expect(result.unknownCount).toBe(LIMITS.HARD_UNKNOWN_THRESHOLD);
     });
 });

@@ -7,7 +7,8 @@ import type {
 } from '../domain/interfaces';
 
 export class MockAiGateway implements IAiGateway {
-    async transcribe(_filePath: string, _lang: string = 'es'): Promise<TranscriptionResponse> {
+    async transcribe(filePath: string): Promise<TranscriptionResponse> {
+        console.log(`[MockAiGateway] Transcribing ${filePath}...`);
         return {
             segments: [
                 { start: 0, end: 5, text: "This is a mock transcription segment." },
@@ -18,7 +19,7 @@ export class MockAiGateway implements IAiGateway {
         };
     }
 
-    async analyzeBatch(texts: string[], _lang: string = 'es'): Promise<FilterResponse> {
+    async analyzeBatch(texts: string[]): Promise<FilterResponse> {
         return {
             results: texts.map(() => [
                 { text: "Mock", lemma: "mock", pos: "NOUN", is_stop: false }

@@ -23,6 +23,7 @@ services:
       - /app/apps/platform/node_modules
       - /app/packages/database/node_modules
       - ../media:/app/media
+      - ../logs:/app/logs
     command: /bin/sh -c "chmod -R +x /app/apps/platform/node_modules && npm run dev -- --host"
     environment:
       - DATABASE_URL=postgres://admin:password@postgres:5432/main_db
@@ -30,6 +31,9 @@ services:
       - AI_SERVICE_API_KEY=dev_secret_key
       - UPLOAD_DIR=/app/media/uploads
       - BETTER_AUTH_SECRET=long_secret_key_for_dev_only_1234567890
+      - PLAYWRIGHT_TEST=true
+      - TEST_GAME_INTERVAL=0.1
+      - RUNNING_IN_DOCKER=true
     depends_on:
       - postgres
       - ai-service
@@ -43,8 +47,10 @@ services:
     volumes:
       - ../apps/ai-service:/app
       - ../media:/app/media
+      - ../logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
+      - LOGS_DIR=/app/logs
       - AI_SERVICE_API_KEY=dev_secret_key
     ports: [ "8000:8000" ]
     depends_on:

@@ -1,7 +1,10 @@
 from typing import List
 import torch
+import structlog
 from transformers import MarianMTModel, MarianTokenizer
 from .interfaces import ITranslator
+
+logger = structlog.get_logger()
 
 class OpusTranslator(ITranslator):
     def __init__(self, device=None):
@@ -11,6 +14,7 @@ class OpusTranslator(ITranslator):
     def _get_model(self, source_lang: str, target_lang: str):
         model_name = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
         if model_name not in self._models:
+            logger.info("loading_marian_model", model_name=model_name)
             tokenizer = MarianTokenizer.from_pretrained(model_name)
             model = MarianMTModel.from_pretrained(model_name).to(self.device)
             self._models[model_name] = (tokenizer, model)
@@ -47,4 +51,10 @@ class OpusTranslator(ITranslator):
             )
             translated_texts.extend(batch_translations)
 
+        logger.info(
+            "translation_complete", 
+            count=len(translated_texts), 
+            source=source_lang, 
+            target=target_lang
+        )
         return translated_texts

@@ -1,3 +1,4 @@
+/* eslint-disable test-smells/assertion-roulette */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateDeck } from './chunker.service';
 import { db } from '../infrastructure/database';
@@ -21,7 +22,7 @@ describe('ChunkerService', () => {
 
     it('should generate a deck containing both known and unknown words from a sentence', async () => {
         // --- ARRANGE ---
-        const mockedDb = db as any;
+        const mockedDb = db as unknown as { limit: { mockResolvedValueOnce: (val: unknown) => void }, where: { mockReturnValueOnce: (val: unknown) => { mockResolvedValueOnce: (val: unknown) => void } } };
         const mockUserId = 'user-1';
         const mockVideoId = 'vid-1';
 
@@ -44,10 +45,13 @@ describe('ChunkerService', () => {
             .mockResolvedValueOnce(mockKnownResult); // Second call: select known words
 
         // --- ACT ---
-        const deck = await generateDeck(mockUserId, mockVideoId, 0, 100, 'en');
+        const TEST_START = 0;
+        const TEST_END = 100;
+        const deck = await generateDeck(mockUserId, mockVideoId, TEST_START, TEST_END, 'en');
 
         // --- ASSERT ---
-        expect(deck.length).toBe(2);
+        const EXPECTED_COUNT = 2;
+        expect(deck).toHaveLength(EXPECTED_COUNT);
         
         const catCard = deck.find(c => c.lemma === 'cat');
         const runCard = deck.find(c => c.lemma === 'run');
@@ -62,11 +66,13 @@ describe('ChunkerService', () => {
 
     it('should return an empty array if no segments are found in the time range', async () => {
         // --- ARRANGE ---
-        const mockedDb = db as any;
+        const mockedDb = db as unknown as { limit: { mockResolvedValueOnce: (val: unknown) => void }, where: { mockReturnValueOnce: (val: unknown) => { mockResolvedValueOnce: (val: unknown) => void } } };
         mockedDb.limit.mockResolvedValueOnce([{ vttJson: [] }]);
 
         // --- ACT ---
-        const deck = await generateDeck('u1', 'v1', 500, 600, 'en');
+        const TEST_START = 500;
+        const TEST_END = 600;
+        const deck = await generateDeck('u1', 'v1', TEST_START, TEST_END, 'en');
 
         // --- ASSERT ---
         expect(deck).toEqual([]);
