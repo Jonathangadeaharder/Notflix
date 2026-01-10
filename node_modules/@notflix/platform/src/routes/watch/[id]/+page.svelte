@@ -90,6 +90,37 @@
         initNextInterrupt();
         videoElement?.play().catch((err) => console.error("Play failed:", err));
     }
+
+    function drawHeatmap(canvas: HTMLCanvasElement, heatmap: any[]) {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const duration = data.video?.duration || 1;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        ctx.clearRect(0, 0, width, height);
+
+        for (const seg of heatmap) {
+            const startX = (seg.start / duration) * width;
+            const w = ((seg.end - seg.start) / duration) * width;
+
+            // Apply colors directly (matching Tailwind manually or parsing)
+            if (seg.type === "EASY")
+                ctx.fillStyle = "rgba(34, 197, 94, 0.5)"; // green-500/50
+            else if (seg.type === "LEARNING")
+                ctx.fillStyle = "rgba(234, 179, 8, 0.8)"; // yellow-500/80
+            else ctx.fillStyle = "rgba(239, 68, 68, 0.5)"; // red-500/50
+
+            ctx.fillRect(startX, 0, w, height);
+        }
+
+        return {
+            update(newHeatmap: any[]) {
+                drawHeatmap(canvas, newHeatmap);
+            },
+        };
+    }
 </script>
 
 <div class="min-h-screen bg-black text-white pb-20">
@@ -170,39 +201,31 @@
                 {/if}
             </div>
 
-            <!-- Heatmap Visualization -->
+            <!-- Heatmap Visualization (Canvas) -->
             {#if data.heatmap && data.heatmap.length > 0 && videoElement}
+                <!-- Canvas container -->
                 <div
-                    class="mt-4 h-4 w-full bg-zinc-800 rounded-full overflow-hidden flex relative"
+                    class="mt-4 h-4 w-full bg-zinc-800 rounded-full overflow-hidden relative"
                 >
-                    {#each data.heatmap as seg, i (i)}
-                        <div
-                            class="absolute h-full {getHeatmapColor(seg.type)}"
-                            style="left: {(seg.start /
-                                (data.video.duration || 1)) *
-                                PERCENT_COMPLETE}%; width: {((seg.end -
-                                seg.start) /
-                                (data.video.duration || 1)) *
-                                PERCENT_COMPLETE}%;"
-                            title="{seg.type} ({Math.round(
-                                seg.start,
-                            )}s - {Math.round(seg.end)}s)"
-                        ></div>
-                    {/each}
+                    <canvas
+                        width="1000"
+                        height="16"
+                        class="w-full h-full block"
+                        use:drawHeatmap={data.heatmap}
+                    ></canvas>
                 </div>
+
                 <div class="flex justify-between text-xs text-zinc-500 mt-1">
                     <div class="flex items-center gap-2">
-                        <div class="w-2 h-2 bg-green-500/50 rounded-full"></div>
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
                         Easy (Known)
                     </div>
                     <div class="flex items-center gap-2">
-                        <div
-                            class="w-2 h-2 bg-yellow-500/80 rounded-full"
-                        ></div>
+                        <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
                         Learning (Target)
                     </div>
                     <div class="flex items-center gap-2">
-                        <div class="w-2 h-2 bg-red-500/50 rounded-full"></div>
+                        <div class="w-2 h-2 bg-red-500 rounded-full"></div>
                         Hard (Too many unknowns)
                     </div>
                 </div>

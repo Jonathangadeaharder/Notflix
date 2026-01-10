@@ -3,6 +3,10 @@ import pino from 'pino';
 // This prints JSON to the server console
 export const logger = pino({
     level: 'info',
+    redact: {
+        paths: ['password', 'token', 'access_token', 'refresh_token', 'session.token', 'user.email'],
+        remove: true
+    },
     transport: {
         targets: [
             {

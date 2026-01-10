@@ -1,17 +1,20 @@
-from fastapi import FastAPI, HTTPException, Security, Depends, Request
-from fastapi.responses import JSONResponse
-from fastapi.security.api_key import APIKeyHeader
-from pydantic import BaseModel, field_validator
-from typing import List, Annotated
-import uvicorn
+import asyncio
+import uuid
 import os
-import structlog
-import torch
 import shlex
 import subprocess
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
+from typing import List, Annotated
+
+from fastapi import FastAPI, HTTPException, Security, Depends, Request
+from fastapi.responses import JSONResponse
+from fastapi.security.api_key import APIKeyHeader
+from pydantic import BaseModel, field_validator
+import uvicorn
+import structlog
+import torch
 
 # Silence TensorFlow oneDNN warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
@@ -41,17 +44,14 @@ def get_api_key(
         )
 
 # --- Logging ---
-# Ensure logs directory exists
-# Ensure logs directory exists
 LOGS_DIR = Path(os.getenv("LOGS_DIR", "logs")).resolve()
 LOGS_DIR.mkdir(exist_ok=True, parents=True)
 
-# Configure standard logging (File + Stdout)
-# We clear existing handlers to avoid duplication if reloaded (though in main.py usually safe)
 logging.root.handlers = []
 
 structlog.configure(
     processors=[
+        structlog.contextvars.merge_contextvars, # Added for Request ID
         structlog.stdlib.filter_by_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
@@ -72,51 +72,6 @@ std_logger.addHandler(logging.StreamHandler())
 std_logger.addHandler(logging.FileHandler(LOGS_DIR / "ai-service.log"))
 
 logger = structlog.get_logger()
-
-# --- Models ---
-class ThumbnailRequest(BaseModel):
-    file_path: str
-
-    @field_validator('file_path')
-    @classmethod
-    def path_must_exist(cls, v: str) -> str:
-        if not os.path.exists(v):
-            raise ValueError(f"File not found: {v}")
-        return v
-
-class ThumbnailResponse(BaseModel):
-    thumbnail_path: str
-
-class TranscriptionRequest(BaseModel):
-    file_path: str
-    language: str = "es"
-
-    @field_validator('file_path')
-    @classmethod
-    def path_must_exist(cls, v: str) -> str:
-        if not os.path.exists(v):
-            raise ValueError(f"File not found: {v}")
-        return v
-
-class TranscriptionResponse(BaseModel):
-    segments: List[Segment]
-    language: str
-    language_probability: float
-
-class TranslationRequest(BaseModel):
-    texts: List[str]
-    source_lang: str = "es"
-    target_lang: str = "en"
-
-class TranslationResponse(BaseModel):
-    translations: List[str]
-
-class FilterRequest(BaseModel):
-    texts: List[str]
-    language: str = "es"
-
-class FilterResponse(BaseModel):
-    results: List[List[TokenAnalysis]]
 
 # --- State ---
 class BrainState:
@@ -144,7 +99,8 @@ TranslatorDep = Annotated[OpusTranslator, Depends(get_translator)]
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     logger.info("startup_models_loading")
-    brain_state.transcriber = WhisperTranscriber(model_size="tiny")
+    # Using 'base' model for better non-English performance as requested
+    brain_state.transcriber = WhisperTranscriber(model_size="base")
     brain_state.filter = SpacyFilter()
     brain_state.translator = OpusTranslator()
     logger.info("startup_models_loaded")
@@ -181,6 +137,16 @@ app = FastAPI(
     ]
 )
 
+# --- Middleware ---
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error("global_error", path=request.url.path, error=str(exc))
@@ -188,6 +154,64 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal AI Service Error", "message": str(exc)},
     )
+
+# --- Models ---
+class ThumbnailRequest(BaseModel):
+    file_path: str
+
+    @field_validator('file_path')
+    @classmethod
+    def path_must_be_safe(cls, v: str) -> str:
+        # Security: Prevent path traversal
+        media_root = Path(os.getenv("MEDIA_ROOT", "/app/media")).resolve()
+        requested_path = Path(v).resolve()
+        
+        if not str(requested_path).startswith(str(media_root)):
+             raise ValueError(f"Security: Path {v} is outside allowed media root {media_root}")
+        
+        # NOTE: Existence check moved to route logic to return 500 instead of 422
+        return str(requested_path)
+
+class ThumbnailResponse(BaseModel):
+    thumbnail_path: str
+
+class TranscriptionRequest(BaseModel):
+    file_path: str
+    language: str = "es"
+
+    @field_validator('file_path')
+    @classmethod
+    def path_must_be_safe(cls, v: str) -> str:
+        media_root = Path(os.getenv("MEDIA_ROOT", "/app/media")).resolve()
+        requested_path = Path(v).resolve()
+        
+        if not str(requested_path).startswith(str(media_root)):
+             raise ValueError(f"Security: Path {v} is outside allowed media root {media_root}")
+        return str(requested_path)
+
+class TranscriptionResponse(BaseModel):
+    segments: List[Segment]
+    language: str
+    language_probability: float
+
+class TranslationRequest(BaseModel):
+    texts: List[str]
+    source_lang: str = "es"
+    # Added fallback logic in core/translator.py handles pair validity, 
+    # but here we allow "es", "en" etc.
+    target_lang: str = "en"
+
+class TranslationResponse(BaseModel):
+    translations: List[str]
+
+class FilterRequest(BaseModel):
+    texts: List[str]
+    language: str = "es"
+
+class FilterResponse(BaseModel):
+    results: List[List[TokenAnalysis]]
+
+# --- Endpoints ---
 
 @app.post(
     "/generate_thumbnail", 
@@ -201,6 +225,11 @@ async def generate_thumbnail(req: ThumbnailRequest):
         endpoint="/generate_thumbnail", 
         file_path=req.file_path
     )
+
+    # Manual check for 500
+    if not os.path.exists(req.file_path):
+        logger.error("file_not_found_system_error", path=req.file_path)
+        raise HTTPException(status_code=500, detail=f"File not found on disk: {req.file_path}")
     
     base, _ = os.path.splitext(req.file_path)
     thumb_path = f"{base}.jpg"
@@ -209,18 +238,25 @@ async def generate_thumbnail(req: ThumbnailRequest):
         "ffmpeg", "-y", "-i", req.file_path, 
         "-ss", "00:00:01", "-vframes", "1", thumb_path
     ]
-    logger.info("running_ffmpeg", command=shlex.join(cmd))
+    logger.info("running_ffmpeg_async", command=shlex.join(cmd))
     
-    # S603: input is sanitized via shlex.join before execution
-    process = subprocess.run( # noqa: S603
-        cmd, 
-        capture_output=True,
-        check=True, # Ensure errors are raised
-        text=True
-    )
-    # Process return code handled by check=True, but retaining explicit check for clarity if needed
-    if process.returncode != 0:
-            raise Exception(f"ffmpeg failed: {process.stderr}")
+    # Async execution to prevent event loop blocking
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            error_msg = stderr.decode() if stderr else "Unknown ffmpeg error"
+            raise Exception(f"ffmpeg failed: {error_msg}")
+            
+    except Exception as e:
+        logger.error("ffmpeg_execution_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
     return ThumbnailResponse(thumbnail_path=thumb_path)
 
 @app.post(
@@ -229,7 +265,7 @@ async def generate_thumbnail(req: ThumbnailRequest):
     tags=["AI"], 
     description="Transcribes an audio file using Faster-Whisper."
 )
-async def transcribe(
+def transcribe(
     req: TranscriptionRequest,
     transcriber: TranscriberDep
 ):
@@ -238,6 +274,12 @@ async def transcribe(
         endpoint="/transcribe", 
         file_path=req.file_path
     )
+    
+    # Manual check for 500
+    if not os.path.exists(req.file_path):
+        logger.error("file_not_found_system_error", path=req.file_path)
+        raise HTTPException(status_code=500, detail=f"File not found on disk: {req.file_path}")
+
     result = transcriber.transcribe(req.file_path, req.language)
     return TranscriptionResponse(
         segments=result.segments,
@@ -251,10 +293,11 @@ async def transcribe(
     tags=["AI"], 
     description="Translates a batch of texts using MarianMT models."
 )
-async def translate(
+def translate(
     req: TranslationRequest,
     translator: TranslatorDep
 ):
+    # Translator logic handles missing models with error logs now
     translations = translator.translate(req.texts, req.source_lang, req.target_lang)
     return TranslationResponse(translations=translations)
 
@@ -264,7 +307,7 @@ async def translate(
     tags=["AI"], 
     description="Analyzes a batch of texts using SpaCy for linguistic filtering."
 )
-async def filter_text(
+def filter_text(
     req: FilterRequest,
     text_filter: FilterDep
 ):
@@ -278,3 +321,4 @@ async def health():
 if __name__ == "__main__":
     # S104: Binding to all interfaces is required for Docker containerization
     uvicorn.run(app, host="0.0.0.0", port=8000) # noqa: S104
+

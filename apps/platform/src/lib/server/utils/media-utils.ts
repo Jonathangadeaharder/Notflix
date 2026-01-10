@@ -10,15 +10,15 @@ export function toMediaUrl(absolutePath: string | null | undefined): string {
     if (absolutePath.startsWith('http') || absolutePath.startsWith('/')) return absolutePath;
 
     const mediaRoot = path.resolve(CONFIG.RESOLVED_UPLOAD_DIR, '..');
-    
+
     // Normalize paths for Windows/Linux comparison
     const normalizedAbs = path.normalize(absolutePath);
     const normalizedRoot = path.normalize(mediaRoot);
 
     if (normalizedAbs.startsWith(normalizedRoot)) {
         const relative = normalizedAbs.slice(normalizedRoot.length);
-        // Ensure forward slashes for URLs
-        return '/media' + relative.split(path.sep).join('/');
+        // Ensure forward slashes for URLs, handling both OS styles safely
+        return '/media' + relative.replace(/\\/g, '/');
     }
 
     return absolutePath;

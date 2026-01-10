@@ -12,6 +12,7 @@ class TokenAnalysis(BaseModel):
     lemma: str
     pos: str
     is_stop: bool
+    whitespace: str = ""
     translation: Optional[str] = None
 
 class TranscriptionResult(BaseModel):

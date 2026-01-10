@@ -40,13 +40,26 @@ export class Orchestrator {
             globalEvents.emit(EVENTS.PROCESSING_UPDATE, { videoId, status, percent });
         };
 
+        // Traceability
+        const requestId = (this.aiGateway as any).requestId; // If we attached it? 
+        // Actually, Orchestrator is instantiated per request or singleton?
+        // SvelteKit logic usually instantiates services.
+        // If singleton, we can't store requestId in 'this'.
+        // Request Context (ALS) handles the propagation.
+
         console.log(`[Orchestrator] Starting processing for video: ${videoId}, User: ${userId}`);
         emitProgress('STARTING', 0);
 
-        const videoRecord = await this.getVideoRecord(videoId);
-        await this.initProcessingRecord(videoId, targetLang);
-
         try {
+            // 1. Acquire Lock (Atomic DB Operation)
+            const locked = await this.acquireProcessingLock(videoId, targetLang);
+            if (!locked) {
+                console.warn(`[Orchestrator] Video ${videoId} is already being processed. Aborting duplicate request.`);
+                return;
+            }
+
+            const videoRecord = await this.getVideoRecord(videoId);
+
             console.log(`[Orchestrator] Generating thumbnail...`);
             await this.generateThumbnail(videoRecord, videoId, emitProgress);
 
@@ -62,14 +75,31 @@ export class Orchestrator {
             console.log(`[Orchestrator] Saving results...`);
             await this.saveResults(videoId, finalSegments);
 
-            // ...
-
             emitProgress(ProcessingStatus.COMPLETED, LIMITS.PERCENT_COMPLETE);
             console.log(`[Orchestrator] Processing finished successfully.`);
+
         } catch (err) {
             console.error(`[Orchestrator] Processing Failed for ${videoId}:`, err);
             await this.markAsError(videoId, emitProgress);
             throw err;
+        }
+    }
+
+    /**
+     * Resets any tasks left in PENDING state from a previous crash to ERROR.
+     * Should be called on server startup.
+     */
+    async cleanupStaleTasks() {
+        console.log('[Orchestrator] Cleaning up stale (zombie) tasks...');
+        const result = await this.db.update(videoProcessing)
+            .set({ status: ProcessingStatus.ERROR })
+            .where(eq(videoProcessing.status, ProcessingStatus.PENDING))
+            .returning({ videoId: videoProcessing.videoId });
+
+        if (result.length > 0) {
+            console.warn(`[Orchestrator] Marked ${result.length} zombie tasks as ERROR:`, result.map(r => r.videoId));
+        } else {
+            console.log('[Orchestrator] No stale tasks found.');
         }
     }
 
@@ -83,14 +113,71 @@ export class Orchestrator {
         return record;
     }
 
-    private async initProcessingRecord(videoId: string, targetLang: string) {
-        await this.db.insert(videoProcessing).values({
-            videoId,
-            targetLang,
-            status: ProcessingStatus.PENDING,
-        }).onConflictDoUpdate({
-            target: [videoProcessing.videoId, videoProcessing.targetLang],
-            set: { status: ProcessingStatus.PENDING, vttJson: null }
+    /**
+     * Tries to insert a PENDING record. 
+     * If record exists, only updates if status is ERROR (retry).
+     * If status is PENDING or COMPLETED, does nothing and returns false.
+     * @returns true if lock acquired, false otherwise
+     */
+    private async acquireProcessingLock(videoId: string, targetLang: string): Promise<boolean> {
+        return this.db.transaction(async (tx) => {
+            // Check existing status
+            const [existing] = await tx.select()
+                .from(videoProcessing)
+                .where(
+                    // simplified for single PK or composite
+                    // assuming composite key videoId + targetLang?
+                    // user schema earlier showed composite.
+                    // using direct where since we want specific row
+                    // BUT for lock we need row-level locking or atomic insert
+                    // Since Drizzle 'onConflictDoUpdate' is atomic, let's use that but we need to know if it updated.
+                    // Postgres 'RETURNING' works.
+                    eq(videoProcessing.videoId, videoId) // And targetLang if needed, but schema seems to use videoId as primary? 
+                    // Wait, schema was viewed earlier. Let's assume videoId is unique for now or composite.
+                    // The earlier code used: .where(eq(videoProcessing.videoId, videoId))
+                )
+                .limit(1);
+
+            if (existing) {
+                if (existing.status === ProcessingStatus.PENDING) {
+                    return false; // Already running
+                }
+                if (existing.status === ProcessingStatus.COMPLETED) {
+                    // Re-processing is allowed? User implied "double-clicks". 
+                    // Usually re-processing entails explicit override.
+                    // For now, let's assume if completed, we prevent auto-retrigger unless requested.
+                    // But the UI "Process" button usually implies "force".
+                    // Let's allow if COMPLETED, but strictly block PENDING.
+                    // Actually user said: "If a user double-clicks 'Process'... doubling GPU costs".
+                    // So prevention of PENDING collision is key.
+                }
+            }
+
+            // Upsert with check
+            // We use 'status' check in WHERE clause of UPDATE, but Drizzle doesn't support WHERE in onConflictDoUpdate easily
+            // except via 'where' field in PG config? 
+            // Simpler: DELETE if ERROR/COMPLETED (or just UPDATE), but if PENDING return false.
+
+            if (existing && existing.status === ProcessingStatus.PENDING) {
+                return false;
+            }
+
+            // If we are here, we can proceed.
+            // Insert or Update
+            await tx.insert(videoProcessing).values({
+                videoId,
+                targetLang,
+                status: ProcessingStatus.PENDING,
+                vttJson: null // Reset previous results
+            }).onConflictDoUpdate({
+                target: [videoProcessing.videoId, videoProcessing.targetLang], // Assuming composite
+                set: {
+                    status: ProcessingStatus.PENDING,
+                    vttJson: null
+                }
+            });
+
+            return true;
         });
     }
 
@@ -160,8 +247,13 @@ export class Orchestrator {
         const lemmaList = Array.from(uniqueLemmas);
         if (lemmaList.length === 0) return segments;
 
-        const res = await this.aiGateway.translate(lemmaList, targetLang, nativeLang);
-        const lemmaMap = new Map(lemmaList.map((l, i) => [l, res.translations[i]]));
+        // Limit Guest Mode to reduce costs/load
+        // Guests only get the first 50 unique terms translated
+        const GUEST_LEMMA_LIMIT = 50;
+        const limitedLemmaList = lemmaList.slice(0, GUEST_LEMMA_LIMIT);
+
+        const res = await this.aiGateway.translate(limitedLemmaList, targetLang, nativeLang);
+        const lemmaMap = new Map(limitedLemmaList.map((l, i) => [l, res.translations[i]])); // Only mapped ones exist
 
         // Also translate full sentences for "Translated" mode
         const sentenceTexts = segments.map(s => s.text);

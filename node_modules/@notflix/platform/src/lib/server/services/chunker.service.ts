@@ -57,19 +57,17 @@ function extractCandidates(vttData: VttSegment[], startTime: number, endTime: nu
     const candidates: CandidateWithMetadata[] = [];
     const CONTENT_POS = ['NOUN', 'VERB', 'ADJ'];
 
-
+    // Optimization: find start index efficiently or just iterate until end
+    // Assuming vttData is sorted by start time (standard VTT)
 
     for (const segment of vttData) {
-        // Include segments that START within the chunk window
-        if (segment.start < startTime || segment.start >= endTime) {
-            continue;
-        }
-        if (!segment.tokens) {
+        // If segment ends before window starts, skip (could optimize skip with findIndex)
+        if (segment.end < startTime) continue;
 
-            continue;
-        }
+        // If segment starts after window ends, we are done
+        if (segment.start >= endTime) break;
 
-
+        if (!segment.tokens) continue;
 
         for (const token of segment.tokens) {
             if (CONTENT_POS.includes(token.pos)) {

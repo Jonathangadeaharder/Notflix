@@ -43,17 +43,13 @@ export enum ProcessingStatus {
 
 /**
  * Converts a local file path to a path that the AI Service can understand.
- * When running locally, translates Windows/Mac paths to Docker container paths.
+ * Relies on MEDIA_ROOT_INTERNAL env var to be consistent across services.
  */
 export function toAiServicePath(localPath: string): string {
-    if (CONFIG.IS_DOCKER) {
-        // Both services in Docker - path is already correct
-        return localPath;
-    }
-
-    // Extract filename from the local path
     const filename = path.basename(localPath);
+    // Default to the standard Docker internal path if env var not set
+    const mediaRootInternal = env.MEDIA_ROOT_INTERNAL || '/app/media/uploads';
 
-    // Return path as AI Service (in Docker) expects it
-    return `${CONFIG.AI_SERVICE_MEDIA_PREFIX}/${filename}`;
+    // Simple, robust concatenation. No magic OS detection.
+    return `${mediaRootInternal}/${filename}`;
 }

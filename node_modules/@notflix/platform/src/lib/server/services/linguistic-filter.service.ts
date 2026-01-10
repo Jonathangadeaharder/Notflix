@@ -16,7 +16,7 @@ export type FilteredSegment = {
 };
 
 export class SmartFilter {
-    constructor(private db = defaultDb) {}
+    constructor(private db = defaultDb) { }
 
     /**
      * Bulk version of filterSegment to reduce DB roundtrips.
@@ -42,8 +42,11 @@ export class SmartFilter {
     }
 
     private classifyTokens(tokens: TokenAnalysis[], knownSet: Set<string>): FilteredSegment {
-        const contentTokens = tokens.filter(t => !t.is_stop && t.pos !== 'PUNCT');
-        
+        // Include functional categories that are often stop words but hard for learners (Pronouns, Prepositions)
+        const contentTokens = tokens.filter(t =>
+            (!t.is_stop || ['PRON', 'ADP'].includes(t.pos)) && t.pos !== 'PUNCT'
+        );
+
         const enrichedTokens = tokens.map(t => ({
             ...t,
             isKnown: t.is_stop || t.pos === 'PUNCT' || knownSet.has(t.lemma)
@@ -51,18 +54,18 @@ export class SmartFilter {
 
         const unknownCount = contentTokens.filter(t => !knownSet.has(t.lemma)).length;
         const totalContentCount = contentTokens.length;
-        
+
         let classification = SegmentClassification.EASY;
-        
+
         if (totalContentCount > 0) {
             const unknownRatio = unknownCount / totalContentCount;
-            
-            const isLearning = unknownCount > 0 && 
-                               unknownCount <= LIMITS.MAX_UNKNOWN_FOR_LEARNING && 
-                               unknownRatio <= LIMITS.MAX_RATIO_FOR_LEARNING;
-            
-            const isHard = unknownCount > LIMITS.MAX_UNKNOWN_FOR_LEARNING || 
-                           unknownRatio > LIMITS.MAX_RATIO_FOR_LEARNING;
+
+            const isLearning = unknownCount > 0 &&
+                unknownCount <= LIMITS.MAX_UNKNOWN_FOR_LEARNING &&
+                unknownRatio <= LIMITS.MAX_RATIO_FOR_LEARNING;
+
+            const isHard = unknownCount > LIMITS.MAX_UNKNOWN_FOR_LEARNING ||
+                unknownRatio > LIMITS.MAX_RATIO_FOR_LEARNING;
 
             if (isLearning) {
                 classification = SegmentClassification.LEARNING;
