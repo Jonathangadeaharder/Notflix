@@ -38,6 +38,26 @@ const ENV = {
 function log(msg) { console.log(`\x1b[36m[Manager]\x1b[0m ${msg}`); }
 function error(msg) { console.error(`\x1b[31m[Error]\x1b[0m ${msg}`); }
 
+function checkPodmanMachine() {
+    if (IS_WIN || IS_WSL) {
+        let podman = 'podman';
+        try {
+            execSync('podman.exe --version', { stdio: 'ignore' });
+            podman = 'podman.exe';
+        } catch (e) {
+            try { execSync('podman --version', { stdio: 'ignore' }); } catch (e) { return; }
+        }
+
+        try {
+            const output = execSync(`${podman} machine list --format "{{.Running}}"`, { stdio: 'pipe' }).toString();
+            if (!output.includes('true')) {
+                log('Starting Podman machine...');
+                execSync(`${podman} machine start`, { stdio: 'inherit' });
+            }
+        } catch (e) { /* ignore */ }
+    }
+}
+
 function getDockerCmd() {
     if (IS_WSL || IS_WIN) {
         try { execSync('docker.exe --version', { stdio: 'ignore' }); return 'docker.exe'; } catch (e) { return 'docker'; }
@@ -75,6 +95,8 @@ async function main() {
 
     await killPort(8000);
     await killPort(5173);
+
+    checkPodmanMachine();
 
     const docker = getDockerCmd();
     try {
