@@ -8,22 +8,20 @@ declare global {
 		}
 		interface Locals {
 			auth: () => Promise<BaseSession | null>;
-			user: BaseUser | null;
-			session: BaseSession | null;
 		}
 		interface PageData {
 			user: BaseUser | null;
 			session: BaseSession | null;
 		}
 		interface ActionData {
-            success?: boolean;
-            errors?: Record<string, string[]>;
-            data?: Record<string, unknown>;
-        }
+			success?: boolean;
+			errors?: Record<string, string[]>;
+			data?: Record<string, unknown>;
+		}
 		interface Platform {
 			env?: Record<string, string>;
 		}
 	}
 }
 
-export {};
+export { };

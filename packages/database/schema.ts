@@ -1,9 +1,9 @@
-import { pgTable, text, timestamp, boolean, uuid, integer, pgEnum, primaryKey, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, uuid, integer, pgEnum, primaryKey, jsonb, index } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 
 // --- AUTHENTICATION (Better Auth Standard) ---
 export const user = pgTable("user", {
-    id: text("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").notNull(),
@@ -19,8 +19,8 @@ export type User = InferSelectModel<typeof user>;
 export type NewUser = InferInsertModel<typeof user>;
 
 export const session = pgTable("session", {
-    id: text("id").primaryKey(),
-    userId: text("user_id").references(() => user.id).notNull(),
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => user.id).notNull(),
     expiresAt: timestamp("expires_at").notNull(),
     token: text("token").notNull().unique(),
     createdAt: timestamp("created_at").notNull(),
@@ -30,10 +30,10 @@ export const session = pgTable("session", {
 });
 
 export const account = pgTable("account", {
-    id: text("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
-    userId: text("user_id").references(() => user.id).notNull(),
+    userId: uuid("user_id").references(() => user.id).notNull(),
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
@@ -44,7 +44,7 @@ export const account = pgTable("account", {
 });
 
 export const verification = pgTable("verification", {
-    id: text("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
     expiresAt: timestamp("expires_at").notNull(),
@@ -74,6 +74,7 @@ export type DbTokenAnalysis = {
     lemma: string;
     pos: string;
     is_stop: boolean;
+    whitespace?: string;
     translation?: string;
     isKnown?: boolean;
 };
@@ -101,10 +102,23 @@ export const videoProcessing = pgTable("video_processing", {
 export type VideoProcessing = InferSelectModel<typeof videoProcessing>;
 export type NewVideoProcessing = InferInsertModel<typeof videoProcessing>;
 
+export const videoLemmas = pgTable("video_lemmas", {
+    videoId: uuid("video_id").references(() => video.id).notNull(),
+    lemma: text("lemma").notNull(),
+    count: integer("count").notNull(),
+}, (table) => {
+    return {
+        pk: primaryKey({ columns: [table.videoId, table.lemma] }),
+        lemmaIdx: index("video_lemmas_lemma_idx").on(table.lemma)
+    };
+});
+
+export type VideoLemma = InferSelectModel<typeof videoLemmas>;
+
 export const vocabLevels = pgEnum("vocab_level", ["A1", "A2", "B1", "B2", "C1", "C2"]);
 
 export const knownWords = pgTable("known_words", {
-    userId: text("user_id").references(() => user.id).notNull(),
+    userId: uuid("user_id").references(() => user.id).notNull(),
     lemma: text("lemma").notNull(),     // The dictionary form
     lang: text("lang").notNull(),       // e.g., "es"
     level: vocabLevels("level"),        // Source (CSV or Custom)

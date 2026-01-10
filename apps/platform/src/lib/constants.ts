@@ -5,6 +5,13 @@ export const UI = {
     INDENT_SPACES: 4,
 } as const;
 
+export const LANGUAGES = {
+    DEFAULT_TARGET: 'es',
+    DEFAULT_NATIVE: 'en',
+    SUPPORTED_TARGETS: ['es'],
+    SUPPORTED_NATIVES: ['en'],
+} as const;
+
 export const HTTP_STATUS = {
     OK: 200,
     SEE_OTHER: 303,

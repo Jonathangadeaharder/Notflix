@@ -1,10 +1,11 @@
 import { CONFIG } from '../infrastructure/config';
-import type { 
-    IAiGateway, 
-    TranscriptionResponse, 
-    FilterResponse, 
-    TranslationResponse, 
-    ThumbnailResponse 
+import { getRequestId } from '../request-context';
+import type {
+    IAiGateway,
+    TranscriptionResponse,
+    FilterResponse,
+    TranslationResponse,
+    ThumbnailResponse
 } from '../domain/interfaces';
 
 export class AiServiceError extends Error {
@@ -16,10 +17,15 @@ export class AiServiceError extends Error {
 
 export class RealAiGateway implements IAiGateway {
     private getHeaders() {
-        return {
+        const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             'X-API-Key': CONFIG.AI_SERVICE_API_KEY
         };
+        const requestId = getRequestId();
+        if (requestId) {
+            headers['X-Request-ID'] = requestId;
+        }
+        return headers;
     }
 
     private async handleResponse(res: Response, context: string) {

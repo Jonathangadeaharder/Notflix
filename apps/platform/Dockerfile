@@ -2,25 +2,30 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy shared packages first (dependencies)
-# We assume the build context is the repository root
+# Copy monorepo manifests
+COPY package.json package-lock.json ./
+COPY packages/database/package.json packages/database/
+COPY apps/platform/package.json apps/platform/
+
+# Install dependencies for the specific workspace and its dependencies
+# This uses the root lockfile for deterministic builds
+RUN npm ci --workspace=@notflix/platform --workspace=@notflix/database --include=dev && npm cache clean --force
+
+# Setup Web App Configs (required for svelte-kit sync in 'prepare' script)
+COPY apps/platform/svelte.config.js apps/platform/
+COPY apps/platform/vite.config.ts apps/platform/
+COPY apps/platform/tsconfig.json apps/platform/
+
+# Copy source code
 COPY packages/database packages/database
+COPY apps/platform apps/platform
 
-# Install dependencies for packages/database
-WORKDIR /app/packages/database
-RUN npm install
-
-# Setup Web App
+# Set working directory to the app
 WORKDIR /app/apps/platform
-COPY apps/platform/package.json .
-# SKIP: COPY apps/platform/package-lock.json .
-RUN npm install --legacy-peer-deps && npm cache clean --force
-
-# Copy source
-COPY apps/platform .
 
 # Create non-root user for security
 RUN useradd -m appuser && chown -R appuser /app
+RUN chown -R appuser /app
 USER appuser
 
 # Expose Vite port

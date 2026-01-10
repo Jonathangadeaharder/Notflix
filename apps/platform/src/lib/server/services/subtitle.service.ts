@@ -25,7 +25,7 @@ export class SubtitleService {
             // Use full sentence translation if available (populated by Orchestrator)
             // Fallback to token reconstruction if missing (legacy/partial)
             const translatedText = (seg as any).translation || seg.tokens
-                .map((t: DbTokenAnalysis & { translation?: string }) => t.translation || t.text)
+                .map((t: DbTokenAnalysis & { translation?: string }) => (t.translation || t.text) + (t.whitespace || ''))
                 .join('');
 
             let text = '';
