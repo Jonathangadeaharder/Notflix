@@ -8,10 +8,9 @@
     import * as Card from "$lib/components/ui/card";
     import { enhance } from "$app/forms";
     import { invalidate } from "$app/navigation";
+    import { TIME } from "$lib/constants";
 
     let { data } = $props();
-
-    const POLLING_INTERVAL_MS = 3000;
 
     onMount(() => {
         const interval = setInterval(async () => {
@@ -24,7 +23,7 @@
             if (hasPending) {
                 await invalidate("app:videos");
             }
-        }, POLLING_INTERVAL_MS);
+        }, TIME.POLLING_INTERVAL_MS);
 
         return () => clearInterval(interval);
     });

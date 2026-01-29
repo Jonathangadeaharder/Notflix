@@ -6,6 +6,31 @@
     "packages/*"
   ],
   "devDependencies": {
-    "drizzle-orm": "0.45.1"
+    "drizzle-orm": "0.45.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "lint": "npm run lint --workspaces --if-present",
+    "check": "npm run check --workspaces --if-present"
+  },
+  "lint-staged": {
+    "apps/platform/**/*.{ts,svelte}": [
+      "eslint --config apps/platform/eslint.config.js --fix",
+      "prettier --write"
+    ],
+    "apps/ai-service/**/*.py": [
+      "ruff check --fix",
+      "ruff format"
+    ],
+    "packages/database/**/*.ts": [
+      "eslint --config packages/database/eslint.config.js --fix",
+      "prettier --write"
+    ],
+    "packages/shared-types/**/*.ts": [
+      "eslint --config packages/shared-types/eslint.config.js --fix",
+      "prettier --write"
+    ]
   }
 }

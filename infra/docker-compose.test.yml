@@ -8,7 +8,7 @@ services:
       - TEST_GAME_INTERVAL=0.1
       - RUNNING_IN_DOCKER=true
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:5173/api/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:5173/api/health || exit 1"]
       interval: 5s
       timeout: 10s
       retries: 12
@@ -16,7 +16,7 @@ services:
 
   ai-service:
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 5s
       timeout: 10s
       retries: 12
@@ -24,7 +24,7 @@ services:
 
   postgres:
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U admin -d main_db" ]
+      test: ["CMD-SHELL", "pg_isready -U admin -d main_db"]
       interval: 5s
       timeout: 5s
       retries: 10

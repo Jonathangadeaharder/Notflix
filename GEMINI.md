@@ -50,3 +50,6 @@ The following files are **Read-Only** to you. Do not attempt to edit them unless
 ## 4. Testing Strategy
 - **E2E:** Playwright (orchestrated by custom runner).
 - **Unit:** Vitest (Frontend/Node), Pytest (Brain).
+
+## 5. Deferred Features (Do Not Implement Yet)
+- **Rate Limiting:** Not needed at early stage. Defer until production readiness.
