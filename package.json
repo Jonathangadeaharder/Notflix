@@ -8,7 +8,8 @@
   "devDependencies": {
     "drizzle-orm": "0.45.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7"
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1"
   },
   "scripts": {
     "prepare": "husky",
