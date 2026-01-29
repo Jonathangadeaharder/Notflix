@@ -8,8 +8,8 @@
 
 We define **Interfaces** (Ports) for all heavy infrastructure. The Application Logic only talks to these Interfaces, never to the concrete libraries directly.
 
-  * **Production:** We inject the **Real Adapter** (e.g., `FasterWhisperAdapter`).
-  * **Testing:** We inject a **Mock Adapter** (e.g., `GoldFileAdapter`).
+- **Production:** We inject the **Real Adapter** (e.g., `FasterWhisperAdapter`).
+- **Testing:** We inject a **Mock Adapter** (e.g., `GoldFileAdapter`).
 
 ## 2. The Host (SvelteKit) Design
 
@@ -73,14 +73,15 @@ We centralize instance creation in `src/lib/server/container.ts`.
 
 ```typescript
 // src/lib/server/container.ts
-import { RealAiGateway } from './adapters/real-ai-gateway';
-import { MockAiGateway } from './adapters/mock-ai-gateway';
-import { Orchestrator } from './orchestrator';
-import { SmartFilter } from './filter';
-import { SubtitleService } from './services/subtitle.service';
-import { db } from './db';
+import { RealAiGateway } from "./adapters/real-ai-gateway";
+import { MockAiGateway } from "./adapters/mock-ai-gateway";
+import { Orchestrator } from "./orchestrator";
+import { SmartFilter } from "./filter";
+import { SubtitleService } from "./services/subtitle.service";
+import { db } from "./db";
 
-const useMock = process.env.NODE_ENV === 'test' || process.env.USE_MOCK_AI === 'true';
+const useMock =
+  process.env.NODE_ENV === "test" || process.env.USE_MOCK_AI === "true";
 
 // Ports/Adapters
 export const aiGateway = useMock ? new MockAiGateway() : new RealAiGateway();
@@ -93,7 +94,7 @@ export const subtitleService = new SubtitleService(db);
 export const orchestrator = new Orchestrator(aiGateway, db, smartFilter);
 ```
 
------
+---
 
 ## 3. The Brain (Python) Design
 

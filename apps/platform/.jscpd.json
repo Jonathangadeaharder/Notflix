@@ -12,12 +12,6 @@
     "**/src/routes/api/debug/**",
     "**/package-lock.json"
   ],
-  "format": [
-    "typescript",
-    "javascript",
-    "svelte",
-    "css",
-    "scss"
-  ],
+  "format": ["typescript", "javascript", "svelte", "css", "scss"],
   "absolute": true
 }

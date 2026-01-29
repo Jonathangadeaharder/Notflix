@@ -19,7 +19,7 @@ class OpusTranslator(ITranslator):
     def __init__(self, device=None):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self._models = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def _get_model(self, source_lang: str, target_lang: str):
         # Normalize

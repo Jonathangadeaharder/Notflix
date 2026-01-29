@@ -14,9 +14,7 @@
   "paths": {
     "/generate_thumbnail": {
       "post": {
-        "tags": [
-          "Media"
-        ],
+        "tags": ["Media"],
         "summary": "Generate Thumbnail",
         "description": "Generates a thumbnail from a video file using FFmpeg.",
         "operationId": "generate_thumbnail_generate_thumbnail_post",
@@ -61,9 +59,7 @@
     },
     "/transcribe": {
       "post": {
-        "tags": [
-          "AI"
-        ],
+        "tags": ["AI"],
         "summary": "Transcribe",
         "description": "Transcribes an audio file using Faster-Whisper.",
         "operationId": "transcribe_transcribe_post",
@@ -108,9 +104,7 @@
     },
     "/translate": {
       "post": {
-        "tags": [
-          "AI"
-        ],
+        "tags": ["AI"],
         "summary": "Translate",
         "description": "Translates a batch of texts using MarianMT models.",
         "operationId": "translate_translate_post",
@@ -155,9 +149,7 @@
     },
     "/filter": {
       "post": {
-        "tags": [
-          "AI"
-        ],
+        "tags": ["AI"],
         "summary": "Filter Text",
         "description": "Analyzes a batch of texts using SpaCy for linguistic filtering.",
         "operationId": "filter_text_filter_post",
@@ -202,9 +194,7 @@
     },
     "/health": {
       "get": {
-        "tags": [
-          "System"
-        ],
+        "tags": ["System"],
         "summary": "Health",
         "description": "Health check endpoint.",
         "operationId": "health_health_get",
@@ -244,9 +234,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "texts"
-        ],
+        "required": ["texts"],
         "title": "FilterRequest"
       },
       "FilterResponse": {
@@ -263,9 +251,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "results"
-        ],
+        "required": ["results"],
         "title": "FilterResponse"
       },
       "HTTPValidationError": {
@@ -297,11 +283,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "start",
-          "end",
-          "text"
-        ],
+        "required": ["start", "end", "text"],
         "title": "Segment"
       },
       "ThumbnailRequest": {
@@ -312,9 +294,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "file_path"
-        ],
+        "required": ["file_path"],
         "title": "ThumbnailRequest"
       },
       "ThumbnailResponse": {
@@ -325,9 +305,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "thumbnail_path"
-        ],
+        "required": ["thumbnail_path"],
         "title": "ThumbnailResponse"
       },
       "TokenAnalysis": {
@@ -350,12 +328,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "text",
-          "lemma",
-          "pos",
-          "is_stop"
-        ],
+        "required": ["text", "lemma", "pos", "is_stop"],
         "title": "TokenAnalysis"
       },
       "TranscriptionRequest": {
@@ -371,9 +344,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "file_path"
-        ],
+        "required": ["file_path"],
         "title": "TranscriptionRequest"
       },
       "TranscriptionResponse": {
@@ -395,11 +366,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "segments",
-          "language",
-          "language_probability"
-        ],
+        "required": ["segments", "language", "language_probability"],
         "title": "TranscriptionResponse"
       },
       "TranslationRequest": {
@@ -423,9 +390,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "texts"
-        ],
+        "required": ["texts"],
         "title": "TranslationRequest"
       },
       "TranslationResponse": {
@@ -439,9 +404,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "translations"
-        ],
+        "required": ["translations"],
         "title": "TranslationResponse"
       },
       "ValidationError": {
@@ -470,11 +433,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError"
       }
     },

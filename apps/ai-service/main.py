@@ -2,7 +2,6 @@ import asyncio
 import uuid
 import os
 import shlex
-import subprocess
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -19,7 +18,7 @@ import torch
 # Silence TensorFlow oneDNN warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-from core.interfaces import Segment, TokenAnalysis
+from core.interfaces import Segment, TokenAnalysis, TranscriptionResult
 from core.transcriber import WhisperTranscriber
 from core.filter import SpacyFilter
 from core.translator import OpusTranslator
@@ -99,10 +98,34 @@ TranslatorDep = Annotated[OpusTranslator, Depends(get_translator)]
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     logger.info("startup_models_loading")
-    # Using 'base' model for better non-English performance as requested
-    brain_state.transcriber = WhisperTranscriber(model_size="base")
-    brain_state.filter = SpacyFilter()
-    brain_state.translator = OpusTranslator()
+    if os.getenv("AI_SERVICE_TEST_MODE") == "1":
+        class DummyTranscriber:
+            def transcribe(self, _file_path: str, language: str = "es"):
+                return TranscriptionResult(
+                    segments=[Segment(start=0, end=1, text="test")],
+                    language=language,
+                    language_probability=1.0
+                )
+
+        class DummyFilter:
+            def analyze(self, text: str, _language: str):
+                return [TokenAnalysis(text=text, lemma=text, pos="NOUN", is_stop=False)]
+
+            def analyze_batch(self, texts: list[str], _language: str):
+                return [[TokenAnalysis(text=t, lemma=t, pos="NOUN", is_stop=False)] for t in texts]
+
+        class DummyTranslator:
+            def translate(self, texts: list[str], _source_lang: str, _target_lang: str):
+                return [text for text in texts]
+
+        brain_state.transcriber = DummyTranscriber()
+        brain_state.filter = DummyFilter()
+        brain_state.translator = DummyTranslator()
+    else:
+        # Using 'base' model for better non-English performance as requested
+        brain_state.transcriber = WhisperTranscriber(model_size="base")
+        brain_state.filter = SpacyFilter()
+        brain_state.translator = OpusTranslator()
     logger.info("startup_models_loaded")
     yield
     logger.info("shutdown_cleanup")
@@ -255,7 +278,7 @@ async def generate_thumbnail(req: ThumbnailRequest):
             
     except Exception as e:
         logger.error("ffmpeg_execution_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     return ThumbnailResponse(thumbnail_path=thumb_path)
 
@@ -321,4 +344,3 @@ async def health():
 if __name__ == "__main__":
     # S104: Binding to all interfaces is required for Docker containerization
     uvicorn.run(app, host="0.0.0.0", port=8000) # noqa: S104
-

@@ -1,4 +1,5 @@
 from typing import Optional
+import os
 import torch
 import structlog
 import threading
@@ -9,9 +10,13 @@ logger = structlog.get_logger()
 
 class WhisperTranscriber(ITranscriber):
     def __init__(self, model_size="tiny", device=None, compute_type="float32"):
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        self._test_mode = os.getenv("AI_SERVICE_TEST_MODE") == "1"
+        if self._test_mode:
+            self.model = None
+        else:
+            if device is None:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
         self._lock = threading.Lock()
 
     def transcribe(
@@ -20,6 +25,12 @@ class WhisperTranscriber(ITranscriber):
         language: Optional[str] = None
     ) -> TranscriptionResult:
         with self._lock:
+            if self._test_mode:
+                return TranscriptionResult(
+                    segments=[Segment(start=0, end=1, text="test")],
+                    language=language or "en",
+                    language_probability=1.0
+                )
             segments, info = self.model.transcribe(
                 file_path, 
                 language=language, 
