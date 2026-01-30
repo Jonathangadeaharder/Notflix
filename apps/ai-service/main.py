@@ -303,12 +303,43 @@ def transcribe(
     )
 
     # Validate and normalize the requested file path to prevent directory traversal.
+    # We must sanitize user input before using it in any path operations.
     try:
-        candidate_path = (AUDIO_BASE_DIR / req.file_path).resolve()
-        # Ensure the resolved path is within the configured audio base directory.
+        # Validate non-empty input
+        if not req.file_path:
+            logger.error("invalid_file_path", path=req.file_path, reason="empty_path")
+            raise ValueError("Empty file path")
+        
+        # Convert to Path and ensure it's a relative path
+        user_path = Path(req.file_path)
+        if user_path.is_absolute():
+            logger.error("invalid_file_path", path=req.file_path, reason="absolute_path")
+            raise ValueError("Absolute paths not allowed")
+        
+        # Construct and resolve the full path (resolve() handles .., ., symlinks)
+        candidate_path = (AUDIO_BASE_DIR / user_path).resolve()
+        
+        # Ensure the resolved path is within the configured audio base directory
+        # This will raise ValueError if the path escapes AUDIO_BASE_DIR
         candidate_path.relative_to(AUDIO_BASE_DIR)
-    except (TypeError, ValueError):
-        logger.error("invalid_file_path", path=req.file_path)
+    except ValueError as e:
+        # Determine the specific reason for better security monitoring
+        error_msg = str(e).lower()
+        if "empty" in error_msg:
+            reason = "empty_path"
+        elif "absolute" in error_msg:
+            reason = "absolute_path"
+        else:
+            # relative_to raises ValueError when path is not within base
+            reason = "path_traversal"
+            logger.error("invalid_file_path", path=req.file_path, reason=reason, error=str(e))
+        
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path."
+        )
+    except (TypeError, OSError) as e:
+        logger.error("invalid_file_path", path=req.file_path, reason="filesystem_error", error=str(e))
         raise HTTPException(
             status_code=400,
             detail="Invalid file path."
