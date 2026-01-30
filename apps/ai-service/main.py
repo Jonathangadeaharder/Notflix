@@ -320,12 +320,26 @@ def transcribe(
         candidate_path = (AUDIO_BASE_DIR / user_path).resolve()
         
         # Ensure the resolved path is within the configured audio base directory
-        try:
-            candidate_path.relative_to(AUDIO_BASE_DIR)
-        except ValueError:
-            logger.error("invalid_file_path", path=req.file_path, reason="path_traversal")
-            raise ValueError("Path traversal detected")
-    except (TypeError, ValueError, OSError) as e:
+        # This will raise ValueError if the path escapes AUDIO_BASE_DIR
+        candidate_path.relative_to(AUDIO_BASE_DIR)
+    except ValueError as e:
+        # Determine the specific reason for better security monitoring
+        error_msg = str(e).lower()
+        if "empty" in error_msg:
+            reason = "empty_path"
+        elif "absolute" in error_msg:
+            reason = "absolute_path"
+        else:
+            # relative_to raises ValueError when path is not within base
+            reason = "path_traversal"
+            logger.error("invalid_file_path", path=req.file_path, reason=reason, error=str(e))
+        
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path."
+        )
+    except (TypeError, OSError) as e:
+        logger.error("invalid_file_path", path=req.file_path, reason="filesystem_error", error=str(e))
         raise HTTPException(
             status_code=400,
             detail="Invalid file path."
