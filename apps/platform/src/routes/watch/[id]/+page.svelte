@@ -91,7 +91,7 @@
         videoElement?.play().catch((err) => console.error("Play failed:", err));
     }
 
-    function drawHeatmap(canvas: HTMLCanvasElement, heatmap: any[]) {
+    function renderHeatmap(canvas: HTMLCanvasElement, heatmap: HeatmapSegment[]) {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
@@ -114,11 +114,17 @@
 
             ctx.fillRect(startX, 0, w, height);
         }
-
-        return {
-            update(newHeatmap: any[]) {
-                drawHeatmap(canvas, newHeatmap);
-            },
+    }
+    
+    interface HeatmapSegment {
+        start: number;
+        end: number;
+        type: string;
+    }
+    
+    function heatmapAttachment(heatmap: HeatmapSegment[]) {
+        return (canvas: HTMLCanvasElement) => {
+            renderHeatmap(canvas, heatmap);
         };
     }
 </script>
@@ -211,7 +217,7 @@
                         width="1000"
                         height="16"
                         class="w-full h-full block"
-                        use:drawHeatmap={data.heatmap}
+                        {@attach heatmapAttachment(data.heatmap)}
                     ></canvas>
                 </div>
 
