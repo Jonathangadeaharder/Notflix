@@ -18,6 +18,10 @@ import torch
 # Silence TensorFlow oneDNN warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
+# Base directory for audio files used by the transcribe endpoint.
+# This constrains user-supplied paths to a safe root.
+AUDIO_BASE_DIR = Path(os.environ.get("AUDIO_BASE_DIR", "/data/audio")).resolve()
+
 from core.interfaces import Segment, TokenAnalysis, TranscriptionResult
 from core.transcriber import WhisperTranscriber
 from core.filter import SpacyFilter
@@ -297,13 +301,28 @@ def transcribe(
         endpoint="/transcribe", 
         file_path=req.file_path
     )
-    
-    # Manual check for 500
-    if not os.path.exists(req.file_path):
-        logger.error("file_not_found_system_error", path=req.file_path)
-        raise HTTPException(status_code=500, detail=f"File not found on disk: {req.file_path}")
 
-    result = transcriber.transcribe(req.file_path, req.language)
+    # Validate and normalize the requested file path to prevent directory traversal.
+    try:
+        candidate_path = (AUDIO_BASE_DIR / req.file_path).resolve()
+        # Ensure the resolved path is within the configured audio base directory.
+        candidate_path.relative_to(AUDIO_BASE_DIR)
+    except (TypeError, ValueError):
+        logger.error("invalid_file_path", path=req.file_path)
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path."
+        )
+
+    # Manual check for 500
+    if not os.path.exists(candidate_path):
+        logger.error("file_not_found_system_error", path=str(candidate_path))
+        raise HTTPException(
+            status_code=500,
+            detail=f"File not found on disk: {candidate_path}"
+        )
+
+    result = transcriber.transcribe(str(candidate_path), req.language)
     return TranscriptionResponse(
         segments=result.segments,
         language=result.language,
