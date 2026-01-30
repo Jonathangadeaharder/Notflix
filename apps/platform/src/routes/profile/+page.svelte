@@ -15,8 +15,13 @@
     let { data, form }: Props = $props();
 
     // Manual form state using Svelte 5 runes
-    // Use writable $derived pattern (Svelte 5.25+)
-    let gameInterval = $derived(data.initialData.gameInterval);
+    // Initialize properly; component recreation on nav handles reset
+    let gameInterval = $state(data.initialData.gameInterval);
+
+    // Watch for data changes to reset state if needed (though usually nav handles this)
+    $effect(() => {
+        gameInterval = data.initialData.gameInterval;
+    });
 
     let isSubmitting = $state(false);
 
