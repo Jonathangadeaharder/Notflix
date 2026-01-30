@@ -18,6 +18,10 @@ import torch
 # Silence TensorFlow oneDNN warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
+# Base directory for audio files used by the transcribe endpoint.
+# This constrains user-supplied paths to a safe root.
+AUDIO_BASE_DIR = Path(os.environ.get("AUDIO_BASE_DIR", "/data/audio")).resolve()
+
 from core.interfaces import Segment, TokenAnalysis, TranscriptionResult
 from core.transcriber import WhisperTranscriber
 from core.filter import SpacyFilter
@@ -297,13 +301,80 @@ def transcribe(
         endpoint="/transcribe", 
         file_path=req.file_path
     )
-    
-    # Manual check for 500
-    if not os.path.exists(req.file_path):
-        logger.error("file_not_found_system_error", path=req.file_path)
-        raise HTTPException(status_code=500, detail=f"File not found on disk: {req.file_path}")
 
-    result = transcriber.transcribe(req.file_path, req.language)
+    # Validate and normalize the requested file path to prevent directory traversal.
+    # Only allow simple filenames and ensure the resolved path stays under AUDIO_BASE_DIR.
+    try:
+        raw_path = req.file_path
+
+        # Validate non-empty, non-whitespace input
+        if not raw_path or not str(raw_path).strip():
+            logger.error("invalid_file_path", path=raw_path, reason="empty_path")
+            raise ValueError("Empty file path")
+
+        # Disallow NUL bytes, which can be used to truncate paths at the OS level
+        if "\x00" in str(raw_path):
+            logger.error("invalid_file_path", path=raw_path, reason="null_byte")
+            raise ValueError("Invalid file path")
+
+        # Work with a Path object for safer inspection of components
+        input_path = Path(str(raw_path))
+
+        # Reject absolute paths
+        if input_path.is_absolute():
+            logger.error("invalid_file_path", path=raw_path, reason="absolute_path")
+            raise ValueError("Absolute paths not allowed")
+
+        # Only allow simple filenames with no directory components or traversal segments.
+        # This prevents the user from influencing directory structure under AUDIO_BASE_DIR.
+        if input_path.name != str(raw_path) or any(part in ("..", ".", "") for part in input_path.parts):
+            logger.error("invalid_file_path", path=raw_path, reason="invalid_components")
+            raise ValueError("Only simple filenames are allowed")
+
+        # Construct the full path using the sanitized filename and resolve it
+        candidate_path = (AUDIO_BASE_DIR / input_path.name).resolve()
+
+        # Final verification: ensure the resolved path is within AUDIO_BASE_DIR
+        # This will raise ValueError if the path escapes AUDIO_BASE_DIR
+        candidate_path.relative_to(AUDIO_BASE_DIR)
+        elif "null" in error_msg:
+            reason = "null_byte"
+    except ValueError as e:
+        # Determine the specific reason for better security monitoring
+        error_msg = str(e).lower()
+        if "empty" in error_msg:
+            reason = "empty_path"
+        elif "filename" in error_msg or "component" in error_msg:
+            reason = "invalid_components"
+        elif "absolute" in error_msg:
+            reason = "absolute_path"
+        elif "parent" in error_msg or "traversal" in error_msg:
+            reason = "path_traversal"
+        else:
+            # relative_to raises ValueError when path is not within base
+            reason = "path_traversal"
+        logger.error("invalid_file_path", path=req.file_path, reason=reason, error=str(e))
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path."
+        )
+    except (TypeError, OSError) as e:
+        logger.error("invalid_file_path", path=req.file_path, reason="filesystem_error", error=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path."
+        )
+
+    # Manual check for 500
+    if not os.path.exists(candidate_path):
+        logger.error("file_not_found_system_error", path=str(candidate_path))
+        raise HTTPException(
+            status_code=500,
+            detail=f"File not found on disk: {candidate_path}"
+        )
+
+    result = transcriber.transcribe(str(candidate_path), req.language)
     return TranscriptionResponse(
         segments=result.segments,
         language=result.language,
