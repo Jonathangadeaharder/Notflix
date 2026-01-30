@@ -303,12 +303,24 @@ def transcribe(
     )
 
     # Validate and normalize the requested file path to prevent directory traversal.
+    # We must sanitize user input before using it in any path operations.
     try:
-        candidate_path = (AUDIO_BASE_DIR / req.file_path).resolve()
-        # Ensure the resolved path is within the configured audio base directory.
+        # First, validate that file_path doesn't contain dangerous patterns
+        if not req.file_path or ".." in req.file_path:
+            raise ValueError("Invalid path component")
+        
+        # Convert to Path and ensure it's a relative path
+        user_path = Path(req.file_path)
+        if user_path.is_absolute():
+            raise ValueError("Absolute paths not allowed")
+        
+        # Now construct and resolve the full path
+        candidate_path = (AUDIO_BASE_DIR / user_path).resolve()
+        
+        # Ensure the resolved path is within the configured audio base directory
         candidate_path.relative_to(AUDIO_BASE_DIR)
-    except (TypeError, ValueError):
-        logger.error("invalid_file_path", path=req.file_path)
+    except (TypeError, ValueError, OSError) as e:
+        logger.error("invalid_file_path", path=req.file_path, error=str(e))
         raise HTTPException(
             status_code=400,
             detail="Invalid file path."
