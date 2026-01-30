@@ -7,6 +7,8 @@ export class PlayerPage {
   readonly swipeRightButton: Locator;
   readonly swipeLeftButton: Locator;
   readonly cardWord: Locator;
+  readonly subtitleContainer: Locator;
+  readonly subtitleBtn: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -15,6 +17,8 @@ export class PlayerPage {
     this.swipeRightButton = page.getByTestId("swipe-right");
     this.swipeLeftButton = page.getByTestId("swipe-left");
     this.cardWord = page.getByTestId("card-original");
+    this.subtitleContainer = page.getByTestId("subtitle-container");
+    this.subtitleBtn = page.getByTestId("subtitle-btn");
   }
 
   async waitForPlayback() {

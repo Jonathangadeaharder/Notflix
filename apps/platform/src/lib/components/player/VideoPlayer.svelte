@@ -68,7 +68,8 @@
 
     let currentSubtitle = $derived(
         subtitles.find(
-            (sub) => currentTime >= sub.start && currentTime <= sub.end,
+            (sub: Subtitle) =>
+                currentTime >= sub.start && currentTime <= sub.end,
         ) || null,
     );
 
