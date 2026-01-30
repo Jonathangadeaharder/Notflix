@@ -3,12 +3,12 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: notflix-db
-    ports: [ "5432:5432" ]
+    ports: ["5432:5432"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: ${POSTGRES_DB:-main_db}
-    volumes: [ "pg_data:/var/lib/postgresql/data" ]
+    volumes: ["pg_data:/var/lib/postgresql/data"]
 
   # The Host Platform (SvelteKit)
   platform:
@@ -16,7 +16,7 @@ services:
     build:
       context: ..
       dockerfile: apps/platform/Dockerfile
-    ports: [ "5173:5173" ]
+    ports: ["5173:5173"]
     volumes:
       - ../apps/platform:/app/apps/platform
       - ../packages/database:/app/packages/database
@@ -52,7 +52,7 @@ services:
       - PYTHONUNBUFFERED=1
       - LOGS_DIR=/app/logs
       - AI_SERVICE_API_KEY=dev_secret_key
-    ports: [ "8000:8000" ]
+    ports: ["8000:8000"]
     depends_on:
       - postgres
 

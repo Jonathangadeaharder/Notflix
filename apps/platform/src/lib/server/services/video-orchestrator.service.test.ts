@@ -1,130 +1,205 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import type { IAiGateway } from '../domain/interfaces';
-import type { SmartFilter } from './linguistic-filter.service';
-import { aiGateway } from '../infrastructure/container';
-import { db } from '../infrastructure/database';
-import { Orchestrator } from './video-orchestrator.service';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  type MockedFunction,
+} from "vitest";
+import type { IAiGateway } from "../domain/interfaces";
+import type { SmartFilter } from "./linguistic-filter.service";
+import { Orchestrator } from "./video-orchestrator.service";
+import { toAiServicePath } from "../infrastructure/config";
 
-// Mock dependencies
-vi.mock('../infrastructure/container', () => ({
-    aiGateway: {
-        transcribe: vi.fn(),
-        analyzeBatch: vi.fn(),
-        translate: vi.fn(),
-        generateThumbnail: vi.fn()
-    },
-    orchestrator: {},
-    smartFilter: {},
-    subtitleService: {}
-}));
+// Type for our mocked db
+interface MockedDb {
+  select: MockedFunction<() => typeof mockedDbChain>;
+  from: MockedFunction<() => typeof mockedDbChain>;
+  where: MockedFunction<() => typeof mockedDbChain>;
+  limit: MockedFunction<() => Promise<unknown[]>>;
+  insert: MockedFunction<() => typeof mockedDbChain>;
+  values: MockedFunction<() => typeof mockedDbChain>;
+  onConflictDoUpdate: MockedFunction<() => typeof mockedDbChain>;
+  update: MockedFunction<() => typeof mockedDbChain>;
+  set: MockedFunction<() => typeof mockedDbChain>;
+  transaction: MockedFunction<
+    (cb: (tx: MockedDb) => Promise<unknown>) => Promise<unknown>
+  >;
+}
 
-vi.mock('../infrastructure/database', () => ({
-    db: {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        onConflictDoUpdate: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        set: vi.fn().mockReturnThis(),
-    }
-}));
+const mockedDbChain = {
+  select: vi.fn().mockReturnThis(),
+  from: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  limit: vi.fn(),
+  insert: vi.fn().mockReturnThis(),
+  values: vi.fn().mockReturnThis(),
+  onConflictDoUpdate: vi.fn().mockReturnThis(),
+  update: vi.fn().mockReturnThis(),
+  set: vi.fn().mockReturnThis(),
+};
 
-const MOCK_TITLE = 'Test Video';
-const MOCK_TEXT = 'Hola mundo';
-const LANG_ES = 'es';
-const LANG_EN = 'en';
+const mockDb: MockedDb = {
+  select: vi.fn().mockReturnThis(),
+  from: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  limit: vi.fn(),
+  insert: vi.fn().mockReturnThis(),
+  values: vi.fn().mockReturnThis(),
+  onConflictDoUpdate: vi.fn().mockReturnThis(),
+  update: vi.fn().mockReturnThis(),
+  set: vi.fn().mockReturnThis(),
+  transaction: vi.fn(),
+};
 
-describe('VideoOrchestratorService', () => {
-    const mockVideoId = 'vid-123';
-    const mockFilePath = 'uploads/test.mp3';
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it('should complete the full processing pipeline for a guest user', async () => {
-        const mockedDb = db as unknown as { limit: { mockResolvedValueOnce: (val: unknown) => void }, set: Mock, update: Mock, where: Mock };
-
-        // Mock Database
-        mockedDb.limit.mockResolvedValueOnce([
-            { id: mockVideoId, filePath: mockFilePath, title: MOCK_TITLE }
-        ]);
-        
-        // Mock set for update check
-        mockedDb.set.mockReturnThis();
-        mockedDb.update.mockReturnThis();
-        mockedDb.where.mockReturnThis();
-
-        setupAiMocks(LANG_ES);
-
-        const orchestrator = new Orchestrator(aiGateway as unknown as IAiGateway, db as unknown as typeof db, {} as SmartFilter);
-
-        // --- ACT ---
-        await orchestrator.processVideo(mockVideoId, LANG_ES, LANG_EN);
-
-        // --- ASSERT ---
-        verifyPipelineCalls(mockFilePath, LANG_ES, LANG_EN);
-        
-        // Verify results were saved
-        expect(mockedDb.set).toHaveBeenCalledWith(expect.objectContaining({
-            status: 'COMPLETED',
-            vttJson: expect.arrayContaining([
-                expect.objectContaining({
-                    text: MOCK_TEXT,
-                    tokens: expect.arrayContaining([
-                        expect.objectContaining({ translation: 'Hello' })
-                    ])
-                })
-            ])
-        }));
-    });
-
-    it('should mark video as ERROR if any step fails', async () => {
-        const mockedDb = db as unknown as { limit: { mockResolvedValueOnce: (val: unknown) => void }, set: Mock, update: Mock, where: Mock };
-
-        mockedDb.limit.mockResolvedValueOnce([{ id: mockVideoId, filePath: 'bad.mp4', title: MOCK_TITLE }]);
-        vi.mocked(aiGateway.transcribe).mockRejectedValue(new Error('AI Offline'));
-
-        const orchestrator = new Orchestrator(aiGateway as unknown as IAiGateway, db as unknown as typeof db, {} as SmartFilter);
-
-        // --- ACT & ASSERT ---
-        await expect(orchestrator.processVideo(mockVideoId)).rejects.toThrow('AI Offline');
-        
-        expect(mockedDb.set).toHaveBeenCalledWith(expect.objectContaining({
-            status: 'ERROR'
-        }));
-    });
+// Create a fresh mock for each method that returns mockReturnThis
+Object.assign(mockDb, {
+  select: vi.fn(() => mockDb),
+  from: vi.fn(() => mockDb),
+  where: vi.fn(() => mockDb),
+  insert: vi.fn(() => mockDb),
+  values: vi.fn(() => mockDb),
+  onConflictDoUpdate: vi.fn(() => mockDb),
+  update: vi.fn(() => mockDb),
+  set: vi.fn(() => mockDb),
 });
 
-function setupAiMocks(es = LANG_ES) {
+const mockAiGateway = {
+  transcribe: vi.fn(),
+  analyzeBatch: vi.fn(),
+  translate: vi.fn(),
+  generateThumbnail: vi.fn(),
+};
+
+const MOCK_TITLE = "Test Video";
+const MOCK_TEXT = "Hola mundo";
+const LANG_ES = "es";
+const LANG_EN = "en";
+
+describe("VideoOrchestratorService", () => {
+  const mockVideoId = "vid-123";
+  const mockFilePath = "uploads/test.mp3";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Reset all mock implementations
+    mockDb.select.mockImplementation(() => mockDb);
+    mockDb.from.mockImplementation(() => mockDb);
+    mockDb.where.mockImplementation(() => mockDb);
+    mockDb.insert.mockImplementation(() => mockDb);
+    mockDb.values.mockImplementation(() => mockDb);
+    mockDb.onConflictDoUpdate.mockImplementation(() => mockDb);
+    mockDb.update.mockImplementation(() => mockDb);
+    mockDb.set.mockImplementation(() => mockDb);
+
+    mockDb.transaction.mockImplementation(async (callback) => {
+      return callback(mockDb);
+    });
+  });
+
+  it("should complete the full processing pipeline for a guest user", async () => {
+    // Setup DB mocks
+    mockDb.limit
+      .mockResolvedValueOnce([]) // acquireProcessingLock existing check
+      .mockResolvedValueOnce([
+        { id: mockVideoId, filePath: mockFilePath, title: MOCK_TITLE },
+      ]);
+
+    setupAiMocks(LANG_ES);
+
+    const orchestrator = new Orchestrator(
+      mockAiGateway as unknown as IAiGateway,
+      mockDb as unknown as Parameters<
+        typeof Orchestrator.prototype.processVideo
+      >[0] extends infer T
+        ? T extends { db: infer D }
+          ? D
+          : never
+        : never,
+      {} as SmartFilter,
+    );
+
+    // --- ACT ---
+    await orchestrator.processVideo(mockVideoId, LANG_ES, LANG_EN);
+
+    // --- ASSERT ---
+    verifyPipelineCalls(mockFilePath, LANG_ES, LANG_EN);
+
+    // Verify results were saved
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "COMPLETED",
+        vttJson: expect.arrayContaining([
+          expect.objectContaining({
+            text: MOCK_TEXT,
+            tokens: expect.arrayContaining([
+              expect.objectContaining({ translation: "Hello" }),
+            ]),
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it("should mark video as ERROR if any step fails", async () => {
+    mockDb.limit
+      .mockResolvedValueOnce([]) // acquireProcessingLock existing check
+      .mockResolvedValueOnce([
+        { id: mockVideoId, filePath: "bad.mp4", title: MOCK_TITLE },
+      ]);
+    mockAiGateway.transcribe.mockRejectedValue(new Error("AI Offline"));
+
+    const orchestrator = new Orchestrator(
+      mockAiGateway as unknown as IAiGateway,
+      mockDb as never,
+      {} as SmartFilter,
+    );
+
+    // --- ACT & ASSERT ---
+    await expect(orchestrator.processVideo(mockVideoId)).rejects.toThrow(
+      "AI Offline",
+    );
+
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "ERROR",
+      }),
+    );
+  });
+
+  function setupAiMocks(es = LANG_ES) {
     const MOCK_PROBABILITY = 0.99;
     const MOCK_SEGMENT_START = 0;
     const MOCK_SEGMENT_END = 2;
-    
-    vi.mocked(aiGateway.transcribe).mockResolvedValue({
-        language: es,
-        language_probability: MOCK_PROBABILITY,
-        segments: [{ start: MOCK_SEGMENT_START, end: MOCK_SEGMENT_END, text: MOCK_TEXT }]
+
+    mockAiGateway.transcribe.mockResolvedValue({
+      language: es,
+      language_probability: MOCK_PROBABILITY,
+      segments: [
+        { start: MOCK_SEGMENT_START, end: MOCK_SEGMENT_END, text: MOCK_TEXT },
+      ],
     });
 
-    vi.mocked(aiGateway.analyzeBatch).mockResolvedValue({
-        results: [[{ text: 'Hola', lemma: 'hola', pos: 'INTJ', is_stop: false }]]
+    mockAiGateway.analyzeBatch.mockResolvedValue({
+      results: [[{ text: "Hola", lemma: "hola", pos: "INTJ", is_stop: false }]],
     });
 
-    vi.mocked(aiGateway.translate).mockResolvedValue({
-        translations: ['Hello']
+    mockAiGateway.translate.mockResolvedValue({
+      translations: ["Hello"],
     });
 
-    vi.mocked(aiGateway.generateThumbnail).mockResolvedValue({
-        thumbnail_path: 'thumb.jpg'
+    mockAiGateway.generateThumbnail.mockResolvedValue({
+      thumbnail_path: "thumb.jpg",
     });
-}
+  }
 
-function verifyPipelineCalls(mockFilePath: string, es: string, en: string) {
-    expect(aiGateway.transcribe).toHaveBeenCalledWith(mockFilePath, es);
-    expect(aiGateway.analyzeBatch).toHaveBeenCalledWith([MOCK_TEXT], es);
-    expect(aiGateway.translate).toHaveBeenCalledWith(['hola'], es, en);
-}
+  function verifyPipelineCalls(mockFilePath: string, es: string, en: string) {
+    expect(mockAiGateway.transcribe).toHaveBeenCalledWith(
+      toAiServicePath(mockFilePath),
+      es,
+    );
+    expect(mockAiGateway.analyzeBatch).toHaveBeenCalledWith([MOCK_TEXT], es);
+    expect(mockAiGateway.translate).toHaveBeenCalledWith(["hola"], es, en);
+  }
+});
