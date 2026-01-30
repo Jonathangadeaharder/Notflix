@@ -1,8 +1,14 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve */
 	import "../app.css";
 	import favicon from "$lib/assets/favicon.svg";
-	import { Clapperboard, User, LayoutGrid, X, Menu } from "lucide-svelte";
+	import {
+		Clapperboard,
+		User,
+		LayoutGrid,
+		X,
+		Menu,
+		BookOpen,
+	} from "lucide-svelte";
 	import { base } from "$app/paths";
 
 	let { children } = $props();
@@ -52,6 +58,13 @@
 							Studio
 						</a>
 						<a
+							href="{base}/vocabulary"
+							class="flex items-center gap-2 text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-full text-sm font-medium transition-all"
+						>
+							<BookOpen class="h-4 w-4" />
+							Vocabulary
+						</a>
+						<a
 							href="{base}/profile"
 							class="flex items-center gap-2 text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-full text-sm font-medium transition-all"
 						>
@@ -91,6 +104,14 @@
 					>
 						<LayoutGrid class="h-5 w-5" />
 						Studio
+					</a>
+					<a
+						href="{base}/vocabulary"
+						onclick={closeMenu}
+						class="flex items-center gap-3 text-zinc-300 hover:text-white hover:bg-white/5 px-4 py-3 rounded-lg text-base font-medium transition-all"
+					>
+						<BookOpen class="h-5 w-5" />
+						Vocabulary
 					</a>
 					<a
 						href="{base}/profile"
