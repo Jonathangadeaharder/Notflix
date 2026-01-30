@@ -310,16 +310,25 @@ def transcribe(
             logger.error("invalid_file_path", path=req.file_path, reason="empty_path")
             raise ValueError("Empty file path")
         
-        # Convert to Path and ensure it's a relative path
-        user_path = Path(req.file_path)
-        if user_path.is_absolute():
+        # Sanitize the input path string by normalizing separators and rejecting
+        # dangerous patterns before converting to Path object
+        sanitized_path_str = os.path.normpath(req.file_path)
+        
+        # Reject absolute paths at the string level
+        if os.path.isabs(sanitized_path_str):
             logger.error("invalid_file_path", path=req.file_path, reason="absolute_path")
             raise ValueError("Absolute paths not allowed")
         
-        # Construct and resolve the full path (resolve() handles .., ., symlinks)
-        candidate_path = (AUDIO_BASE_DIR / user_path).resolve()
+        # Reject paths that attempt to escape via parent directory references
+        # Check if normalized path starts with ".." which would escape the base
+        if sanitized_path_str.startswith(".."):
+            logger.error("invalid_file_path", path=req.file_path, reason="parent_traversal")
+            raise ValueError("Parent directory traversal not allowed")
         
-        # Ensure the resolved path is within the configured audio base directory
+        # Now construct the full path using the sanitized string
+        candidate_path = (AUDIO_BASE_DIR / sanitized_path_str).resolve()
+        
+        # Final verification: ensure the resolved path is within AUDIO_BASE_DIR
         # This will raise ValueError if the path escapes AUDIO_BASE_DIR
         candidate_path.relative_to(AUDIO_BASE_DIR)
     except ValueError as e:
@@ -329,6 +338,8 @@ def transcribe(
             reason = "empty_path"
         elif "absolute" in error_msg:
             reason = "absolute_path"
+        elif "parent" in error_msg or "traversal" in error_msg:
+            reason = "path_traversal"
         else:
             # relative_to raises ValueError when path is not within base
             reason = "path_traversal"
