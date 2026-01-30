@@ -309,25 +309,24 @@ def transcribe(
         if not req.file_path:
             logger.error("invalid_file_path", path=req.file_path, reason="empty_path")
             raise ValueError("Empty file path")
-        
-        # Sanitize the input path string by normalizing separators and rejecting
-        # dangerous patterns before converting to Path object
-        sanitized_path_str = os.path.normpath(req.file_path)
-        
-        # Reject absolute paths at the string level
-        if os.path.isabs(sanitized_path_str):
+
+        # Work with a Path object for safer inspection of components
+        input_path = Path(req.file_path)
+
+        # Reject absolute paths
+        if input_path.is_absolute():
             logger.error("invalid_file_path", path=req.file_path, reason="absolute_path")
             raise ValueError("Absolute paths not allowed")
-        
-        # Reject paths that attempt to escape via parent directory references
-        # Check if normalized path starts with ".." which would escape the base
-        if sanitized_path_str.startswith(".."):
-            logger.error("invalid_file_path", path=req.file_path, reason="parent_traversal")
-            raise ValueError("Parent directory traversal not allowed")
-        
-        # Now construct the full path using the sanitized string
-        candidate_path = (AUDIO_BASE_DIR / sanitized_path_str).resolve()
-        
+
+        # Only allow simple filenames, no directory components or traversal segments.
+        # This ensures the user cannot influence directory structure under AUDIO_BASE_DIR.
+        if input_path.name != req.file_path:
+            logger.error("invalid_file_path", path=req.file_path, reason="invalid_components")
+            raise ValueError("Only simple filenames are allowed")
+
+        # Construct the full path using the sanitized filename and resolve it
+        candidate_path = (AUDIO_BASE_DIR / input_path.name).resolve()
+
         # Final verification: ensure the resolved path is within AUDIO_BASE_DIR
         # This will raise ValueError if the path escapes AUDIO_BASE_DIR
         candidate_path.relative_to(AUDIO_BASE_DIR)
@@ -336,6 +335,8 @@ def transcribe(
         error_msg = str(e).lower()
         if "empty" in error_msg:
             reason = "empty_path"
+        elif "filename" in error_msg or "component" in error_msg:
+            reason = "invalid_components"
         elif "absolute" in error_msg:
             reason = "absolute_path"
         elif "parent" in error_msg or "traversal" in error_msg:
@@ -344,7 +345,7 @@ def transcribe(
             # relative_to raises ValueError when path is not within base
             reason = "path_traversal"
             logger.error("invalid_file_path", path=req.file_path, reason=reason, error=str(e))
-        
+
         raise HTTPException(
             status_code=400,
             detail="Invalid file path."
