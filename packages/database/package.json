@@ -14,12 +14,12 @@
     "db:check": "drizzle-kit check"
   },
   "devDependencies": {
-    "@types/node": "^25.1.0",
-    "drizzle-kit": "^0.31.8",
-    "eslint": "^9.39.2",
+    "@types/node": "^25.3.5",
+    "drizzle-kit": "^0.31.9",
+    "eslint": "^10.0.3",
     "globals": "^17.2.0",
     "tsx": "^4.21.0",
-    "typescript-eslint": "^8.54.0"
+    "typescript-eslint": "^8.56.1"
   },
   "keywords": [],
   "author": "",
