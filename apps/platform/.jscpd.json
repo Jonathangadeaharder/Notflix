@@ -10,7 +10,8 @@
     "**/*.spec.ts",
     "**/*.test.ts",
     "**/src/routes/api/debug/**",
-    "**/package-lock.json"
+    "**/package-lock.json",
+    "**/pnpm-lock.yaml"
   ],
   "format": ["typescript", "javascript", "svelte", "css", "scss"],
   "absolute": true

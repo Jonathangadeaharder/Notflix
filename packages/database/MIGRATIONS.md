@@ -6,19 +6,19 @@ This package uses [Drizzle Kit](https://orm.drizzle.team/kit-docs/overview) for 
 
 ```bash
 # Generate a new migration from schema changes
-npm run db:generate --workspace=@notflix/database
+pnpm --filter @notflix/database db:generate
 
 # Apply pending migrations
-npm run db:migrate --workspace=@notflix/database
+pnpm --filter @notflix/database db:migrate
 
 # Push schema directly (development only - no migration files)
-npm run db:push --workspace=@notflix/database
+pnpm --filter @notflix/database db:push
 
 # Open Drizzle Studio (database GUI)
-npm run db:studio --workspace=@notflix/database
+pnpm --filter @notflix/database db:studio
 
 # Check migration status
-npm run db:check --workspace=@notflix/database
+pnpm --filter @notflix/database db:check
 ```
 
 ## Workflow
@@ -28,7 +28,7 @@ npm run db:check --workspace=@notflix/database
 Use `db:push` for rapid prototyping:
 
 ```bash
-npm run db:push --workspace=@notflix/database
+pnpm --filter @notflix/database db:push
 ```
 
 ### Production (Tracked Migrations)
@@ -36,12 +36,12 @@ npm run db:push --workspace=@notflix/database
 1. Make changes to `schema.ts`
 2. Generate migration:
    ```bash
-   npm run db:generate --workspace=@notflix/database
+   pnpm --filter @notflix/database db:generate
    ```
 3. Review the generated SQL in `migrations/`
 4. Apply migration:
    ```bash
-   npm run db:migrate --workspace=@notflix/database
+   pnpm --filter @notflix/database db:migrate
    ```
 
 ## Migration Files

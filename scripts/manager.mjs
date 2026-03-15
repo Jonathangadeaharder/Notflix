@@ -8,6 +8,7 @@ import { connect } from "node:net";
 const ROOT = resolve(".");
 const APPS_DIR = join(ROOT, "apps");
 const AI_DIR = join(APPS_DIR, "ai-service");
+const PNPM_NODE_MODULES_DIR = join(ROOT, "node_modules", ".pnpm");
 
 const IS_WIN = platform() === "win32";
 let IS_WSL = false;
@@ -41,6 +42,16 @@ function log(msg) {
 }
 function error(msg) {
   console.error(`\x1b[31m[Error]\x1b[0m ${msg}`);
+}
+
+function findCommand(candidates) {
+  for (const candidate of candidates) {
+    try {
+      execSync(`${candidate} --version`, { stdio: "ignore" });
+      return candidate;
+    } catch (e) {}
+  }
+  return null;
 }
 
 function checkPodmanMachine() {
@@ -141,6 +152,16 @@ async function main() {
   log(`Starting Notflix Dev Environment...`);
   log(`Platform: ${platform()} (WSL: ${IS_WSL})`);
 
+  const pnpmCmd = findCommand(IS_WIN ? ["pnpm.cmd", "pnpm"] : ["pnpm"]);
+  if (!pnpmCmd) {
+    throw new Error("pnpm is required to run the platform workspace.");
+  }
+
+  const uvxCmd = findCommand(IS_WIN ? ["uvx.exe", "uvx"] : ["uvx"]);
+  if (!uvxCmd) {
+    throw new Error("uvx is required to run the AI service workspace.");
+  }
+
   mkdirSync(join(ROOT, "media", "uploads"), { recursive: true });
   mkdirSync(join(ROOT, "logs"), { recursive: true });
 
@@ -177,47 +198,32 @@ async function main() {
   log("Waiting for DB...");
   await waitForPort(5432);
 
-  if (!existsSync(join(ROOT, "node_modules"))) runSync("npm install", ROOT);
-  runSync("npm run db:push --workspace=@notflix/database", ROOT);
+  if (!existsSync(PNPM_NODE_MODULES_DIR)) runSync(`${pnpmCmd} install`, ROOT);
+  runSync(`${pnpmCmd} --filter @notflix/database db:push`, ROOT);
 
   log("Setting up AI Service...");
+  log(`Using package manager: ${pnpmCmd}`);
+  log(`Using Python tool runner: ${uvxCmd}`);
 
-  // --- FORCE LINUX SYSTEM PYTHON ON WSL ---
-  let pythonExec = "python3";
-
-  if (IS_WIN) {
-    const venvDir = join(AI_DIR, ".venv");
-    if (!existsSync(venvDir)) {
-      try {
-        runSync(`python -m venv .venv`, AI_DIR);
-      } catch (e) {}
-    }
-    pythonExec = join(venvDir, "Scripts", "python.exe");
-    if (!existsSync(pythonExec)) pythonExec = "python";
-  }
-
-  log(`Using Python: ${pythonExec}`);
-
-  // Install Deps
-  try {
-    const args = ["-m", "pip", "install", "-r", "requirements.txt"];
-    if (!IS_WIN) args.push("--user");
-    // Force uvicorn install if missing
-    args.push("uvicorn");
-
-    execSync(`"${pythonExec}" ${args.join(" ")}`, {
-      cwd: AI_DIR,
-      stdio: "inherit",
-    });
-  } catch (e) {
-    log("Pip install warn");
-  }
+  const aiRequirementsFile = existsSync(join(AI_DIR, "requirements.lock"))
+    ? "requirements.lock"
+    : "requirements.txt";
 
   // Start AI
   const aiLog = join(ROOT, "logs", "ai-service.log");
   const aiProcess = spawn(
-    pythonExec,
-    ["-m", "uvicorn", "main:app", "--reload", "--port", "8000"],
+    uvxCmd,
+    [
+      "--with-requirements",
+      aiRequirementsFile,
+      "--from",
+      "uvicorn",
+      "uvicorn",
+      "main:app",
+      "--reload",
+      "--port",
+      "8000",
+    ],
     {
       cwd: AI_DIR,
       env: ENV,
@@ -241,11 +247,11 @@ async function main() {
   process.on("SIGTERM", cleanup);
   process.on("exit", () => aiProcess.kill());
 
-  spawn("npm", ["run", "dev", "--workspace=@notflix/platform"], {
+  spawn(pnpmCmd, ["--filter", "@notflix/platform", "dev"], {
     cwd: ROOT,
     env: ENV,
     stdio: "inherit",
-    shell: true,
+    shell: IS_WIN,
   }).on("close", cleanup);
 }
 
