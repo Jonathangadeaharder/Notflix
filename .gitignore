@@ -63,3 +63,6 @@ test-results/
 playwright-report/
 blob-report/
 node_modules
+
+# AI agent planning artifacts
+.claude/
