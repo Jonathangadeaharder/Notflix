@@ -3,7 +3,7 @@ import { videoProcessing, type DbTokenAnalysis } from "@notflix/database";
 import { and, eq } from "drizzle-orm";
 import type { VttSegment } from "./video-orchestrator.service";
 import { getKnownLemmas } from "./knowledge.service";
-import { INDICES } from "$lib/constants";
+import { GAME, INDICES } from "$lib/constants";
 
 // Types for our deck
 export type GameCard = {
@@ -18,15 +18,13 @@ export type GameCard = {
 
 type CandidateWithMetadata = DbTokenAnalysis & { context: string };
 
-const DEFAULT_DECK_LIMIT = 15;
-
 export async function generateDeck(
   userId: string,
   videoId: string,
   startTime: number,
   endTime: number,
   targetLang: string,
-  limit = DEFAULT_DECK_LIMIT,
+  limit = GAME.DEFAULT_DECK_LIMIT,
 ): Promise<GameCard[]> {
   const vttData = await fetchVttData(videoId, targetLang);
   if (!vttData) return [];

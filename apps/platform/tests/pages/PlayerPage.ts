@@ -4,21 +4,21 @@ export class PlayerPage {
   readonly page: Page;
   readonly videoPlayer: Locator;
   readonly gameOverlay: Locator;
+  readonly subtitleContainer: Locator;
+  readonly subtitleBtn: Locator;
   readonly swipeRightButton: Locator;
   readonly swipeLeftButton: Locator;
   readonly cardWord: Locator;
-  readonly subtitleContainer: Locator;
-  readonly subtitleBtn: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.videoPlayer = page.getByTestId("video-player");
     this.gameOverlay = page.getByTestId("game-overlay");
+    this.subtitleContainer = page.getByTestId("subtitle-container");
+    this.subtitleBtn = page.getByTestId("subtitle-btn");
     this.swipeRightButton = page.getByTestId("swipe-right");
     this.swipeLeftButton = page.getByTestId("swipe-left");
     this.cardWord = page.getByTestId("card-original");
-    this.subtitleContainer = page.getByTestId("subtitle-container");
-    this.subtitleBtn = page.getByTestId("subtitle-btn");
   }
 
   async waitForPlayback() {

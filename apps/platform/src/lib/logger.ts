@@ -1,4 +1,6 @@
 import pino from "pino";
+import path from "path";
+import { CONFIG } from "$lib/server/infrastructure/config";
 
 // This prints JSON to the server console
 export const logger = pino({
@@ -22,7 +24,10 @@ export const logger = pino({
       },
       {
         target: "pino/file",
-        options: { destination: "../../logs/platform.log", mkdir: true },
+        options: {
+          destination: path.join(CONFIG.LOGS_DIR, "platform.log"),
+          mkdir: true,
+        },
       },
     ],
   },

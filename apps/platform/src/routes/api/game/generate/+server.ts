@@ -1,8 +1,10 @@
 import { json } from "@sveltejs/kit";
 import { generateDeck } from "$lib/server/services/chunker.service";
+import { GAME } from "$lib/constants";
 import type { RequestHandler } from "./$types";
 
-const DEFAULT_END_TIME = 600;
+const SECONDS_IN_MINUTE = 60;
+const DEFAULT_END_TIME = GAME.DEFAULT_INTERVAL_MINUTES * SECONDS_IN_MINUTE;
 const HTTP_STATUS_UNAUTHORIZED = 401;
 const HTTP_STATUS_BAD_REQUEST = 400;
 
@@ -25,9 +27,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   );
   const targetLang = url.searchParams.get("targetLang") || "es";
 
-  if (!videoId) {
+  if (!videoId || Number.isNaN(start) || Number.isNaN(end) || end <= start) {
     return json(
-      { error: "Missing videoId" },
+      { error: "Invalid game request" },
       { status: HTTP_STATUS_BAD_REQUEST },
     );
   }

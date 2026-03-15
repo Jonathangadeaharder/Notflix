@@ -1,483 +1,639 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import GameOverlay from "$lib/components/GameOverlay.svelte";
-    import SubtitleDisplay from "./SubtitleDisplay.svelte";
-    import type {
-        PlayerVideo,
-        PlayerSettings,
-        Subtitle,
-        SubtitleMode,
-    } from "./types";
+  import { onMount } from "svelte";
+  import GameOverlay from "$lib/components/GameOverlay.svelte";
+  import SubtitleDisplay from "./SubtitleDisplay.svelte";
+  import type {
+    PlayerVideo,
+    PlayerSettings,
+    Subtitle,
+    SubtitleMode,
+  } from "./types";
+  import { GAME } from "$lib/constants";
+  import { getUpcomingGameWindow } from "$lib/utils/game-window";
 
-    let {
-        video,
-        subtitles = [],
-        settings,
-        gameCards = [],
-        onRequestGameCards,
-    } = $props<{
-        video: PlayerVideo;
-        subtitles: Subtitle[];
-        settings: PlayerSettings;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        gameCards: any[];
-        onRequestGameCards?: (
-            chunkIndex: number,
-            start: number,
-            end: number,
-        ) => void;
-    }>();
+  let {
+    video,
+    subtitles = [],
+    settings,
+    gameCards = [],
+    onRequestGameCards,
+    onProgressUpdate,
+  } = $props<{
+    video: PlayerVideo;
+    subtitles: Subtitle[];
+    settings: PlayerSettings;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    gameCards: any[];
+    onRequestGameCards?: (
+      chunkIndex: number,
+      start: number,
+      end: number,
+    ) => void;
+    onProgressUpdate?: (progress: {
+      currentTime: number;
+      duration: number;
+      progressPercent: number;
+    }) => void;
+  }>();
 
-    const SECONDS_IN_MINUTE = 60;
-    const PAD_LENGTH = 2;
-    const MEDIA_ERR_ABORTED = 1;
-    const MEDIA_ERR_NETWORK = 2;
-    const MEDIA_ERR_DECODE = 3;
-    const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
-    const DEFAULT_GAME_INTERVAL = 10;
-    const PERCENTAGE_BASE = 100;
+  const SECONDS_IN_MINUTE = 60;
+  const PAD_LENGTH = 2;
+  const MEDIA_ERR_ABORTED = 1;
+  const MEDIA_ERR_NETWORK = 2;
+  const MEDIA_ERR_DECODE = 3;
+  const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
+  const PERCENTAGE_BASE = 100;
+  const NO_PROGRESS_REPORTED = -1;
+  const PROGRESS_REPORT_INTERVAL_SECONDS = 5;
 
-    // Player State
-    let videoElement = $state<HTMLVideoElement>();
-    let isPaused = $state(true);
-    let volume = $state(1);
-    let isMuted = $state(false);
-    let currentTime = $state(0);
-    let duration = $state(1);
+  // Player State
+  let videoElement = $state<HTMLVideoElement>();
+  let isPaused = $state(true);
+  let volume = $state(1);
+  let isMuted = $state(false);
+  let currentTime = $state(0);
+  let duration = $state(1);
 
-    // UI State
-    let subtitleMode = $state<SubtitleMode>("FILTERED");
-    let showOverlay = $state(false);
-    let errorState = $state<{ code: number; message: string } | null>(null);
+  // UI State
+  let subtitleMode = $state<SubtitleMode>("FILTERED");
+  let showOverlay = $state(false);
+  let showTranscript = $state(false);
+  let errorState = $state<{ code: number; message: string } | null>(null);
 
-    // Logic State
-    let chunkIndex = $state(0);
-    let nextInterruptTime = $state(Infinity);
-    let isInterrupting = $state(false);
+  // Logic State
+  let chunkIndex = $state(0);
+  let nextInterruptTime = $state(Infinity);
+  let isInterrupting = $state(false);
+  let subtitleEntries = $derived(subtitles);
+  let lastOpenedGameBatch = $state<typeof gameCards | null>(null);
+  let lastProgressReportSecond = $state(NO_PROGRESS_REPORTED);
 
-    let intervalSeconds = $derived(
-        (settings.gameInterval || DEFAULT_GAME_INTERVAL) * SECONDS_IN_MINUTE,
-    );
+  let intervalSeconds = $derived(
+    (settings.gameInterval || GAME.DEFAULT_INTERVAL_MINUTES) *
+      SECONDS_IN_MINUTE,
+  );
 
-    let isAudio = $derived(
-        video.filePath?.toLowerCase().endsWith(".m4a") ||
-            video.filePath?.toLowerCase().endsWith(".mp3"),
-    );
+  let isAudio = $derived(
+    video.filePath?.toLowerCase().endsWith(".m4a") ||
+      video.filePath?.toLowerCase().endsWith(".mp3"),
+  );
 
-    let videoProgress = $derived((currentTime / duration) * PERCENTAGE_BASE);
+  let videoProgress = $derived((currentTime / duration) * PERCENTAGE_BASE);
 
-    let currentSubtitle = $derived(
-        subtitles.find(
-            (sub: Subtitle) =>
-                currentTime >= sub.start && currentTime <= sub.end,
-        ) || null,
-    );
+  let currentSubtitle = $derived(
+    subtitleEntries.find(
+      (sub: Subtitle) => currentTime >= sub.start && currentTime <= sub.end,
+    ) || null,
+  );
 
-    // Debug logging
-    $effect(() => {
-        if (video) {
-            console.log(`[Player] Video Path:`, video.filePath);
-            console.log(`[Player] Thumbnail Path:`, video.thumbnailPath);
-            console.log(`[Player] Is Audio:`, isAudio);
-        }
+  // Debug logging
+  $effect(() => {
+    if (video) {
+      console.log(`[Player] Video Path:`, video.filePath);
+      console.log(`[Player] Thumbnail Path:`, video.thumbnailPath);
+      console.log(`[Player] Is Audio:`, isAudio);
+    }
+  });
+
+  // Watch for gameCards update to show overlay
+  $effect(() => {
+    if (gameCards.length > 0 && gameCards !== lastOpenedGameBatch) {
+      lastOpenedGameBatch = gameCards;
+      showOverlay = true;
+      videoElement?.pause();
+    }
+  });
+
+  function initNextInterrupt() {
+    if (intervalSeconds > 0) {
+      nextInterruptTime = intervalSeconds * (chunkIndex + 1);
+    } else {
+      nextInterruptTime = Infinity;
+    }
+  }
+
+  onMount(() => {
+    initNextInterrupt();
+  });
+
+  function reportProgress(force = false) {
+    if (!onProgressUpdate) {
+      return;
+    }
+
+    const roundedCurrentTime = Math.round(currentTime);
+    const roundedDuration = Math.round(duration || 0);
+    if (roundedDuration <= 0) {
+      return;
+    }
+
+    if (
+      !force &&
+      Math.abs(roundedCurrentTime - lastProgressReportSecond) <
+        PROGRESS_REPORT_INTERVAL_SECONDS
+    ) {
+      return;
+    }
+
+    lastProgressReportSecond = roundedCurrentTime;
+    onProgressUpdate({
+      currentTime: roundedCurrentTime,
+      duration: roundedDuration,
+      progressPercent: (roundedCurrentTime / roundedDuration) * PERCENTAGE_BASE,
     });
+  }
 
-    // Watch for gameCards update to show overlay
-    $effect(() => {
-        if (gameCards.length > 0 && !showOverlay) {
-            showOverlay = true;
-            videoElement?.pause();
-        }
-    });
-
-    function initNextInterrupt() {
-        if (intervalSeconds > 0) {
-            nextInterruptTime = intervalSeconds * (chunkIndex + 1);
-        } else {
-            nextInterruptTime = Infinity;
-        }
+  function handleLoadedMetadata() {
+    if (!videoElement) {
+      return;
     }
 
-    onMount(() => {
-        initNextInterrupt();
-    });
+    duration = videoElement.duration || video.duration || 1;
 
-    function handleVideoError(e: Event) {
-        console.error("[Player] Video Error Event:", e);
-        const target = e.target as HTMLVideoElement;
+    if (video.videoProgress) {
+      videoElement.currentTime = Math.min(video.videoProgress, duration);
+      currentTime = videoElement.currentTime;
+    }
+  }
 
-        if (target && target.error) {
-            const code = target.error.code;
-            let message = target.error.message;
+  function handleVideoError(e: Event) {
+    console.error("[Player] Video Error Event:", e);
+    const target = e.target as HTMLVideoElement;
 
-            // Map standard error codes to user-friendly messages
-            switch (code) {
-                case MEDIA_ERR_ABORTED:
-                    message = "Playback aborted by user.";
-                    break;
-                case MEDIA_ERR_NETWORK:
-                    message = "Network error while downloading.";
-                    break;
-                case MEDIA_ERR_DECODE:
-                    message =
-                        "Video playback aborted due to a corruption problem or because the video used features your browser did not support.";
-                    break;
-                case MEDIA_ERR_SRC_NOT_SUPPORTED:
-                    message =
-                        "The video could not be loaded, either because the server or network failed or because the format is not supported (File might be missing).";
-                    break;
-            }
+    if (target && target.error) {
+      const code = target.error.code;
+      let message = target.error.message;
 
-            console.error("[Player] Error Details:", code, message);
+      // Map standard error codes to user-friendly messages
+      switch (code) {
+        case MEDIA_ERR_ABORTED:
+          message = "Playback aborted by user.";
+          break;
+        case MEDIA_ERR_NETWORK:
+          message = "Network error while downloading.";
+          break;
+        case MEDIA_ERR_DECODE:
+          message =
+            "Video playback aborted due to a corruption problem or because the video used features your browser did not support.";
+          break;
+        case MEDIA_ERR_SRC_NOT_SUPPORTED:
+          message =
+            "The video could not be loaded, either because the server or network failed or because the format is not supported (File might be missing).";
+          break;
+      }
 
-            errorState = {
-                code: code,
-                message: message,
-            };
-        } else {
-            errorState = { code: 0, message: "Unknown error occurred" };
-        }
+      console.error("[Player] Error Details:", code, message);
+
+      errorState = {
+        code: code,
+        message: message,
+      };
+    } else {
+      errorState = { code: 0, message: "Unknown error occurred" };
+    }
+  }
+
+  function handleTimeUpdate() {
+    if (!videoElement || showOverlay || isInterrupting) return;
+
+    currentTime = videoElement.currentTime;
+    duration = videoElement.duration || 1;
+    reportProgress();
+
+    if (currentTime >= nextInterruptTime) {
+      isInterrupting = true;
+      console.log(`[Player] Interrupt Triggered!`);
+      videoElement.pause();
+      const gameWindow = getUpcomingGameWindow(
+        nextInterruptTime,
+        intervalSeconds,
+      );
+
+      // Dispatch event to parent to load cards
+      if (onRequestGameCards) {
+        onRequestGameCards(chunkIndex, gameWindow.start, gameWindow.end);
+      } else {
+        // Fallback for demo/no-parent: just skip
+        handleGameComplete();
+      }
+    }
+  }
+
+  function handlePause() {
+    isPaused = true;
+    reportProgress(true);
+  }
+
+  function handleGameComplete() {
+    showOverlay = false;
+    isInterrupting = false;
+    chunkIndex++;
+    initNextInterrupt();
+    videoElement?.play().catch((e) => console.error(e));
+  }
+
+  function formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / SECONDS_IN_MINUTE);
+    const secs = Math.floor(seconds % SECONDS_IN_MINUTE);
+    return `${mins}:${secs.toString().padStart(PAD_LENGTH, "0")}`;
+  }
+
+  function toggleSubtitleMode() {
+    const modes: SubtitleMode[] = ["OFF", "FILTERED", "DUAL", "ORIGINAL"];
+    const idx = modes.indexOf(subtitleMode);
+    subtitleMode = modes[(idx + 1) % modes.length];
+  }
+
+  function handleWordMarkedKnown(lemma: string) {
+    subtitleEntries = subtitleEntries.map((subtitle: Subtitle) => ({
+      ...subtitle,
+      words: subtitle.words?.map(
+        (word: NonNullable<Subtitle["words"]>[number]) =>
+          word.lemma === lemma
+            ? { ...word, isKnown: true, difficulty: "easy" }
+            : word,
+      ),
+    }));
+  }
+
+  function jumpToSubtitle(subtitle: Subtitle) {
+    if (!videoElement) {
+      return;
     }
 
-    function handleTimeUpdate() {
-        if (!videoElement || showOverlay || isInterrupting) return;
+    videoElement.currentTime = subtitle.start;
+    videoElement.play().catch((error) => console.error(error));
+  }
 
-        currentTime = videoElement.currentTime;
-        duration = videoElement.duration || 1;
+  function getTranscriptItemClass(subtitle: Subtitle) {
+    const isCurrent =
+      currentTime >= subtitle.start && currentTime <= subtitle.end;
 
-        if (currentTime >= nextInterruptTime) {
-            isInterrupting = true;
-            console.log(`[Player] Interrupt Triggered!`);
-            videoElement.pause();
-
-            // Dispatch event to parent to load cards
-            if (onRequestGameCards) {
-                onRequestGameCards(
-                    chunkIndex,
-                    nextInterruptTime - intervalSeconds,
-                    nextInterruptTime,
-                );
-            } else {
-                // Fallback for demo/no-parent: just skip
-                handleGameComplete();
-            }
-        }
+    if (isCurrent) {
+      return "border-amber-400/70 bg-white/10";
     }
 
-    function handleGameComplete() {
-        showOverlay = false;
-        isInterrupting = false;
-        chunkIndex++;
-        initNextInterrupt();
-        videoElement?.play().catch((e) => console.error(e));
+    if (subtitle.classification === "LEARNING") {
+      return "border-amber-500/30";
     }
 
-    function formatTime(seconds: number): string {
-        const mins = Math.floor(seconds / SECONDS_IN_MINUTE);
-        const secs = Math.floor(seconds % SECONDS_IN_MINUTE);
-        return `${mins}:${secs.toString().padStart(PAD_LENGTH, "0")}`;
+    if (subtitle.classification === "HARD") {
+      return "border-red-500/30";
     }
 
-    function toggleSubtitleMode() {
-        const modes: SubtitleMode[] = ["OFF", "FILTERED", "DUAL", "ORIGINAL"];
-        const idx = modes.indexOf(subtitleMode);
-        subtitleMode = modes[(idx + 1) % modes.length];
-    }
+    return "border-white/10";
+  }
 </script>
 
 <div class="relative w-full h-full bg-black group overflow-hidden">
-    {#if errorState}
-        <div
-            class="absolute inset-0 flex items-center justify-center bg-zinc-900 text-red-500 z-20"
-        >
-            <div class="text-center p-6">
-                <h3 class="text-xl font-bold mb-2">Video Error</h3>
-                <p>Code: {errorState.code}</p>
-                <p class="text-sm opacity-70">{errorState.message}</p>
-                <p class="mt-4 text-xs text-zinc-400 break-all">
-                    {video.filePath}
-                </p>
-            </div>
-        </div>
-    {/if}
-
-    {#if isAudio}
-        <div
-            class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-0"
-        >
-            <!-- Use the thumbnail as background cover if distinct from placeholder -->
-            {#if video.thumbnailPath && !video.thumbnailPath.includes("placeholder")}
-                <img
-                    src={video.thumbnailPath}
-                    alt="Album Art"
-                    class="absolute inset-0 w-full h-full object-cover opacity-50 blur-sm"
-                />
-                <img
-                    src={video.thumbnailPath}
-                    alt="Album Art"
-                    class="relative w-64 h-64 rounded-xl shadow-2xl object-cover z-10"
-                />
-            {:else}
-                <div
-                    class="relative z-10 w-32 h-32 rounded-full bg-zinc-800 flex items-center justify-center"
-                >
-                    <svg
-                        class="w-16 h-16 text-zinc-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                        />
-                    </svg>
-                </div>
-                <p class="relative z-10 mt-4 text-zinc-400 font-medium">
-                    Audio Only
-                </p>
-            {/if}
-        </div>
-    {/if}
-
-    <video
-        bind:this={videoElement}
-        data-testid="video-player"
-        src={video.filePath}
-        poster={!isAudio ? video.thumbnailPath : undefined}
-        class="w-full h-full object-contain relative z-10 {isAudio
-            ? 'opacity-0'
-            : ''}"
-        ontimeupdate={handleTimeUpdate}
-        onerror={handleVideoError}
-        onplay={() => (isPaused = false)}
-        onpause={() => (isPaused = true)}
-        muted={isMuted}
-        {volume}
-        controls={false}
-        oncontextmenu={(e) => e.preventDefault()}
+  {#if errorState}
+    <div
+      class="absolute inset-0 flex items-center justify-center bg-zinc-900 text-red-500 z-20"
     >
-    </video>
+      <div class="text-center p-6">
+        <h3 class="text-xl font-bold mb-2">Video Error</h3>
+        <p>Code: {errorState.code}</p>
+        <p class="text-sm opacity-70">{errorState.message}</p>
+        <p class="mt-4 text-xs text-zinc-400 break-all">
+          {video.filePath}
+        </p>
+      </div>
+    </div>
+  {/if}
 
-    <!-- Force hide native controls -->
-    <style>
-        video::-webkit-media-controls {
-            display: none !important;
-        }
-        video::-webkit-media-controls-enclosure {
-            display: none !important;
-        }
-    </style>
-
-    <SubtitleDisplay
-        subtitle={currentSubtitle}
-        mode={subtitleMode}
-        videoTargetLang={video.targetLang}
-        onPauseRequest={() => videoElement?.pause()}
-    />
-
-    <!-- Play Button Overlay -->
-    {#if isPaused && !showOverlay && !errorState}
+  {#if isAudio}
+    <div
+      class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-0"
+    >
+      <!-- Use the thumbnail as background cover if distinct from placeholder -->
+      {#if video.thumbnailPath && !video.thumbnailPath.includes("placeholder")}
+        <img
+          src={video.thumbnailPath}
+          alt="Album Art"
+          class="absolute inset-0 w-full h-full object-cover opacity-50 blur-sm"
+        />
+        <img
+          src={video.thumbnailPath}
+          alt="Album Art"
+          class="relative w-64 h-64 rounded-xl shadow-2xl object-cover z-10"
+        />
+      {:else}
         <div
-            class="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+          class="relative z-10 w-32 h-32 rounded-full bg-zinc-800 flex items-center justify-center"
         >
-            <button
-                class="w-32 h-32 rounded-full bg-black/60 flex items-center justify-center pointer-events-auto hover:bg-black/80 transition-colors"
-                onclick={() => videoElement?.play()}
-                data-testid="play-overlay-btn"
-            >
-                <!-- Play Icon -->
-                <svg
-                    class="w-16 h-16 ml-2 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                >
-                    <path
-                        d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
-                    />
-                </svg>
-            </button>
+          <svg
+            class="w-16 h-16 text-zinc-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+            />
+          </svg>
         </div>
-    {/if}
+        <p class="relative z-10 mt-4 text-zinc-400 font-medium">Audio Only</p>
+      {/if}
+    </div>
+  {/if}
 
-    <!-- Controls Bar -->
-    {#if !errorState}
-        <div
-            class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/95 to-transparent transition-opacity duration-300 z-30 {isPaused
-                ? 'opacity-100'
-                : 'opacity-0 group-hover:opacity-100'}"
+  <video
+    bind:this={videoElement}
+    data-testid="video-player"
+    src={video.filePath}
+    poster={!isAudio ? video.thumbnailPath : undefined}
+    class="w-full h-full object-contain relative z-10 {isAudio
+      ? 'opacity-0'
+      : ''}"
+    ontimeupdate={handleTimeUpdate}
+    onloadedmetadata={handleLoadedMetadata}
+    onerror={handleVideoError}
+    onplay={() => (isPaused = false)}
+    onpause={handlePause}
+    muted={isMuted}
+    {volume}
+    controls={false}
+    oncontextmenu={(e) => e.preventDefault()}
+  >
+  </video>
+
+  <!-- Force hide native controls -->
+  <style>
+    video::-webkit-media-controls {
+      display: none !important;
+    }
+    video::-webkit-media-controls-enclosure {
+      display: none !important;
+    }
+  </style>
+
+  <SubtitleDisplay
+    subtitle={currentSubtitle}
+    mode={subtitleMode}
+    videoTargetLang={video.targetLang}
+    onPauseRequest={() => videoElement?.pause()}
+    onMarkKnown={handleWordMarkedKnown}
+  />
+
+  {#if showTranscript}
+    <div
+      class="absolute top-4 right-4 bottom-24 w-80 max-w-[calc(100%-2rem)] z-30 rounded-2xl border border-white/10 bg-black/85 backdrop-blur-md shadow-2xl overflow-hidden"
+    >
+      <div
+        class="flex items-center justify-between px-4 py-3 border-b border-white/10"
+      >
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-zinc-500">
+            Script View
+          </p>
+          <p class="text-sm text-zinc-300">Jump to any subtitle segment</p>
+        </div>
+        <button
+          class="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white"
+          onclick={() => (showTranscript = false)}
         >
-            <!-- Progress -->
+          Close
+        </button>
+      </div>
+
+      <div class="h-full overflow-y-auto p-4 space-y-3">
+        {#each subtitleEntries as subtitle, index (index)}
+          <button
+            type="button"
+            class="w-full rounded-xl border p-3 text-left transition-colors hover:bg-white/5 {getTranscriptItemClass(
+              subtitle,
+            )}"
+            onclick={() => jumpToSubtitle(subtitle)}
+          >
             <div
-                class="mb-4 cursor-pointer group/progress"
-                onclick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const pos = (e.clientX - rect.left) / rect.width;
-                    if (videoElement) videoElement.currentTime = pos * duration;
-                }}
+              class="flex items-center justify-between gap-3 text-xs text-zinc-400 mb-2"
             >
-                <div
-                    class="h-1 bg-gray-700 rounded-full overflow-hidden group-hover/progress:h-2 transition-all"
+              <span>
+                {formatTime(subtitle.start)} - {formatTime(subtitle.end)}
+              </span>
+              {#if subtitle.classification}
+                <span
+                  class="rounded-full border border-white/10 px-2 py-0.5 font-semibold text-zinc-300"
                 >
-                    <div
-                        class="h-full bg-amber-500"
-                        style="width: {videoProgress}%"
-                    ></div>
-                </div>
+                  {subtitle.classification}
+                </span>
+              {/if}
             </div>
+            <p class="text-sm text-white leading-relaxed">
+              {subtitle.text}
+            </p>
+            {#if subtitle.translation}
+              <p class="mt-2 text-xs italic text-zinc-400">
+                {subtitle.translation}
+              </p>
+            {/if}
+          </button>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <!-- Play/Pause -->
-                    <button
-                        class="w-8 h-8 flex items-center justify-center hover:text-white/80 text-white"
-                        onclick={() =>
-                            isPaused
-                                ? videoElement?.play()
-                                : videoElement?.pause()}
-                        data-testid="play-pause-btn"
-                    >
-                        {#if isPaused}
-                            <svg
-                                class="w-5 h-5"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                ><path
-                                    d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
-                                /></svg
-                            >
-                        {:else}
-                            <svg
-                                class="w-5 h-5"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                ><path
-                                    fill-rule="evenodd"
-                                    d="M5.5 4a1.5 1.5 0 00-1.5 1.5v9a1.5 1.5 0 003 0v-9A1.5 1.5 0 005.5 4zM14.5 4a1.5 1.5 0 00-1.5 1.5v9a1.5 1.5 0 003 0v-9A1.5 1.5 0 0014.5 4z"
-                                    clip-rule="evenodd"
-                                /></svg
-                            >
-                        {/if}
-                    </button>
-
-                    <!-- Volume Control -->
-                    <div class="flex items-center gap-2 group/volume relative">
-                        <button
-                            class="w-8 h-8 flex items-center justify-center hover:text-white/80 text-white"
-                            onclick={() => (isMuted = !isMuted)}
-                            data-testid="volume-btn"
-                        >
-                            {#if isMuted || volume === 0}
-                                <svg
-                                    class="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    ><path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                                    /><path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
-                                    /></svg
-                                >
-                            {:else}
-                                <svg
-                                    class="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    ><path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                                    /></svg
-                                >
-                            {/if}
-                        </button>
-
-                        <div
-                            class="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center"
-                        >
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                bind:value={volume}
-                                oninput={() => (isMuted = false)}
-                                class="w-20 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Time -->
-                    <div class="text-sm text-white leading-tight">
-                        <span>{formatTime(currentTime)}</span>
-                        <span class="text-gray-400">
-                            / {formatTime(duration)}</span
-                        >
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <!-- Subtitle Toggle/Mode -->
-                    <button
-                        class="h-8 px-2 flex items-center justify-center hover:text-white/80 transition-colors text-xs font-bold rounded border border-white/20 {subtitleMode !==
-                        'OFF'
-                            ? 'bg-white/10 text-white'
-                            : 'text-gray-500'}"
-                        onclick={toggleSubtitleMode}
-                        data-testid="subtitle-btn"
-                    >
-                        {subtitleMode === "OFF" ? "CC" : subtitleMode}
-                    </button>
-
-                    <!-- Fullscreen -->
-                    <button
-                        class="w-8 h-8 flex items-center justify-center hover:text-white/80 text-white"
-                        onclick={() => {
-                            if (document.fullscreenElement)
-                                document.exitFullscreen();
-                            else
-                                videoElement
-                                    ?.closest(".relative")
-                                    ?.requestFullscreen();
-                        }}
-                        data-testid="fullscreen-btn"
-                    >
-                        <svg
-                            class="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            ><path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                            /></svg
-                        >
-                    </button>
-                </div>
-            </div>
-        </div>
-    {/if}
-
-    <!-- Game Overlay -->
-    {#if showOverlay}
-        <div
-            class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
-            data-testid="game-overlay"
+  <!-- Play Button Overlay -->
+  {#if isPaused && !showOverlay && !errorState}
+    <div
+      class="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+    >
+      <button
+        class="w-32 h-32 rounded-full bg-black/60 flex items-center justify-center pointer-events-auto hover:bg-black/80 transition-colors"
+        onclick={() => videoElement?.play()}
+        data-testid="play-overlay-btn"
+      >
+        <!-- Play Icon -->
+        <svg
+          class="w-16 h-16 ml-2 text-white"
+          fill="currentColor"
+          viewBox="0 0 20 20"
         >
-            <GameOverlay cards={gameCards} onComplete={handleGameComplete} />
+          <path
+            d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
+          />
+        </svg>
+      </button>
+    </div>
+  {/if}
+
+  <!-- Controls Bar -->
+  {#if !errorState}
+    <div
+      class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/95 to-transparent transition-opacity duration-300 z-30 {isPaused
+        ? 'opacity-100'
+        : 'opacity-0 group-hover:opacity-100'}"
+    >
+      <!-- Progress -->
+      <button
+        type="button"
+        class="mb-4 cursor-pointer group/progress"
+        aria-label="Seek video position"
+        onclick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const pos = (e.clientX - rect.left) / rect.width;
+          if (videoElement) videoElement.currentTime = pos * duration;
+        }}
+      >
+        <div
+          class="h-1 bg-gray-700 rounded-full overflow-hidden group-hover/progress:h-2 transition-all"
+        >
+          <div
+            class="h-full bg-amber-500"
+            style="width: {videoProgress}%"
+          ></div>
         </div>
-    {/if}
+      </button>
+
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <!-- Play/Pause -->
+          <button
+            class="w-8 h-8 flex items-center justify-center hover:text-white/80 text-white"
+            onclick={() =>
+              isPaused ? videoElement?.play() : videoElement?.pause()}
+            data-testid="play-pause-btn"
+          >
+            {#if isPaused}
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+                ><path
+                  d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
+                /></svg
+              >
+            {:else}
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+                ><path
+                  fill-rule="evenodd"
+                  d="M5.5 4a1.5 1.5 0 00-1.5 1.5v9a1.5 1.5 0 003 0v-9A1.5 1.5 0 005.5 4zM14.5 4a1.5 1.5 0 00-1.5 1.5v9a1.5 1.5 0 003 0v-9A1.5 1.5 0 0014.5 4z"
+                  clip-rule="evenodd"
+                /></svg
+              >
+            {/if}
+          </button>
+
+          <!-- Volume Control -->
+          <div class="flex items-center gap-2 group/volume relative">
+            <button
+              class="w-8 h-8 flex items-center justify-center hover:text-white/80 text-white"
+              onclick={() => (isMuted = !isMuted)}
+              data-testid="volume-btn"
+            >
+              {#if isMuted || volume === 0}
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  ><path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                  /><path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+                  /></svg
+                >
+              {:else}
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  ><path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                  /></svg
+                >
+              {/if}
+            </button>
+
+            <div
+              class="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center"
+            >
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                bind:value={volume}
+                oninput={() => (isMuted = false)}
+                class="w-20 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
+            </div>
+          </div>
+
+          <!-- Time -->
+          <div class="text-sm text-white leading-tight">
+            <span>{formatTime(currentTime)}</span>
+            <span class="text-gray-400"> / {formatTime(duration)}</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Subtitle Toggle/Mode -->
+          <button
+            class="h-8 px-2 flex items-center justify-center hover:text-white/80 transition-colors text-xs font-bold rounded border border-white/20 {subtitleMode !==
+            'OFF'
+              ? 'bg-white/10 text-white'
+              : 'text-gray-500'}"
+            onclick={toggleSubtitleMode}
+            data-testid="subtitle-btn"
+          >
+            {subtitleMode === "OFF" ? "CC" : subtitleMode}
+          </button>
+
+          <button
+            class="h-8 px-3 flex items-center justify-center hover:text-white/80 transition-colors text-xs font-bold rounded border border-white/20 {showTranscript
+              ? 'bg-white/10 text-white'
+              : 'text-gray-400'}"
+            onclick={() => (showTranscript = !showTranscript)}
+          >
+            Script
+          </button>
+
+          <!-- Fullscreen -->
+          <button
+            class="w-8 h-8 flex items-center justify-center hover:text-white/80 text-white"
+            aria-label="Toggle fullscreen"
+            onclick={() => {
+              if (document.fullscreenElement) document.exitFullscreen();
+              else videoElement?.closest(".relative")?.requestFullscreen();
+            }}
+            data-testid="fullscreen-btn"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+              /></svg
+            >
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Game Overlay -->
+  {#if showOverlay}
+    <div
+      class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
+      data-testid="game-overlay"
+    >
+      <GameOverlay cards={gameCards} onComplete={handleGameComplete} />
+    </div>
+  {/if}
 </div>

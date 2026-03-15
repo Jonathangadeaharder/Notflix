@@ -1,116 +1,48 @@
-# ADR 005: Dependency Injection & Confidence Testing
+# ADR-005: Dependency Injection Boundaries
 
 **Status:** Approved
 **Date:** 2025-12-09
-**Context:** Ensuring the system is testable, fast, and robust without loading 4GB AI models for every unit test.
+**Context:** The platform must remain testable and fast without coupling application logic to concrete infrastructure or forcing heavy AI model loading into unit tests.
 
-## 1. The Strategy: "Ports and Adapters" (Hexagonal Architecture)
+## 1. Decision
 
-We define **Interfaces** (Ports) for all heavy infrastructure. The Application Logic only talks to these Interfaces, never to the concrete libraries directly.
+We use explicit dependency-injection seams on both sides of the system:
 
-- **Production:** We inject the **Real Adapter** (e.g., `FasterWhisperAdapter`).
-- **Testing:** We inject a **Mock Adapter** (e.g., `GoldFileAdapter`).
+- **Platform (SvelteKit):** constructor-based injection with shared singleton wiring in `src/lib/server/container.ts`
+- **AI Service (FastAPI):** route-level dependency injection through `Depends(...)`
+- **Tests:** replace dependencies at the seam rather than mutating global runtime state
 
-## 2. The Host (SvelteKit) Design
+Detailed testing workflow lives in `docs/standards/testing-and-di.md`. This ADR is limited to the architectural boundaries that make that workflow possible.
 
-We use a lightweight DI pattern (Factory Functions or Classes) to manage dependencies in `src/lib/server`.
+## 2. Platform Boundary
 
-### 2.1 The Interfaces
+Application services depend on ports/interfaces rather than concrete adapters.
 
-Define what "Doing AI" means, regardless of who does it.
+- Real adapters are used in production.
+- Mock or fake adapters are used in unit tests.
+- Startup and route code should consume the shared container instead of constructing fresh service graphs ad hoc.
 
-```typescript
-// src/lib/server/domain/interfaces.ts
-import type { ProcessVideoResponse } from "$lib/gen/ai/v1/service_pb";
+This keeps orchestration, subtitle processing, and other domain services testable without changing the calling code.
 
-export interface IAiGateway {
-  processVideo(filePath: string): Promise<ProcessVideoResponse>;
-}
+## 3. AI Service Boundary
 
-export interface IStorageGateway {
-  uploadFile(file: File): Promise<string>; // Returns path
-}
-```
+FastAPI route handlers obtain heavy services through dependency functions.
 
-### 2.2 The Implementation (Real vs. Mock)
+- `get_transcriber()`
+- `get_filter()`
+- `get_translator()`
 
-**The Real Gateway (ConnectRPC):**
+These dependencies are backed by lifespan-managed runtime state in production, but the route contract is the dependency function, not the global variable.
 
-```typescript
-// src/lib/server/adapters/grpc-ai-gateway.ts
-import { createPromiseClient } from "@connectrpc/connect";
-import { AiService } from "$lib/gen/ai/v1/service_connect";
-import type { IAiGateway } from "../domain/interfaces";
+## 4. Testing Implication
 
-export class GrpcAiGateway implements IAiGateway {
-  constructor(private client = createPromiseClient(AiService, transport)) {}
+FastAPI tests must override dependencies through `app.dependency_overrides`.
 
-  async processVideo(path: string) {
-    // This actually calls Python over the network
-    return this.client.processVideo({ filePath: path });
-  }
-}
-```
+- This is the canonical test seam for Python routes.
+- Tests must not mutate `brain_state` directly to fake model behavior.
+- The goal is to test route behavior against a stable dependency contract instead of reaching into runtime internals.
 
-**The Mock Gateway (Gold File):**
+## 5. Consequences
 
-```typescript
-// src/lib/server/adapters/mock-ai-gateway.ts
-import type { IAiGateway } from "../domain/interfaces";
-import goldResponse from "../../../tests/fixtures/gold_transcript.json";
-
-export class MockAiGateway implements IAiGateway {
-  async processVideo(path: string) {
-    // Instant return. Perfect for testing UI flows.
-    return goldResponse;
-  }
-}
-```
-
-### 2.3 The Composition Root (Wiring it up)
-
-We centralize instance creation in `src/lib/server/container.ts`.
-
-```typescript
-// src/lib/server/container.ts
-import { RealAiGateway } from "./adapters/real-ai-gateway";
-import { MockAiGateway } from "./adapters/mock-ai-gateway";
-import { Orchestrator } from "./orchestrator";
-import { SmartFilter } from "./filter";
-import { SubtitleService } from "./services/subtitle.service";
-import { db } from "./db";
-
-const useMock =
-  process.env.NODE_ENV === "test" || process.env.USE_MOCK_AI === "true";
-
-// Ports/Adapters
-export const aiGateway = useMock ? new MockAiGateway() : new RealAiGateway();
-
-// Domain Services (Injected)
-export const smartFilter = new SmartFilter(db);
-export const subtitleService = new SubtitleService(db);
-
-// Orchestrator (Injected)
-export const orchestrator = new Orchestrator(aiGateway, db, smartFilter);
-```
-
----
-
-## 3. The Brain (Python) Design
-
-Python uses FastAPI's built-in dependency injection for model management.
-
-### 3.1 Wiring (FastAPI Depends)
-
-We use lambda-based dependencies to inject model instances initialized in the app lifespan.
-
-```python
-# services/brain/main.py
-
-@app.post("/transcribe")
-async def transcribe(
-    req: TranscriptionRequest,
-    transcriber = Depends(lambda: brain_state.transcriber)
-):
-    return transcriber.transcribe(req.file_path, req.language)
-```
+- **Positive:** clear seams for mocks/fakes, fast unit tests, and less accidental coupling to model bootstrapping details
+- **Negative:** requires discipline to keep startup wiring, route dependencies, and tests aligned with the same injection boundaries

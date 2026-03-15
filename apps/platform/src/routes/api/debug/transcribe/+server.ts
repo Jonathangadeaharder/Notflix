@@ -6,7 +6,7 @@ import {
 import { json } from "@sveltejs/kit";
 import fs from "fs";
 import path from "path";
-import { CONFIG } from "$lib/server/infrastructure/config";
+import { CONFIG, toAiServicePath } from "$lib/server/infrastructure/config";
 import type { RequestHandler } from "./$types";
 
 const HTTP_STATUS_BAD_REQUEST = 400;
@@ -28,7 +28,10 @@ export const POST: RequestHandler = async ({ request }) => {
     const tempFilePath = await saveTempFile(file);
 
     try {
-      const transcription = await aiGateway.transcribe(tempFilePath, language);
+      const transcription = await aiGateway.transcribe(
+        toAiServicePath(tempFilePath),
+        language,
+      );
 
       const srtSegments = transcription.segments.map((seg, i) => ({
         index: i + 1,
