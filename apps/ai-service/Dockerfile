@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
 WORKDIR /app
+ENV UV_CACHE_DIR=/app/.uv-cache
 
 # Install system dependencies
 # hadolint ignore=DL3008
@@ -9,12 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies and Models in single layer
-COPY apps/ai-service/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    python -m spacy download es_core_news_lg && \
-    python -m spacy download en_core_web_lg && \
-    rm -rf /root/.cache/pip
+# Install uv and prewarm the locked runtime environment
+RUN pip install --no-cache-dir uv && rm -rf /root/.cache/pip
+COPY apps/ai-service/requirements.txt apps/ai-service/requirements.lock ./
+RUN uvx --with-requirements requirements.lock --from uvicorn uvicorn --version
 
 # Copy source code
 COPY apps/ai-service/ .
@@ -27,5 +26,5 @@ USER appuser
 EXPOSE 8000
 
 # Start the application
-CMD ["python", "main.py"]
+CMD ["uvx", "--with-requirements", "requirements.lock", "--from", "uvicorn", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 

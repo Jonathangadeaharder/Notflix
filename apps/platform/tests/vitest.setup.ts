@@ -1,8 +1,14 @@
+/* This test bootstrap intentionally shells out to trusted local tooling. */
+/* eslint-disable sonarjs/os-command, sonarjs/no-os-command-from-path */
 import { execSync } from "node:child_process";
 import { connect } from "node:net";
 import path from "node:path";
 
 const DATABASE_URL = "postgres://admin:password@127.0.0.1:5432/main_db";
+const DB_PORT = 5432;
+const DB_WAIT_TIMEOUT_MS = 30000;
+const PORT_RETRY_DELAY_MS = 500;
+
 process.env.DATABASE_URL = DATABASE_URL;
 process.env.RUNNING_IN_DOCKER = "false";
 
@@ -76,7 +82,7 @@ function getContainerCmd() {
 async function waitForPort(
   port: number,
   host = "127.0.0.1",
-  timeoutMs = 30000,
+  timeoutMs = DB_WAIT_TIMEOUT_MS,
 ) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -91,7 +97,7 @@ async function waitForPort(
       });
       return;
     } catch {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, PORT_RETRY_DELAY_MS));
     }
   }
   throw new Error(`Timeout waiting for ${host}:${port}`);
@@ -136,8 +142,8 @@ async function ensureDb() {
     }
   }
 
-  await waitForPort(5432);
-  execSync("npm run db:push --workspace=@notflix/database", {
+  await waitForPort(DB_PORT);
+  execSync("pnpm --filter @notflix/database db:push", {
     cwd: repoRoot,
     stdio: "inherit",
   });

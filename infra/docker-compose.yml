@@ -24,7 +24,7 @@ services:
       - /app/packages/database/node_modules
       - ../media:/app/media
       - ../logs:/app/logs
-    command: /bin/sh -c "chmod -R +x /app/apps/platform/node_modules && npm run dev -- --host"
+    command: /bin/sh -c "chmod -R +x /app/apps/platform/node_modules && pnpm run dev -- --host"
     environment:
       - DATABASE_URL=postgres://admin:password@postgres:5432/main_db
       - AI_SERVICE_URL=http://ai-service:8000

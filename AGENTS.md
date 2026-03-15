@@ -11,23 +11,23 @@
 ## Build, Test, and Development Commands
 
 - `node scripts/manager.mjs` (or `start.bat`/`start.sh`) boots DB, AI service, and the platform dev server.
-- `npm run dev --workspace=@notflix/platform` runs the SvelteKit dev server (default `http://localhost:5173`).
-- `npm run build --workspace=@notflix/platform` builds the web app; `npm run preview --workspace=@notflix/platform` serves the build.
-- `npm run db:push --workspace=@notflix/database` applies Drizzle schema to the local DB.
-- `python -m uvicorn main:app --reload --port 8000` runs the AI service from `apps/ai-service/`.
+- `pnpm --filter @notflix/platform dev` runs the SvelteKit dev server (default `http://localhost:5173`).
+- `pnpm --filter @notflix/platform build` builds the web app; `pnpm --filter @notflix/platform preview` serves the build.
+- `pnpm --filter @notflix/database db:push` applies Drizzle schema to the local DB.
+- `cd apps/ai-service && uvx --with-requirements requirements.lock --from uvicorn uvicorn main:app --reload --port 8000` runs the AI service.
 
 ## Coding Style & Naming Conventions
 
 - Follow existing formatting in each module; Svelte/TypeScript generally use 2-space indents, Python uses 4.
-- Linting: `npm run lint --workspace=@notflix/platform` and `npm run lint --workspace=@notflix/database`.
+- Linting: `pnpm --filter @notflix/platform lint` and `pnpm --filter @notflix/database lint`.
 - Python style/security tooling is configured in `apps/ai-service/pyproject.toml` (ruff, pylint, bandit).
 - Test naming: Playwright specs use `*.spec.ts`; Python tests use `test_*.py`.
 
 ## Testing Guidelines
 
-- Frontend E2E: `npm run test:e2e --workspace=@notflix/platform`.
-- Full stack E2E with Docker: `npm run test:e2e:docker --workspace=@notflix/platform`.
-- AI service tests: `python -m pytest` from `apps/ai-service/`.
+- Frontend E2E: `pnpm --filter @notflix/platform test:e2e`.
+- Full stack E2E with Docker: `pnpm --filter @notflix/platform test:e2e:docker`.
+- AI service tests: `cd apps/ai-service && uvx --with-requirements requirements.lock --from pytest pytest`.
 
 ## Commit & Pull Request Guidelines
 

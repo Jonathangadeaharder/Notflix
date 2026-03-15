@@ -1,11 +1,13 @@
 import { type PlaywrightTestConfig } from "@playwright/test";
 
+const CI_RETRIES = 2;
+
 const config: PlaywrightTestConfig = {
   timeout: 120000, // 2 min for video processing
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? CI_RETRIES : 0,
 
   webServer: {
-    command: "npm run test:e2e:server",
+    command: "pnpm run test:e2e:server",
     port: 5173,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

@@ -53,8 +53,8 @@ To run the linters, typically you would use:
 
 ```bash
 # Run Ruff
-ruff check .
+uvx --from ruff ruff check .
 
 # Run Pylint
-pylint apps/ai-service
+uvx --from pylint pylint apps/ai-service
 ```
