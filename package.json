@@ -16,20 +16,20 @@
   },
   "lint-staged": {
     "apps/platform/**/*.{ts,svelte}": [
-      "eslint --config apps/platform/eslint.config.js --fix",
-      "prettier --write"
+      "pnpm -C apps/platform exec eslint --fix",
+      "pnpm exec prettier --write"
     ],
     "apps/ai-service/**/*.py": [
       "uvx --from ruff ruff check --fix",
       "uvx --from ruff ruff format"
     ],
     "packages/database/**/*.ts": [
-      "eslint --config packages/database/eslint.config.js --fix",
-      "prettier --write"
+      "pnpm -C packages/database exec eslint --fix",
+      "pnpm exec prettier --write"
     ],
     "packages/shared-types/**/*.ts": [
-      "eslint --config packages/shared-types/eslint.config.js --fix",
-      "prettier --write"
+      "pnpm -C packages/shared-types exec eslint --fix",
+      "pnpm exec prettier --write"
     ]
   }
 }
