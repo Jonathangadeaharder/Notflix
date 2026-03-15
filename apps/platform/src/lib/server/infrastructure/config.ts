@@ -1,69 +1,51 @@
-import path from "path";
-import process from "node:process";
-import { toPosixPath, toRelativePathFromRoot } from "../utils/path-utils";
+import { env } from '$env/dynamic/private';
+import path from 'path';
 
-const env = process.env;
+// The AI service container always mounts media at this path, regardless of host layout.
+const AI_MEDIA_PATH = '/app/media/uploads';
 
-const DEFAULT_UPLOAD_DIR = "media/uploads";
-const uploadDir = env.UPLOAD_DIR || DEFAULT_UPLOAD_DIR;
+const uploadDir = env.UPLOAD_DIR || 'media/uploads';
 
 // Detect if running inside Docker container
-const isDocker = env.RUNNING_IN_DOCKER === "true";
+const isDocker = env.RUNNING_IN_DOCKER === 'true';
 
-// For Docker: UPLOAD_DIR is already absolute (/app/media/uploads)
-// For Local: Resolve relative to project root
-function resolveUploadDir(currentUploadDir: string): string {
-  if (
-    isDocker ||
-    currentUploadDir.startsWith("/") ||
-    currentUploadDir.includes(":")
-  ) {
-    return currentUploadDir;
-  }
-  return path.resolve(process.cwd(), "../../", currentUploadDir);
+function resolveUploadDir(dir: string, docker: boolean): string {
+    if (docker) return dir;
+    const isAbsolute = dir.startsWith('/') || dir.includes(':');
+    return isAbsolute ? dir : path.resolve(process.cwd(), '../../', dir);
 }
 
-const resolvedUploadDir = resolveUploadDir(uploadDir);
-const mediaRoot = path.resolve(resolvedUploadDir, "..");
-const logsDir = env.LOGS_DIR || path.resolve(mediaRoot, "../logs");
+const resolvedUploadDir = resolveUploadDir(uploadDir, isDocker);
 
 export const CONFIG = {
-  DATABASE_URL:
-    env.DATABASE_URL || "postgres://admin:password@127.0.0.1:5432/main_db",
-  AI_SERVICE_URL: env.AI_SERVICE_URL || "http://127.0.0.1:8000",
-  AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || "dev_secret_key",
-  UPLOAD_DIR: uploadDir,
-  RESOLVED_UPLOAD_DIR: resolvedUploadDir,
-  MEDIA_ROOT: mediaRoot,
-  LOGS_DIR: logsDir,
-  IS_DOCKER: isDocker,
-  DEFAULT_TARGET_LANG: "es",
-  DEFAULT_NATIVE_LANG: "en",
-  MODEL_SIZE: "tiny",
-  STORAGE_TYPE: env.STORAGE_TYPE || "local", // local | s3
+    DATABASE_URL: env.DATABASE_URL || 'postgres://admin:password@localhost:5432/main_db',
+    AI_SERVICE_URL: env.AI_SERVICE_URL || 'http://127.0.0.1:8000',
+    AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || 'dev_secret_key',
+    UPLOAD_DIR: uploadDir,
+    RESOLVED_UPLOAD_DIR: resolvedUploadDir,
+    AI_SERVICE_MEDIA_PREFIX: AI_MEDIA_PATH,
+    IS_DOCKER: isDocker,
+    DEFAULT_TARGET_LANG: 'es',
+    DEFAULT_NATIVE_LANG: 'en',
+    MODEL_SIZE: 'tiny',
+    STORAGE_TYPE: env.STORAGE_TYPE || 'local' // local | s3
 };
 
 export enum ProcessingStatus {
-  PENDING = "PENDING",
-  COMPLETED = "COMPLETED",
-  ERROR = "ERROR",
+    PENDING = 'PENDING',
+    COMPLETED = 'COMPLETED',
+    ERROR = 'ERROR'
 }
 
 /**
- * Converts a stored media path to the platform's canonical AI-service input.
- * Paths under the shared media root are sent as media-root-relative paths
- * (for example `uploads/example.mp4`) so both platform and AI service can
- * resolve them consistently across local and Docker environments.
+ * Converts a local file path to a path that the AI Service can understand.
+ * Relies on MEDIA_ROOT_INTERNAL env var to be consistent across services.
  */
 export function toAiServicePath(localPath: string): string {
-  if (!localPath) {
-    return localPath;
-  }
+    const filename = path.basename(localPath);
+    // Default to the standard Docker internal path if env var not set
+    const mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH;
 
-  if (!path.isAbsolute(localPath)) {
-    return toPosixPath(localPath);
-  }
-
-  const relativePath = toRelativePathFromRoot(localPath, CONFIG.MEDIA_ROOT);
-  return relativePath ?? localPath;
+    // Simple, robust concatenation. No magic OS detection.
+    return `${mediaRootInternal}/${filename}`;
 }

@@ -5,8 +5,6 @@
     import { CheckCircle2 } from "lucide-svelte";
     import { enhance } from "$app/forms";
     import type { PageData, ActionData } from "./$types";
-    import { untrack } from "svelte";
-
     interface Props {
         data: PageData & { initialData: { gameInterval: string } };
         form: ActionData & { errors?: Record<string, string[]> };
@@ -17,12 +15,6 @@
     // Manual form state using Svelte 5 runes
     // Initialize properly; component recreation on nav handles reset
     let gameInterval = $state(data.initialData.gameInterval);
-
-    // Watch for data changes to reset state if needed (though usually nav handles this)
-    $effect(() => {
-        gameInterval = data.initialData.gameInterval;
-    });
-
     let isSubmitting = $state(false);
 
     function getIntervalLabel(value: string) {

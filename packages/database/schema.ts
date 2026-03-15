@@ -95,11 +95,12 @@ export type DbTokenAnalysis = {
 };
 
 export type DbVttSegment = {
-  start: number;
-  end: number;
-  text: string;
-  tokens: DbTokenAnalysis[];
-  classification?: string;
+    start: number;
+    end: number;
+    text: string;
+    tokens: DbTokenAnalysis[];
+    classification?: string;
+    translation?: string;
 };
 
 export const videoProcessing = pgTable(
