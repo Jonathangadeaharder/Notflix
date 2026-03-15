@@ -1,45 +1,82 @@
-# ADR-007: Idiomatic Backend Patterns (Tasks, Errors, and DI)
+# ADR-007: Idiomatic Backend Patterns (Tasks, Errors, and Progress State)
 
 **Status:** Accepted
 **Date:** 2025-12-20
-**Context:** Need for consistent, observable, and maintainable patterns for background processing, error handling, and dependency management across both SvelteKit (Host) and FastAPI (Brain).
+**Context:** The platform needs consistent backend patterns for orchestration, dependency wiring, and progress reporting across the SvelteKit host and the FastAPI AI service.
 
 ## 1. Decision
 
-We have adopted the following backend patterns:
+We adopt the following backend patterns:
 
-- **Background Tasks (Host):** Centralized `TaskRegistry` for fire-and-forget operations.
-- **Error Handling (Brain):** Global FastAPI exception handlers to simplify route logic.
-- **Dependency Injection:** Constructor-based injection with a centralized container (Host) and `Depends` (Brain).
-- **Data Consistency:** Singleton library instances enforced via root `overrides`.
-- **Path Resolution:** Absolute path resolution centralized in `config.ts`, avoiding brittle relative path math (`../../`).
-- **Request Validation (Brain):** Use Pydantic `@field_validator` for logic-based validation (like file existence) before route handlers execute.
+- **Background tasks:** fire-and-forget work is tracked through a centralized `TaskRegistry`
+- **Dependency injection:** the host uses a shared container; the AI service uses FastAPI `Depends(...)`
+- **Progress state:** long-running processing persists coarse lifecycle plus UI-facing progress in `video_processing`
+- **Request context:** request IDs flow through AsyncLocalStorage on the host and `X-Request-ID` across service calls
+- **Startup cleanup:** stale in-flight rows are repaired on boot through the shared orchestrator instance
 
-## 2. Rationale
+## 2. Processing State Model
 
-### 2.1 TaskRegistry (SvelteKit)
+`video_processing` is the canonical backend state for media processing.
 
-# ... (same)
+- **`status`** is the coarse lifecycle:
+  - `PENDING`
+  - `COMPLETED`
+  - `ERROR`
+- **`progress_stage`** is the user-facing stage:
+  - `QUEUED`
+  - `THUMBNAIL_GENERATION`
+  - `TRANSCRIBING`
+  - `ANALYZING`
+  - `TRANSLATING`
+  - `READY`
+  - `FAILED`
+- **`progress_percent`** is the integer `0..100` progress indicator surfaced to the UI
 
-### 2.5 Absolute Pathing
+### Transition Rules
 
-- **Reliability:** Using `path.resolve` once at startup based on the environment or project root ensures the application behaves consistently regardless of the current working directory or Docker container WORKDIR.
+- Lock acquisition or retry starts at `PENDING / QUEUED / 0`
+- Active processing keeps `status = PENDING` while only stage/percent change
+- Successful completion writes `COMPLETED / READY / 100`
+- Runtime failure writes `ERROR / FAILED / 0`
+- Startup stale-task cleanup writes the same `ERROR / FAILED / 0` terminal state for zombie rows
 
-### 2.6 Pydantic Validators
+The frontend consumes this state via polling; there is no SSE/WebSocket client contract for processing updates.
 
-- **Fast-Fail:** By moving path existence checks into the model layer, we catch errors earlier and return standard 422 responses automatically, keeping AI logic focused on processing.
+## 3. Dependency Wiring
 
-## 3. Implementation Standards
+### Host (SvelteKit)
 
-1.  **Background Work:** Never call `async` functions without `await` directly in a route. Always wrap them in `taskRegistry.register('name', promise)`.
-2.  **FastAPI Routes:** Write the "happy path." Let the `global_exception_handler` and Pydantic validators deal with validation and unexpected crashes.
-3.  **Pathing:** Always use `CONFIG.RESOLVED_UPLOAD_DIR` instead of calculating relative paths in local files.
-4.  **DI:**
-    - **Host:** Export singleton instances from `lib/server/container.ts`.
-    - **Brain:** Use `Depends` to inject model instances into route handlers.
-5.  **Schema Types:** Use Drizzle's `InferSelectModel` and `InferInsertModel` to generate TypeScript interfaces directly from the database schema.
+- Shared instances are composed in `src/lib/server/container.ts`
+- Routes and startup hooks should use container exports rather than instantiating fresh service graphs
 
-## 4. Consequences
+### Brain (FastAPI)
 
-- **Positive:** significantly reduced "dirty" code and type casts. Improved logs for background processing. Easier to write fast-running unit tests.
-- **Negative:** Requires discipline to follow the DI pattern instead of direct imports. Root `package.json` management becomes more critical.
+- Route handlers obtain heavy services through `Depends(...)`
+- Lifespan bootstrapping provides the production instances behind those dependency functions
+
+## 4. Background Work and Locking
+
+`Orchestrator.acquireProcessingLock()` prevents duplicate processing of the same `(video_id, target_lang)` pair.
+
+- Existing `PENDING` row: refuse duplicate work
+- Existing terminal row: allow retry by resetting the row
+- Missing row: create a new processing record
+
+This protects against duplicate "Process" actions and unnecessary GPU/CPU cost.
+
+## 5. Request Context
+
+`request-context.ts` uses `AsyncLocalStorage` so a request ID can flow through host-side code without being threaded through every function signature. The real AI gateway forwards that request ID to the AI service through `X-Request-ID`.
+
+## 6. Startup Cleanup
+
+`hooks.server.ts` invokes `orchestrator.cleanupStaleTasks()` through the shared container instance during server startup.
+
+- The call happens once per boot.
+- Its purpose is repair, not reprocessing.
+- Any rows left in `PENDING` from a prior crash are converted into the canonical failure state so Studio, dashboard, and upload UI do not display phantom in-flight work.
+
+## 7. Consequences
+
+- **Positive:** duplicate processing is constrained, progress is queryable from persisted state, and backend wiring remains testable and explicit
+- **Negative:** correctness depends on keeping the shared container, progress writes, and cleanup behavior aligned with the same lifecycle model

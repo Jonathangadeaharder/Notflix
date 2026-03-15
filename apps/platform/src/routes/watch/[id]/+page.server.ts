@@ -1,33 +1,48 @@
+import { GAME } from "$lib/constants";
+import { mapSegmentsToPlayerSubtitles } from "$lib/components/player/subtitle-mapper";
+import type { Session } from "$lib/server/infrastructure/auth";
 import { db } from "$lib/server/infrastructure/database";
-import {
-  video,
-  user,
-  videoProcessing,
-  type DbVttSegment,
-} from "@notflix/database";
-import { eq, and } from "drizzle-orm";
-import type { PageServerLoad } from "./$types";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
+import {
+  type DbVttSegment,
+  user,
+  video,
+  videoProcessing,
+  watchProgress,
+} from "@notflix/database";
+import { and, eq, type InferSelectModel } from "drizzle-orm";
+import type { PageServerLoad } from "./$types";
 
-const DEFAULT_GAME_INTERVAL = 10;
+const DEFAULT_GAME_INTERVAL = GAME.DEFAULT_INTERVAL_MINUTES;
+const DEFAULT_TARGET_LANGUAGE = "es";
 
+type User = InferSelectModel<typeof user>;
+type VideoRecord = InferSelectModel<typeof video>;
+type VideoProcessingRecord = InferSelectModel<typeof videoProcessing>;
 type HeatmapSegment = { start: number; end: number; type: string };
+type WatchQueryResult = {
+  video: VideoRecord;
+  processing: VideoProcessingRecord | null;
+};
 
-function generateHeatmap(vttJson: unknown): HeatmapSegment[] {
-  const heatmap: HeatmapSegment[] = [];
-  if (vttJson) {
-    const segments = vttJson as DbVttSegment[];
-    for (const seg of segments) {
-      if (seg.classification) {
-        heatmap.push({
-          start: seg.start,
-          end: seg.end,
-          type: seg.classification, // EASY, LEARNING, HARD
-        });
-      }
-    }
+function generateHeatmap(
+  vttJson: DbVttSegment[] | null | undefined,
+): HeatmapSegment[] {
+  if (!vttJson) {
+    return [];
   }
-  return heatmap;
+
+  return vttJson.flatMap((segment) =>
+    segment.classification
+      ? [
+          {
+            start: segment.start,
+            end: segment.end,
+            type: segment.classification,
+          },
+        ]
+      : [],
+  );
 }
 
 async function fetchUserProfile(userId: string) {
@@ -36,25 +51,19 @@ async function fetchUserProfile(userId: string) {
     .from(user)
     .where(eq(user.id, userId))
     .limit(1);
+
   return profile || null;
 }
-
-import type { Session } from "$lib/server/infrastructure/auth";
-
-import type { InferSelectModel } from "drizzle-orm";
-type User = InferSelectModel<typeof user>;
 
 async function getGameInterval(
   session: Session | null,
 ): Promise<{ profile: User | null; interval: number }> {
-  if (!session) return { profile: null, interval: DEFAULT_GAME_INTERVAL };
+  if (!session) {
+    return { profile: null, interval: DEFAULT_GAME_INTERVAL };
+  }
 
   const userProfile = await fetchUserProfile(session.user.id);
-
-  if (
-    process.env.PLAYWRIGHT_TEST === "true" &&
-    process.env.TEST_GAME_INTERVAL
-  ) {
+  if (process.env.TEST_GAME_INTERVAL) {
     return {
       profile: userProfile,
       interval: parseFloat(process.env.TEST_GAME_INTERVAL),
@@ -67,14 +76,10 @@ async function getGameInterval(
   };
 }
 
-export const load: PageServerLoad = async ({ params, locals, url }) => {
-  const videoId = params.id;
-  const session = await locals.auth();
-  const targetLang = url.searchParams.get("lang") || "es";
-
+async function fetchWatchResult(videoId: string, targetLang: string) {
   const [result] = await db
     .select({
-      video: video,
+      video,
       processing: videoProcessing,
     })
     .from(video)
@@ -88,26 +93,78 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
     .where(eq(video.id, videoId))
     .limit(1);
 
-  if (!result || !result.video) {
-    return {
-      video: null,
-      heatmap: [],
-      profile: null,
-      user: session?.user ?? null,
-      session,
-    };
+  return result as WatchQueryResult | undefined;
+}
+
+async function fetchSavedProgressSeconds(
+  session: Session | null,
+  videoId: string,
+) {
+  if (!session) {
+    return 0;
   }
 
-  const vid = result.video;
-  vid.filePath = toMediaUrl(vid.filePath);
-  vid.thumbnailPath = toMediaUrl(vid.thumbnailPath);
+  const [progress] = await db
+    .select({
+      currentTime: watchProgress.currentTime,
+    })
+    .from(watchProgress)
+    .where(
+      and(
+        eq(watchProgress.videoId, videoId),
+        eq(watchProgress.userId, session.user.id),
+      ),
+    )
+    .limit(1);
 
-  const heatmap = generateHeatmap(result.processing?.vttJson);
-  const { profile, interval } = await getGameInterval(session);
+  return progress?.currentTime ?? 0;
+}
+
+function buildEmptyPageState(session: Session | null) {
+  return {
+    video: null,
+    subtitles: [],
+    heatmap: [],
+    profile: null,
+    user: session?.user ?? null,
+    session,
+  };
+}
+
+function normalizeVideoMedia(loadedVideo: VideoRecord) {
+  return {
+    ...loadedVideo,
+    filePath: toMediaUrl(loadedVideo.filePath),
+    thumbnailPath: toMediaUrl(loadedVideo.thumbnailPath),
+  };
+}
+
+export const load: PageServerLoad = async ({ params, locals, url }) => {
+  const session = await locals.auth();
+  const targetLang = url.searchParams.get("lang") || DEFAULT_TARGET_LANGUAGE;
+  const result = await fetchWatchResult(params.id, targetLang);
+
+  if (!result?.video) {
+    return buildEmptyPageState(session);
+  }
+
+  const vttSegments = result.processing?.vttJson as
+    | DbVttSegment[]
+    | null
+    | undefined;
+  const [videoProgress, { profile, interval }] = await Promise.all([
+    fetchSavedProgressSeconds(session, params.id),
+    getGameInterval(session),
+  ]);
 
   return {
-    video: { ...vid, targetLang: result.processing?.targetLang },
-    heatmap,
+    video: {
+      ...normalizeVideoMedia(result.video),
+      targetLang: result.processing?.targetLang,
+      videoProgress,
+    },
+    subtitles: mapSegmentsToPlayerSubtitles(vttSegments ?? []),
+    heatmap: generateHeatmap(vttSegments),
     profile,
     gameInterval: interval,
     user: session?.user ?? null,

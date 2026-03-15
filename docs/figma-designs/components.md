@@ -148,12 +148,15 @@ Reusable UI components for the Notflix design system.
 - Hover: `-translate-y-1` lift effect
 
 **Status Badge**:
-| Status | Variant | Color |
-|--------|---------|-------|
-| COMPLETED | default | Green |
-| PENDING | secondary | Gray |
-| ERROR | destructive | Red |
-| UNPROCESSED | outline | Outline |
+
+Canonical processing labels live in the functional/schema specs. This design doc uses semantic badge mappings only:
+
+| Semantic State | Variant | Color |
+|----------------|---------|-------|
+| Success | default | Green |
+| In Progress | secondary | Gray |
+| Error | destructive | Red |
+| Unprocessed | outline | Outline |
 
 ---
 

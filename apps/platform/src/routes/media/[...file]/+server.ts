@@ -4,6 +4,7 @@ import fs from "fs";
 import { CONFIG } from "$lib/server/infrastructure/config";
 import type { RequestHandler } from "./$types";
 import { HTTP_STATUS } from "$lib/constants";
+import { isPathWithinRoot } from "$lib/server/utils/path-utils";
 
 export const GET: RequestHandler = async ({ params }) => {
   const filePath = params.file;
@@ -12,14 +13,11 @@ export const GET: RequestHandler = async ({ params }) => {
   // The filePath from params is relative to the 'media' root in URLs
   // e.g. /media/uploads/123.mp4 -> params.file = "uploads/123.mp4"
 
-  // We want to resolve this against the actual media root.
-  // CONFIG.RESOLVED_UPLOAD_DIR is e.g. "E:/.../media/uploads"
-  // So the media root is one level up from there.
-  const mediaRoot = path.resolve(CONFIG.RESOLVED_UPLOAD_DIR, "..");
-  const fullPath = path.join(mediaRoot, filePath);
+  const mediaRoot = CONFIG.MEDIA_ROOT;
+  const fullPath = path.resolve(mediaRoot, filePath);
 
   // Security: Ensure the resolved path is still within the media root
-  if (!fullPath.startsWith(mediaRoot)) {
+  if (!isPathWithinRoot(fullPath, mediaRoot)) {
     throw error(HTTP_STATUS.FORBIDDEN, "Forbidden");
   }
 

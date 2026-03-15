@@ -13,6 +13,8 @@ export const load = async ({ depends }) => {
       id: video.id,
       title: video.title,
       status: videoProcessing.status,
+      progressStage: videoProcessing.progressStage,
+      progressPercent: videoProcessing.progressPercent,
       createdAt: video.createdAt,
       thumbnailPath: video.thumbnailPath,
     })

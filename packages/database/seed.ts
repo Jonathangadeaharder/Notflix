@@ -18,7 +18,7 @@ async function seed() {
   console.log("🌱 Seeding Knowledge Base (Simplified)...");
 
   // 1. Ensure a default user exists
-  const defaultUserId = "user_123";
+  const defaultUserId = "00000000-0000-0000-0000-000000000123";
   await db
     .insert(user)
     .values({

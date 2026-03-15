@@ -4,6 +4,8 @@
 **Project:** "Notflix" - A Local-First Language Learning Platform
 **Aesthetic:** Premium Streaming Service (Netflix/HBO) meets Modern EdTech (Duolingo/Anki).
 
+**Authority Note:** This brief is aspirational. Canonical shipped behavior lives in `docs/specs/functional-specs.md`, `docs/specs/processing-progress.md`, and `docs/specs/learning-session-state.md`.
+
 ---
 
 ## 🚀 The Elevator Pitch
@@ -31,7 +33,7 @@ Imagine Netflix, but it pauses every 10 minutes to test you on vocabulary you _d
 - **Layout:** Classic streaming grid (Poster Art).
 - **Hero Section:** "Continue Watching" with a progress bar and a "Knowledge Gap" indicator (e.g., "85% Known").
 - **Metadata:** Instead of "Match %" (Netflix), show "Comprehension %" (e.g., "92% Comprehension").
-- **Status Indicators:** Small badges for `PROCESSING`, `NEW`, `COMPLETED`.
+- **Status Indicators:** Small badges for processing state and readiness, using the canonical labels from the runtime specs.
 
 ### 2. The "Smart Player" (Video Interface)
 
@@ -54,8 +56,7 @@ Imagine Netflix, but it pauses every 10 minutes to test you on vocabulary you _d
 
 - **Vibe:** Professional tool, clearer, more data-dense.
 - **Features:** Drag-and-drop video upload zone.
-- **Pipeline Visualization:** A step-by-step progress tracker for the AI pipeline:
-  `Uploading` -> `Transcribing (Whisper)` -> `Analyzing (SpaCy)` -> `Ready`.
+- **Pipeline Visualization:** A step-by-step progress tracker aligned with the canonical upload and processing stages from the runtime specs.
 
 ---
 

@@ -1,20 +1,29 @@
-import { video, videoProcessing, type DbVttSegment } from "@notflix/database";
-import { eq } from "drizzle-orm";
+import {
+  video,
+  videoLemmas,
+  videoProcessing,
+  type DbVttSegment,
+  type NewVideoLemma,
+} from "@notflix/database";
+import { and, eq } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import type {
   IAiGateway,
   TranscriptionResponse,
   TokenAnalysis,
 } from "../domain/interfaces";
+import { globalEvents, EVENTS } from "../infrastructure/event-bus";
 import {
   CONFIG,
   ProcessingStatus,
   toAiServicePath,
 } from "../infrastructure/config";
 import { LIMITS } from "$lib/constants";
-import type { SmartFilter } from "./linguistic-filter.service";
+import {
+  SegmentClassification,
+  type SmartFilter,
+} from "./linguistic-filter.service";
 import { db as drizzleDb } from "../infrastructure/database";
-import { logger } from "$lib/logger";
 
 // Infer types from schema
 type VideoRecord = InferSelectModel<typeof video>;
@@ -23,6 +32,7 @@ type ProgressEmitter = (status: string, percent: number) => void;
 
 // VTT Segment for application logic (mapping DbVttSegment to local needs if necessary)
 export type VttSegment = DbVttSegment;
+type EnrichedVttSegment = VttSegment & { translation?: string };
 
 const Progress = {
   THUMBNAIL: 5,
@@ -44,45 +54,58 @@ export class Orchestrator {
     nativeLang: string = CONFIG.DEFAULT_NATIVE_LANG,
     userId?: string,
   ) {
-    const ctx = { videoId, userId, targetLang };
     const emitProgress: ProgressEmitter = (status: string, percent: number) => {
-      logger.debug({ ...ctx, status, percent }, "Processing progress");
+      globalEvents.emit(EVENTS.PROCESSING_UPDATE, { videoId, status, percent });
+      this.persistProcessingProgress(
+        videoId,
+        targetLang,
+        status,
+        percent,
+      ).catch((error) => {
+        console.error(
+          "[Orchestrator] Failed to persist progress update:",
+          error,
+        );
+      });
     };
 
-    logger.info(ctx, "Starting video processing");
+    console.log(
+      `[Orchestrator] Starting processing for video: ${videoId}, User: ${userId}`,
+    );
     emitProgress("STARTING", 0);
 
     try {
       // 1. Acquire Lock (Atomic DB Operation)
       const locked = await this.acquireProcessingLock(videoId, targetLang);
       if (!locked) {
-        logger.warn(
-          ctx,
-          "Video already being processed, aborting duplicate request",
+        console.warn(
+          `[Orchestrator] Video ${videoId} is already being processed. Aborting duplicate request.`,
         );
         return;
       }
 
       const videoRecord = await this.getVideoRecord(videoId);
 
-      logger.debug(ctx, "Generating thumbnail");
+      console.log(`[Orchestrator] Generating thumbnail...`);
       await this.generateThumbnail(videoRecord, videoId, emitProgress);
 
-      logger.debug(ctx, "Transcribing audio");
+      console.log(`[Orchestrator] Transcribing...`);
       const transcription = await this.transcribe(
         videoRecord,
         targetLang,
         emitProgress,
       );
 
-      logger.debug(ctx, "Analyzing linguistic content");
+      console.log(`[Orchestrator] Analyzing...`);
       const analyzedSegments = await this.analyze(
         transcription,
         targetLang,
         emitProgress,
       );
 
-      logger.debug(ctx, "Enriching with translations");
+      console.log(
+        `[Orchestrator] Enriching with translations (User: ${userId})...`,
+      );
       const finalSegments = await this.enrichWithTranslations(
         analyzedSegments,
         targetLang,
@@ -91,15 +114,14 @@ export class Orchestrator {
         emitProgress,
       );
 
-      logger.debug(ctx, "Saving results to database");
-      await this.saveResults(videoId, finalSegments);
+      console.log(`[Orchestrator] Saving results...`);
+      await this.saveResults(videoId, targetLang, finalSegments);
 
       emitProgress(ProcessingStatus.COMPLETED, LIMITS.PERCENT_COMPLETE);
-      logger.info(ctx, "Video processing completed successfully");
+      console.log(`[Orchestrator] Processing finished successfully.`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      logger.error({ ...ctx, err: errorMessage }, "Video processing failed");
-      await this.markAsError(videoId, emitProgress);
+      console.error(`[Orchestrator] Processing Failed for ${videoId}:`, err);
+      await this.markAsError(videoId, targetLang, emitProgress);
       throw err;
     }
   }
@@ -109,20 +131,24 @@ export class Orchestrator {
    * Should be called on server startup.
    */
   async cleanupStaleTasks() {
-    logger.info("Cleaning up stale (zombie) tasks");
+    console.log("[Orchestrator] Cleaning up stale (zombie) tasks...");
     const result = await this.db
       .update(videoProcessing)
-      .set({ status: ProcessingStatus.ERROR })
+      .set({
+        status: ProcessingStatus.ERROR,
+        progressStage: "FAILED",
+        progressPercent: 0,
+      })
       .where(eq(videoProcessing.status, ProcessingStatus.PENDING))
       .returning({ videoId: videoProcessing.videoId });
 
     if (result.length > 0) {
-      logger.warn(
-        { count: result.length, videoIds: result.map((r) => r.videoId) },
-        "Marked zombie tasks as ERROR",
+      console.warn(
+        `[Orchestrator] Marked ${result.length} zombie tasks as ERROR:`,
+        result.map((r) => r.videoId),
       );
     } else {
-      logger.debug("No stale tasks found");
+      console.log("[Orchestrator] No stale tasks found.");
     }
   }
 
@@ -152,14 +178,33 @@ export class Orchestrator {
       const [existing] = await tx
         .select()
         .from(videoProcessing)
-        .where(eq(videoProcessing.videoId, videoId))
+        .where(
+          and(
+            eq(videoProcessing.videoId, videoId),
+            eq(videoProcessing.targetLang, targetLang),
+          ),
+        )
         .limit(1);
 
       if (existing) {
         if (existing.status === ProcessingStatus.PENDING) {
           return false; // Already running
         }
+        if (existing.status === ProcessingStatus.COMPLETED) {
+          // Re-processing is allowed? User implied "double-clicks".
+          // Usually re-processing entails explicit override.
+          // For now, let's assume if completed, we prevent auto-retrigger unless requested.
+          // But the UI "Process" button usually implies "force".
+          // Let's allow if COMPLETED, but strictly block PENDING.
+          // Actually user said: "If a user double-clicks 'Process'... doubling GPU costs".
+          // So prevention of PENDING collision is key.
+        }
       }
+
+      // Upsert with check
+      // We use 'status' check in WHERE clause of UPDATE, but Drizzle doesn't support WHERE in onConflictDoUpdate easily
+      // except via 'where' field in PG config?
+      // Simpler: DELETE if ERROR/COMPLETED (or just UPDATE), but if PENDING return false.
 
       if (existing && existing.status === ProcessingStatus.PENDING) {
         return false;
@@ -173,12 +218,16 @@ export class Orchestrator {
           videoId,
           targetLang,
           status: ProcessingStatus.PENDING,
+          progressStage: "QUEUED",
+          progressPercent: 0,
           vttJson: null, // Reset previous results
         })
         .onConflictDoUpdate({
-          target: [videoProcessing.videoId, videoProcessing.targetLang],
+          target: [videoProcessing.videoId, videoProcessing.targetLang], // Assuming composite
           set: {
             status: ProcessingStatus.PENDING,
+            progressStage: "QUEUED",
+            progressPercent: 0,
             vttJson: null,
           },
         });
@@ -201,9 +250,8 @@ export class Orchestrator {
     );
 
     if (isAudio) {
-      logger.debug(
-        { videoId, filePath: videoRecord.filePath },
-        "Skipping thumbnail for audio file",
+      console.log(
+        `[Orchestrator] Skipping thumbnail for audio file: ${videoRecord.filePath}`,
       );
       return;
     }
@@ -216,11 +264,7 @@ export class Orchestrator {
         .set({ thumbnailPath: thumbRes.thumbnail_path })
         .where(eq(video.id, videoId));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      logger.warn(
-        { videoId, err: errorMessage },
-        "Thumbnail generation failed (non-critical)",
-      );
+      console.error(`[Orchestrator] Thumbnail failed (non-critical):`, err);
     }
   }
 
@@ -294,7 +338,7 @@ export class Orchestrator {
     if (lemmaList.length === 0) return segments;
 
     // Limit Guest Mode to reduce costs/load
-    // Guests only get the first N unique terms translated
+    // Guests only get the first N unique terms translated.
     const limitedLemmaList = lemmaList.slice(0, LIMITS.GUEST_LEMMA_LIMIT);
 
     const res = await this.aiGateway.translate(
@@ -341,12 +385,14 @@ export class Orchestrator {
     );
 
     // 2. Map filtered results back and collect unknown lemmas
-    const enrichedSegments = segments.map((seg, i) => {
+    const enrichedSegments: EnrichedVttSegment[] = segments.map((seg, i) => {
       const filtered = filteredSegments[i];
 
-      filtered.tokens.forEach((t) => {
-        if (!t.isKnown) unknownLemmasToTranslate.add(t.lemma);
-      });
+      if (filtered.classification === SegmentClassification.LEARNING) {
+        filtered.tokens.forEach((t) => {
+          if (!t.isKnown) unknownLemmasToTranslate.add(t.lemma);
+        });
+      }
 
       return {
         ...seg,
@@ -375,7 +421,7 @@ export class Orchestrator {
 
     enrichedSegments.forEach((seg, i) => {
       // Assign full sentence translation
-      (seg as any).translation = sentenceRes.translations[i];
+      seg.translation = sentenceRes.translations[i];
 
       seg.tokens.forEach(
         (t: TokenAnalysis & { isKnown?: boolean; translation?: string }) => {
@@ -389,21 +435,98 @@ export class Orchestrator {
     return enrichedSegments;
   }
 
-  private async saveResults(videoId: string, vttJson: VttSegment[]) {
+  private async saveResults(
+    videoId: string,
+    targetLang: string,
+    vttJson: VttSegment[],
+  ) {
+    const lemmaCounts = this.buildVideoLemmaCounts(videoId, vttJson);
+
     await this.db
       .update(videoProcessing)
       .set({
         status: ProcessingStatus.COMPLETED,
+        progressStage: "READY",
+        progressPercent: LIMITS.PERCENT_COMPLETE,
         vttJson: vttJson,
       })
-      .where(eq(videoProcessing.videoId, videoId));
+      .where(
+        and(
+          eq(videoProcessing.videoId, videoId),
+          eq(videoProcessing.targetLang, targetLang),
+        ),
+      );
+
+    await this.db.delete(videoLemmas).where(eq(videoLemmas.videoId, videoId));
+
+    if (lemmaCounts.length > 0) {
+      await this.db.insert(videoLemmas).values(lemmaCounts);
+    }
   }
 
-  private async markAsError(videoId: string, emit: ProgressEmitter) {
+  private async markAsError(
+    videoId: string,
+    targetLang: string,
+    emit: ProgressEmitter,
+  ) {
     await this.db
       .update(videoProcessing)
-      .set({ status: ProcessingStatus.ERROR })
-      .where(eq(videoProcessing.videoId, videoId));
+      .set({
+        status: ProcessingStatus.ERROR,
+        progressStage: "FAILED",
+        progressPercent: 0,
+      })
+      .where(
+        and(
+          eq(videoProcessing.videoId, videoId),
+          eq(videoProcessing.targetLang, targetLang),
+        ),
+      );
     emit(ProcessingStatus.ERROR, 0);
+  }
+
+  private async persistProcessingProgress(
+    videoId: string,
+    targetLang: string,
+    stage: string,
+    progressPercent: number,
+  ) {
+    await this.db
+      .update(videoProcessing)
+      .set({
+        status: ProcessingStatus.PENDING,
+        progressStage: stage,
+        progressPercent,
+      })
+      .where(
+        and(
+          eq(videoProcessing.videoId, videoId),
+          eq(videoProcessing.targetLang, targetLang),
+        ),
+      );
+  }
+
+  private buildVideoLemmaCounts(
+    videoId: string,
+    segments: VttSegment[],
+  ): NewVideoLemma[] {
+    const lemmaCounts = new Map<string, number>();
+
+    segments.forEach((segment) => {
+      segment.tokens.forEach((token) => {
+        const lemma = token.lemma?.trim();
+        if (!lemma || token.pos === "PUNCT") {
+          return;
+        }
+
+        lemmaCounts.set(lemma, (lemmaCounts.get(lemma) ?? 0) + 1);
+      });
+    });
+
+    return Array.from(lemmaCounts.entries()).map(([lemma, count]) => ({
+      videoId,
+      lemma,
+      count,
+    }));
   }
 }

@@ -1,117 +1,142 @@
 # System Specifications: "Notflix" Language Platform
 
-**Version:** 1.1 (Revised 2025-12-19)
-**Architecture:** KISS (Keep It Simple, Stupid) - SvelteKit + FastAPI + Postgres.
+**Version:** 1.2 (Revised 2026-03-14)
+**Architecture:** KISS (Keep It Simple, Stupid) - SvelteKit + FastAPI + Postgres
+
+This document is normative for shipped runtime product behavior. Persistent data shape lives in `docs/specs/database-schema.md`. Processing and learning-session state are further defined in `docs/specs/processing-progress.md` and `docs/specs/learning-session-state.md`.
 
 ## 1. Core Concept
 
-A "Netflix-style" video player that acts as a language engine. Instead of translating everything, it calculates the user's "knowledge gap" for a specific episode and translates **only** the words they do not know, turning entertainment into a targeted spaced-repetition loop.
+Notflix is a video-first language learning product. It does not translate everything indiscriminately; it uses processed subtitle data, known-word state, and timed intermissions to focus the learner on the words they are most ready to acquire.
 
-## 2. Data Models (Schema)
+## 2. Data Model Overview
 
-Defined in `packages/db/schema.ts` using Drizzle.
+Persistent storage is defined in `packages/database/schema.ts`.
 
-### 2.1 User & Profile
+- **User/profile:** native language, target language, and game interval preferences
+- **Known words:** lemma-level vocabulary state per user and language
+- **Video processing:** processed subtitle JSON plus coarse and fine-grained progress state
+- **Watch progress:** per-user resume state for completed videos
+- **Video lemmas:** per-video lemma counts for dashboard and future analytics
 
-Tracks native/target languages and learning preferences (e.g., game frequency).
+## 3. Processing Pipeline
 
-### 2.2 Vocabulary Knowledge Base
+The SvelteKit orchestrator coordinates the AI service over blocking JSON requests.
 
-Tracks knowledge at the **Lemma** level (e.g., knowing "run" means you know "running"). This is the source of truth for the "Gap Analysis".
+### 3.1 Transcription
 
-### 2.3 Video & Processing
+- Input: a shared-media file path
+- Action: call Brain `/transcribe`
+- Result: timestamped transcript segments
 
-Tracks media metadata and the resulting structured linguistic data (`vttJson`).
+### 3.2 Linguistic Analysis
 
----
+- Action: call Brain `/filter` in batch
+- Result: tokenized segments with lemma, POS, stop-word, and whitespace data
 
-## 3. The "Smart Filter" Logic (Pipeline)
+### 3.3 User-Aware Filtering
 
-Executed by the **Orchestrator (SvelteKit)**, coordinating AI services via REST/JSON.
+- Compare segment lemmas against the user's known-word state
+- Classify segments into `EASY`, `LEARNING`, or `HARD`
+- Thresholds remain defined in code constants
 
-### Phase 1: Transcription (Whisper)
+### 3.4 Translation
 
-- **Input:** Video File Path (Shared Volume).
-- **Action:** Call Brain `/transcribe`.
-- **Result:** Timestamped segments with raw text.
+- **Authenticated users:** translate unknown lemmas from `LEARNING` segments only
+- **Guests:** translate only the first 50 unique lemmas to cap cost
+- **All users:** still receive full-sentence translations for translated-subtitle modes
 
-### Phase 2: Analysis (SpaCy)
+### 3.5 Persistence
 
-- **Action:** Call Brain `/filter` (Batch).
-- **Linguistic Data:** Each segment is tokenized with Lemmas, POS tags, and Stop-word status.
+- Save enriched subtitle JSON to `video_processing.vtt_json`
+- Refresh `video_lemmas` from the saved subtitle data
+- Persist progress lifecycle in `video_processing.status`, `progress_stage`, and `progress_percent`
 
-### Phase 3: Filtering (Gap Analysis)
-
-- **Context:** User-aware filtering.
-- **Rule:** Compare segment lemmas against the **Known Words** database.
-- **Classification:**
-  - **EASY:** 100% words known.
-  - **LEARNING:** High ratio of known words, but contains target "unknowns".
-  - **HARD:** Too many unknown words for effective learning.
-
-### Phase 4: Just-in-Time Translation (MarianMT)
-
-- **Action:** Call Brain `/translate` for unknown lemmas found in "Learning" segments.
-- **Storage:** Save full JSON structure (Segments + Tokens + Translations) to Postgres.
-
----
-
-## 4. Communication & Status
+## 4. Communication, Pathing, and Status
 
 ### 4.1 Internal API
 
-Communication between SvelteKit and Python happens over a private Docker network using **Standard JSON POST** requests. No streaming or NDJSON is used.
+Platform-to-AI communication uses standard blocking JSON POST requests on the private Docker network. No NDJSON or streaming protocol is used.
 
-### 4.2 Status Tracking (Polling)
+### 4.2 Media Path Contract
 
-- The UI does not use SSE or WebSockets.
-- **Idiomatic Refresh:** The UI uses SvelteKit's granular `invalidate('app:videos')` every 3 seconds while any visible video has a `PENDING` status. This re-runs the specific database query for the video list without refreshing the entire page or layout state.
+- Media is stored on the shared filesystem under `media/`
+- The platform sends media-root-relative POSIX paths to the AI service when possible
+- The AI service resolves incoming paths against the configured media root before filesystem access
 
-## 5. Media Management
+### 4.3 Progress Tracking
 
-- **Storage:** Shared filesystem volume (`media/uploads`).
-- **Thumbnail Generation:** Triggered during the pipeline via Brain `/generate_thumbnail` (FFmpeg wrapper).
+- The UI does not use SSE or WebSockets for processing state
+- Studio invalidates the videos query every 3 seconds while any visible row is still `PENDING`
+- The upload page polls `GET /api/videos/[id]/progress` every 3 seconds until terminal state
+- Detailed lifecycle semantics live in `docs/specs/processing-progress.md`
 
----
+## 5. Dashboard Behavior
 
-## 6. The "Game & Watch" Loop
+The home route is a data-backed dashboard, not a marketing landing page.
 
-Directly integrates Spaced Repetition into the video player.
+- The featured session prefers a **Continue Watching** video when one exists
+- Otherwise, the dashboard falls back to the first completed video, then the most recent video
+- Each card surfaces:
+  - processing state
+  - watch-progress state
+  - comprehension percentage
+- Continue Watching and comprehension semantics are defined in `docs/specs/learning-session-state.md`
 
-1.  **Interval:** User sets a frequency (e.g., every 10 minutes).
-2.  **Trigger:** Video reaches the interval.
-3.  **Action:** Video pauses; Flashcard Overlay appears using unknown words from the _upcoming_ 10-minute segment.
-4.  **Resume:** Video resumes once the user completes the "Knowledge Check".
+## 6. Smart Player Behavior
 
----
+The canonical watch route uses the shared `VideoPlayer` experience.
 
-## 7. Non-Goals (Explicitly Out of Scope)
+- Resume starts from persisted watch progress when available
+- Subtitle words are interactive:
+  - hover or keyboard focus reveals word details and pauses playback
+  - click pins the tooltip
+  - **Mark Known** persists the lemma and updates the local subtitle state immediately
+- A transcript drawer is available from the processed subtitle data
+- A subtitle heatmap visualizes segment difficulty across the media timeline
 
-The following features are intentionally **NOT** implemented:
+## 7. Studio Upload Behavior
 
-## 7. Non-Goals (Explicitly Out of Scope)
+- The upload screen supports drag-and-drop and direct file selection
+- Successful upload returns a `videoId` and keeps the user on the upload flow
+- The page shows a stepwise pipeline view driven by local upload state plus persisted processing progress
+- When processing completes, the page offers direct actions to start watching or return to Studio
 
-The following features are intentionally **NOT** implemented to maintain the "KISS" and "Local-First" philosophy:
+## 8. Game & Watch Loop
 
-### 7.1 Infrastructure & Real-time
+The player integrates spaced repetition into playback.
 
-- **Rate Limiting:** Not needed for a local-first, single-machine deployment.
-- **WebSocket/SSE:** Polling (3s interval) is sufficient and simpler.
-- **Distributed Queues:** `TaskRegistry` with Promises handles background work adequately.
+1. The user-configured interval determines the next interruption point.
+2. When the interval is reached, playback pauses.
+3. Flashcards are generated from the **upcoming** interval window, not the segment just watched.
+4. The overlay is keyboard-first and displays a bounded set of visible cards.
+5. Completing the batch resumes playback smoothly.
 
-### 7.2 Media & Playback
+Deck-generation and overlay-state semantics are further defined in `docs/specs/learning-session-state.md`.
 
-- **Real-time Transcoding:** No Plex-style on-the-fly transcoding. Users must provide browser-compatible files (MP4/WebM).
-- **DRM Support:** No support for encrypted content (Widevine/FairPlay).
-- **TV Interface:** UI is designed for Laptop/Tablet (mouse/touch), not 10-foot TV remotes.
+## 9. Non-Goals
 
-### 7.3 AI & Language Scope
+The following remain intentionally out of scope to preserve the local-first KISS model:
 
-- **Pronunciation Scoring:** This is a listening/comprehension tool. No microphone integration.
-- **Live Streams:** Pipeline is designed for batch processing of complete files, not RTMP/HLS streams.
-- **OCR:** We process audio/subtitles, not on-screen text.
+### 9.1 Infrastructure & Real-Time
 
-### 7.4 Integrations
+- Rate limiting for public multi-tenant traffic
+- WebSocket/SSE client progress streaming
+- Distributed queue infrastructure
 
-- **Metadata Scraping:** No TMDB/IMDB integration. Rely on filenames.
-- **Bi-directional Anki Sync:** Export only. State synchronization is too complex.
+### 9.2 Media & Playback
+
+- Real-time transcoding
+- DRM support
+- 10-foot TV remote interface design
+
+### 9.3 AI & Language Scope
+
+- Pronunciation scoring
+- Live-stream processing
+- OCR/on-screen text extraction
+
+### 9.4 External Integrations
+
+- Metadata scraping from TMDB/IMDB
+- Bi-directional Anki sync
