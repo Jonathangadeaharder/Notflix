@@ -1,19 +1,23 @@
-FROM python:3.14-slim
+# syntax=docker/dockerfile:1.7
+FROM python:3.11-slim
 
 WORKDIR /app
-ENV UV_CACHE_DIR=/app/.uv-cache
 
-# Install system dependencies
+# System dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv and prewarm the locked runtime environment
-RUN pip install --no-cache-dir uv && rm -rf /root/.cache/pip
-COPY apps/ai-service/requirements.txt apps/ai-service/requirements.lock ./
-RUN uvx --with-requirements requirements.lock --from uvicorn uvicorn --version
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Install Python dependencies with uv — pip cache is mounted so
+# repeated builds on the droplet only download changed packages.
+COPY apps/ai-service/requirements.lock ./requirements.lock
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system -r requirements.lock
 
 # Copy source code
 COPY apps/ai-service/ .
@@ -22,9 +26,6 @@ COPY apps/ai-service/ .
 RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
-# Expose API port
 EXPOSE 8000
 
-# Start the application
-CMD ["uvx", "--with-requirements", "requirements.lock", "--from", "uvicorn", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -5,6 +5,7 @@
       - ca-certificates
       - curl
       - gnupg
+      - git
     state: present
     update_cache: true
 
@@ -59,6 +60,14 @@
     - /opt/notflix/volumes
     - /opt/notflix/volumes/api
 
+- name: Clone or update repo
+  git:
+    repo: "{{ repo_url }}"
+    dest: /opt/notflix/repo
+    version: "{{ git_ref }}"
+    force: true
+  become_user: root
+
 - name: Deploy .env file
   copy:
     content: "{{ lookup('env', 'PROD_ENV_FILE') }}"
@@ -84,15 +93,12 @@
     group: docker
     mode: "0640"
 
-- name: Log into GitHub Container Registry
-  shell: |
-    echo "{{ lookup('env', 'GHCR_TOKEN') }}" | docker login ghcr.io -u "{{ lookup('env', 'GHCR_USER') }}" --password-stdin
-  no_log: true
-
-- name: Pull latest images
+- name: Build images on droplet
   shell: |
     cd /opt/notflix
-    docker compose -f docker-compose.prod.yml --env-file .env pull
+    docker compose -f docker-compose.prod.yml --env-file .env build --pull
+  environment:
+    DOCKER_BUILDKIT: "1"
 
 - name: Deploy with docker compose
   shell: |

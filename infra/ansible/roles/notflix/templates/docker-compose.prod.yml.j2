@@ -49,7 +49,10 @@ services:
       - "8000:8000"
 
   ai-service:
-    image: ghcr.io/{{ image_owner }}/notflix-ai-service:{{ image_tag }}
+    build:
+      context: /opt/notflix/repo
+      dockerfile: apps/ai-service/Dockerfile
+    image: notflix-ai-service:{{ git_ref[:7] }}
     restart: unless-stopped
     depends_on:
       db:
@@ -62,7 +65,10 @@ services:
       - log_data:/app/logs
 
   platform:
-    image: ghcr.io/{{ image_owner }}/notflix-platform:{{ image_tag }}
+    build:
+      context: /opt/notflix/repo
+      dockerfile: apps/platform/Dockerfile.prod
+    image: notflix-platform:{{ git_ref[:7] }}
     restart: unless-stopped
     depends_on:
       - auth
