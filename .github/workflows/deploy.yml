@@ -39,6 +39,35 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Import existing resources (idempotent)
+        env:
+          TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+        run: |
+          # Import SSH key if it already exists in DO (ignore error if not yet created)
+          SSH_KEY_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            "https://api.digitalocean.com/v2/account/keys" \
+            | jq -r '.ssh_keys[] | select(.name=="notflix-deploy") | .id // empty')
+          if [ -n "$SSH_KEY_ID" ]; then
+            terraform import digitalocean_ssh_key.deploy "$SSH_KEY_ID" || true
+          fi
+
+          # Import droplet if it already exists in DO (ignore error if not yet created)
+          DROPLET_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            "https://api.digitalocean.com/v2/droplets?name=notflix-prod" \
+            | jq -r '.droplets[0].id // empty')
+          if [ -n "$DROPLET_ID" ]; then
+            terraform import digitalocean_droplet.notflix "$DROPLET_ID" || true
+          fi
+
+          # Import firewall if it already exists
+          FW_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            "https://api.digitalocean.com/v2/firewalls" \
+            | jq -r '.firewalls[] | select(.name=="notflix-prod-fw") | .id // empty')
+          if [ -n "$FW_ID" ]; then
+            terraform import digitalocean_firewall.notflix "$FW_ID" || true
+          fi
+
       - name: Terraform Plan
         env:
           TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
