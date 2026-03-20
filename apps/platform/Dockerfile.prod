@@ -1,0 +1,37 @@
+# ---- Stage 1: Build ----
+FROM node:20-slim AS builder
+
+# Install pnpm
+RUN npm install -g pnpm@9
+
+WORKDIR /app
+
+# Copy workspace manifests
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/ packages/
+COPY apps/platform/package.json apps/platform/
+
+# Install all deps (including devDependencies for build)
+RUN pnpm install --frozen-lockfile
+
+# Copy source
+COPY apps/platform/ apps/platform/
+
+# Build
+WORKDIR /app/apps/platform
+RUN pnpm run build
+
+# ---- Stage 2: Runtime ----
+FROM node:20-slim AS runtime
+
+WORKDIR /app
+
+# Copy only the build output and production node_modules
+COPY --from=builder /app/apps/platform/build ./build
+COPY --from=builder /app/apps/platform/package.json ./
+
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+CMD ["node", "build"]

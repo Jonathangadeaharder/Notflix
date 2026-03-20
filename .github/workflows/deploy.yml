@@ -1,0 +1,169 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+jobs:
+  # ── 1. Build & push Docker images ──────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        run: echo "version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push platform image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/platform/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/notflix-platform:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}/notflix-platform:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push ai-service image
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/ai-service
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/notflix-ai-service:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}/notflix-ai-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 2. Provision infra with Terraform ──────────────────────────────────────
+  terraform:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    outputs:
+      droplet_ip: ${{ steps.tf-output.outputs.droplet_ip }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        env:
+          TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get droplet IP
+        id: tf-output
+        env:
+          TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+        run: echo "droplet_ip=$(terraform output -raw droplet_ip)" >> "$GITHUB_OUTPUT"
+
+  # ── 3. Deploy with Ansible ──────────────────────────────────────────────────
+  ansible:
+    name: Ansible Deploy
+    runs-on: ubuntu-latest
+    needs: [build-and-push, terraform]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          pip install ansible
+
+      - name: Write SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Write dynamic inventory
+        run: |
+          cat > infra/ansible/inventory.ini << INVENTORY
+          [notflix]
+          ${{ needs.terraform.outputs.droplet_ip }} ansible_user=root ansible_ssh_private_key_file=~/.ssh/deploy_key
+          INVENTORY
+
+      - name: Run Ansible playbook
+        working-directory: infra/ansible
+        env:
+          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          ansible-playbook -i inventory.ini site.yml \
+            --extra-vars "image_tag=${IMAGE_TAG}"
+
+      - name: Smoke test
+        run: |
+          echo "Waiting for platform to be reachable..."
+          for i in $(seq 1 12); do
+            if curl -sf "http://${{ needs.terraform.outputs.droplet_ip }}:3000" > /dev/null 2>&1; then
+              echo "Platform is up!"
+              exit 0
+            fi
+            echo "Attempt $i/12 failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Platform did not become healthy in time"
+          exit 1

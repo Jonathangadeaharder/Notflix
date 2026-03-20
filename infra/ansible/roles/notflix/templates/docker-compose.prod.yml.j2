@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  db:
+    image: supabase/postgres:15.8.1.060
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    image: supabase/gotrue:v2.170.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_SITE_URL: ${SITE_URL}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_DISABLE_SIGNUP: "false"
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL}
+
+  kong:
+    image: kong:3.6
+    restart: unless-stopped
+    depends_on:
+      - auth
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+    volumes:
+      - ./volumes/api/kong.yml:/var/lib/kong/kong.yml:ro
+    ports:
+      - "8000:8000"
+
+  ai-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/notflix-ai-service:${IMAGE_TAG}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      API_KEY: ${AI_SERVICE_API_KEY}
+    volumes:
+      - media_data:/app/media
+      - log_data:/app/logs
+
+  platform:
+    image: ghcr.io/${GITHUB_REPOSITORY}/notflix-platform:${IMAGE_TAG}
+    restart: unless-stopped
+    depends_on:
+      - auth
+      - ai-service
+    environment:
+      PUBLIC_SUPABASE_URL: ${API_EXTERNAL_URL}
+      PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+    ports:
+      - "3000:3000"
+
+volumes:
+  pg_data:
+  media_data:
+  log_data:
