@@ -1,0 +1,3 @@
+# Copy to terraform.tfvars and fill in your values (never commit terraform.tfvars)
+do_token       = "your-digitalocean-api-token"
+ssh_public_key = "ssh-ed25519 AAAA... your-deploy-key"
