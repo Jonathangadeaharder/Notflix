@@ -62,7 +62,8 @@ jobs:
       - name: Build & push ai-service image
         uses: docker/build-push-action@v5
         with:
-          context: apps/ai-service
+          context: .
+          file: apps/ai-service/Dockerfile
           push: true
           tags: |
             ${{ steps.lower.outputs.prefix }}-ai-service:${{ steps.meta.outputs.version }}
