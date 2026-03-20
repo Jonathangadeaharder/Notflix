@@ -12,7 +12,8 @@ COPY packages/ packages/
 COPY apps/platform/package.json apps/platform/
 
 # Install all deps (including devDependencies for build)
-RUN pnpm install --frozen-lockfile
+# --no-frozen-lockfile because adapter-node may not be in lockfile yet on first build
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source
 COPY apps/platform/ apps/platform/
