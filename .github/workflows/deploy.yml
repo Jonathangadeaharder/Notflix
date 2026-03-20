@@ -11,7 +11,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
 
 jobs:
   # ── 1. Build & push Docker images ──────────────────────────────────────────
@@ -24,10 +23,15 @@ jobs:
 
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
+      image_prefix: ${{ steps.lower.outputs.prefix }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set lowercase image prefix
+        id: lower
+        run: echo "prefix=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/notflix" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -50,8 +54,8 @@ jobs:
           file: apps/platform/Dockerfile.prod
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}/notflix-platform:${{ steps.meta.outputs.version }}
-            ${{ env.IMAGE_PREFIX }}/notflix-platform:latest
+            ${{ steps.lower.outputs.prefix }}-platform:${{ steps.meta.outputs.version }}
+            ${{ steps.lower.outputs.prefix }}-platform:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -61,8 +65,8 @@ jobs:
           context: apps/ai-service
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}/notflix-ai-service:${{ steps.meta.outputs.version }}
-            ${{ env.IMAGE_PREFIX }}/notflix-ai-service:latest
+            ${{ steps.lower.outputs.prefix }}-ai-service:${{ steps.meta.outputs.version }}
+            ${{ steps.lower.outputs.prefix }}-ai-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
