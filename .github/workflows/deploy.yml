@@ -56,8 +56,8 @@ jobs:
           tags: |
             ${{ steps.lower.outputs.prefix }}-platform:${{ steps.meta.outputs.version }}
             ${{ steps.lower.outputs.prefix }}-platform:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=platform
+          cache-to: type=gha,mode=max,scope=platform
 
       - name: Build & push ai-service image
         uses: docker/build-push-action@v5
@@ -68,8 +68,8 @@ jobs:
           tags: |
             ${{ steps.lower.outputs.prefix }}-ai-service:${{ steps.meta.outputs.version }}
             ${{ steps.lower.outputs.prefix }}-ai-service:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=ai-service
+          cache-to: type=gha,mode=max,scope=ai-service
 
   # ── 2. Provision infra with Terraform ──────────────────────────────────────
   terraform:
