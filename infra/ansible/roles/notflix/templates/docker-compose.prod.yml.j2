@@ -49,7 +49,7 @@ services:
       - "8000:8000"
 
   ai-service:
-    image: ghcr.io/${GITHUB_REPOSITORY}/notflix-ai-service:${IMAGE_TAG}
+    image: ghcr.io/{{ image_owner }}/notflix-ai-service:{{ image_tag }}
     restart: unless-stopped
     depends_on:
       db:
@@ -62,7 +62,7 @@ services:
       - log_data:/app/logs
 
   platform:
-    image: ghcr.io/${GITHUB_REPOSITORY}/notflix-platform:${IMAGE_TAG}
+    image: ghcr.io/{{ image_owner }}/notflix-platform:{{ image_tag }}
     restart: unless-stopped
     depends_on:
       - auth

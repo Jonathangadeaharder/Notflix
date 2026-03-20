@@ -76,6 +76,14 @@
     group: docker
     mode: "0640"
 
+- name: Deploy Kong config
+  copy:
+    src: kong.yml
+    dest: /opt/notflix/volumes/api/kong.yml
+    owner: notflix
+    group: docker
+    mode: "0640"
+
 - name: Log into GitHub Container Registry
   shell: |
     echo "{{ lookup('env', 'GHCR_TOKEN') }}" | docker login ghcr.io -u "{{ lookup('env', 'GHCR_USER') }}" --password-stdin
@@ -84,16 +92,12 @@
 - name: Pull latest images
   shell: |
     cd /opt/notflix
-    docker compose -f docker-compose.prod.yml pull
-  environment:
-    ENV_FILE: /opt/notflix/.env
+    docker compose -f docker-compose.prod.yml --env-file .env pull
 
 - name: Deploy with docker compose
   shell: |
     cd /opt/notflix
-    docker compose -f docker-compose.prod.yml up -d --remove-orphans
-  environment:
-    ENV_FILE: /opt/notflix/.env
+    docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
 
 - name: Smoke test - wait for platform to be healthy
   uri:

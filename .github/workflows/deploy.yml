@@ -157,7 +157,7 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           ansible-playbook -i inventory.ini site.yml \
-            --extra-vars "image_tag=${IMAGE_TAG}"
+            --extra-vars "image_tag=${IMAGE_TAG} image_owner=$(echo ${GHCR_USER} | tr '[:upper:]' '[:lower:]')"
 
       - name: Smoke test
         run: |
