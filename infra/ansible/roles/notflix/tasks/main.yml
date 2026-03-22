@@ -119,27 +119,30 @@
     cd /opt/notflix
     docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
 
-- name: Smoke test - wait for platform to be healthy
-  uri:
-    url: http://localhost:3000
-    status_code: 200
-    timeout: 30
-  register: health_check
-  retries: 30
-  delay: 15
-  until: health_check.status == 200
+- name: Smoke test and diagnostics
+  block:
+    - name: Smoke test - wait for platform to be healthy
+      uri:
+        url: http://localhost:3000
+        status_code: 200
+        timeout: 14
+      register: health_check
+      retries: 30
+      delay: 15
+      until: health_check.status is defined and health_check.status == 200
+      failed_when: health_check.status is not defined or health_check.status != 200
+  always:
+    - name: Show container status (always run for diagnostics)
+      shell: |
+        cd /opt/notflix
+        echo "=== Container status ==="
+        docker compose -f docker-compose.prod.yml ps
+        echo ""
+        echo "=== Recent logs (all services) ==="
+        docker compose -f docker-compose.prod.yml logs --tail=80
+      register: compose_status
+      ignore_errors: true
 
-- name: Show container status (always run for diagnostics)
-  shell: |
-    cd /opt/notflix
-    echo "=== Container status ==="
-    docker compose -f docker-compose.prod.yml ps
-    echo ""
-    echo "=== Recent logs ==="
-    docker compose -f docker-compose.prod.yml logs --tail=50
-  register: compose_status
-  ignore_errors: true
-
-- name: Print container diagnostics
-  debug:
-    msg: "{{ compose_status.stdout_lines }}"
+    - name: Print container diagnostics
+      debug:
+        msg: "{{ compose_status.stdout_lines }}"
