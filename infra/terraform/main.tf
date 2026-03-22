@@ -74,6 +74,12 @@ resource "digitalocean_droplet" "notflix" {
   USERDATA
 
   tags = ["notflix", "production"]
+
+  # Never replace the droplet due to user_data drift — user_data only runs on
+  # first boot anyway. Replacing would wipe Docker layer cache (~20 min rebuild).
+  lifecycle {
+    ignore_changes = [user_data]
+  }
 }
 
 resource "digitalocean_firewall" "notflix" {
