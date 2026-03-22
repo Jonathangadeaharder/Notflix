@@ -6,6 +6,33 @@ terraform {
     }
   }
   required_version = ">= 1.3.0"
+
+  # Remote state stored in DigitalOcean Spaces (S3-compatible).
+  # With state persisted, Terraform sees the live droplet on every run and
+  # makes zero changes — the droplet stays alive between deploys and Docker's
+  # layer cache is fully preserved, cutting build time from ~20 min to ~2 min.
+  #
+  # One-time setup (do this once, then never again):
+  #   1. Create a Spaces bucket named "notflix-tf-state" in fra1 via DO console
+  #   2. Generate a Spaces access key: DO console → API → Spaces Keys
+  #   3. Add two secrets to the GitHub repo:
+  #        TF_BACKEND_ACCESS_KEY  →  Spaces key ID
+  #        TF_BACKEND_SECRET_KEY  →  Spaces secret key
+  backend "s3" {
+    endpoints = {
+      s3 = "https://fra1.digitaloceanspaces.com"
+    }
+    bucket = "notflix-tf-state"
+    key    = "prod/terraform.tfstate"
+    region = "us-east-1" # required by S3 protocol, value ignored by DO Spaces
+
+    # Disable AWS-specific checks not supported by DO Spaces
+    skip_credentials_validation = true
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_region_validation      = true
+    use_path_style              = true
+  }
 }
 
 provider "digitalocean" {

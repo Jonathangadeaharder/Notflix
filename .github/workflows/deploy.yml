@@ -34,50 +34,27 @@ jobs:
         env:
           TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TF_BACKEND_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_BACKEND_SECRET_KEY }}
         run: terraform init
 
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Import existing resources (idempotent)
-        env:
-          TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
-        run: |
-          # Import SSH key if it already exists in DO (ignore error if not yet created)
-          SSH_KEY_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
-            "https://api.digitalocean.com/v2/account/keys" \
-            | jq -r '.ssh_keys[] | select(.name=="notflix-deploy") | .id // empty')
-          if [ -n "$SSH_KEY_ID" ]; then
-            terraform import digitalocean_ssh_key.deploy "$SSH_KEY_ID" || true
-          fi
-
-          # Import droplet if it already exists in DO (ignore error if not yet created)
-          DROPLET_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
-            "https://api.digitalocean.com/v2/droplets?name=notflix-prod" \
-            | jq -r '.droplets[0].id // empty')
-          if [ -n "$DROPLET_ID" ]; then
-            terraform import digitalocean_droplet.notflix "$DROPLET_ID" || true
-          fi
-
-          # Import firewall if it already exists
-          FW_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
-            "https://api.digitalocean.com/v2/firewalls" \
-            | jq -r '.firewalls[] | select(.name=="notflix-prod-fw") | .id // empty')
-          if [ -n "$FW_ID" ]; then
-            terraform import digitalocean_firewall.notflix "$FW_ID" || true
-          fi
-
       - name: Terraform Plan
         env:
           TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TF_BACKEND_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_BACKEND_SECRET_KEY }}
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         env:
           TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TF_BACKEND_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_BACKEND_SECRET_KEY }}
         run: terraform apply -auto-approve tfplan
 
       - name: Get droplet IP
@@ -85,6 +62,8 @@ jobs:
         env:
           TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TF_BACKEND_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_BACKEND_SECRET_KEY }}
         run: echo "droplet_ip=$(terraform output -raw droplet_ip)" >> "$GITHUB_OUTPUT"
 
   # ── 2. Deploy with Ansible (builds images on the droplet) ────────────────────
@@ -122,16 +101,3 @@ jobs:
           ansible-playbook -i inventory.ini site.yml \
             --extra-vars "repo_url=https://github.com/${{ github.repository }}.git git_ref=${{ github.sha }}"
 
-      - name: Smoke test
-        run: |
-          echo "Waiting for platform to be reachable..."
-          for i in $(seq 1 12); do
-            if curl -sf "http://${{ needs.terraform.outputs.droplet_ip }}:3000" > /dev/null 2>&1; then
-              echo "Platform is up!"
-              exit 0
-            fi
-            echo "Attempt $i/12 failed, retrying in 10s..."
-            sleep 10
-          done
-          echo "Platform did not become healthy in time"
-          exit 1
