@@ -62,15 +62,15 @@
 
 - name: Create /opt/notflix directory structure
   file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
     owner: notflix
     group: docker
-    mode: "0750"
+    mode: "{{ item.mode }}"
   loop:
-    - /opt/notflix
-    - /opt/notflix/volumes
-    - /opt/notflix/volumes/api
+    - { path: /opt/notflix,               mode: "0750" }
+    - { path: /opt/notflix/volumes,       mode: "0755" }  # world-traversable: container users must reach subdirs
+    - { path: /opt/notflix/volumes/api,   mode: "0755" }  # world-traversable: Kong container user reads kong.yml
 
 - name: Clone or update repo
   git:
@@ -103,7 +103,7 @@
     dest: /opt/notflix/volumes/api/kong.yml
     owner: notflix
     group: docker
-    mode: "0640"
+    mode: "0644"  # world-readable: Kong container user must be able to read this
 
 - name: Build images on droplet
   shell: |
