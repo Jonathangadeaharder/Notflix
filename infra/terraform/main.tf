@@ -26,6 +26,13 @@ resource "digitalocean_droplet" "notflix" {
 
   user_data = <<-USERDATA
     #!/bin/bash
+    # 4 GB swap so Docker builds don't OOM on 2 GB RAM
+    fallocate -l 4G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
     apt-get update -y
     apt-get install -y ca-certificates curl gnupg
     install -m 0755 -d /etc/apt/keyrings

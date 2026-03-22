@@ -1,4 +1,16 @@
 ---
+- name: Ensure 4 GB swap exists for Docker builds
+  shell: |
+    if ! swapon --show | grep -q /swapfile; then
+      fallocate -l 4G /swapfile
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
+      echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    fi
+  args:
+    creates: /swapfile
+
 - name: Install Docker dependencies
   apt:
     name:
@@ -99,6 +111,8 @@
     docker compose -f docker-compose.prod.yml --env-file .env build --pull
   environment:
     DOCKER_BUILDKIT: "1"
+  async: 10800  # 3 hour timeout
+  poll: 30      # re-poll every 30s instead of holding one SSH connection
 
 - name: Deploy with docker compose
   shell: |
