@@ -27,9 +27,13 @@ FROM node:20-slim AS runtime
 
 WORKDIR /app
 
-# Copy only the build output and production node_modules
+# Copy build output, package.json, and the full node_modules from builder.
+# adapter-node does NOT bundle dependencies — the runtime needs node_modules
+# for drizzle-orm, postgres, @supabase/ssr, pino, etc.
 COPY --from=builder /app/apps/platform/build ./build
 COPY --from=builder /app/apps/platform/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
 
 ENV NODE_ENV=production
 ENV PORT=3000
