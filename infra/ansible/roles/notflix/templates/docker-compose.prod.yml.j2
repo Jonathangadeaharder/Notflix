@@ -72,7 +72,6 @@ services:
     restart: unless-stopped
     depends_on:
       - auth
-      - ai-service
     environment:
       PUBLIC_SUPABASE_URL: ${API_EXTERNAL_URL}
       PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}

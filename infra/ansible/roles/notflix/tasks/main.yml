@@ -125,6 +125,21 @@
     status_code: 200
     timeout: 30
   register: health_check
-  retries: 10
-  delay: 10
+  retries: 30
+  delay: 15
   until: health_check.status == 200
+
+- name: Show container status (always run for diagnostics)
+  shell: |
+    cd /opt/notflix
+    echo "=== Container status ==="
+    docker compose -f docker-compose.prod.yml ps
+    echo ""
+    echo "=== Recent logs ==="
+    docker compose -f docker-compose.prod.yml logs --tail=50
+  register: compose_status
+  ignore_errors: true
+
+- name: Print container diagnostics
+  debug:
+    msg: "{{ compose_status.stdout_lines }}"
