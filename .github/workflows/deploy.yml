@@ -41,7 +41,48 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Terraform Plan
+      - name: Import existing resources (idempotent)
+        env:
+          TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TF_BACKEND_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_BACKEND_SECRET_KEY }}
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+        run: |
+          # Import SSH key by fingerprint if not already in state
+          if ! terraform state show digitalocean_ssh_key.deploy &>/dev/null; then
+            KEY_ID=$(curl -sf -H "Authorization: Bearer $DO_TOKEN" \
+              "https://api.digitalocean.com/v2/account/keys?per_page=200" \
+              | jq -r '.ssh_keys[] | select(.name=="notflix-deploy") | .id')
+            if [ -n "$KEY_ID" ]; then
+              echo "Importing SSH key $KEY_ID"
+              terraform import digitalocean_ssh_key.deploy "$KEY_ID"
+            fi
+          fi
+
+          # Import droplet by name if not already in state
+          if ! terraform state show digitalocean_droplet.notflix &>/dev/null; then
+            DROPLET_ID=$(curl -sf -H "Authorization: Bearer $DO_TOKEN" \
+              "https://api.digitalocean.com/v2/droplets?per_page=200" \
+              | jq -r '.droplets[] | select(.name=="notflix-prod") | .id')
+            if [ -n "$DROPLET_ID" ]; then
+              echo "Importing droplet $DROPLET_ID"
+              terraform import digitalocean_droplet.notflix "$DROPLET_ID"
+            fi
+          fi
+
+          # Import firewall by name if not already in state
+          if ! terraform state show digitalocean_firewall.notflix &>/dev/null; then
+            FW_ID=$(curl -sf -H "Authorization: Bearer $DO_TOKEN" \
+              "https://api.digitalocean.com/v2/firewalls?per_page=200" \
+              | jq -r '.firewalls[] | select(.name=="notflix-prod-fw") | .id')
+            if [ -n "$FW_ID" ]; then
+              echo "Importing firewall $FW_ID"
+              terraform import digitalocean_firewall.notflix "$FW_ID"
+            fi
+          fi
+
+      - name: Terraform Plan (post-import)
         env:
           TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.DO_SSH_PUBLIC_KEY }}
