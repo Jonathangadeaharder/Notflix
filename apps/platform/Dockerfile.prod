@@ -25,15 +25,24 @@ RUN pnpm run build
 # ---- Stage 2: Runtime ----
 FROM node:20-slim AS runtime
 
-WORKDIR /app
+# Mirror the builder's workspace layout so Node ESM package resolution works.
+# The build was compiled at /app/apps/platform, so keep the same paths at
+# runtime — that way import("clsx") from /app/apps/platform/build/server/
+# finds node_modules via the normal walk-up algorithm.
+WORKDIR /app/apps/platform
 
-# Copy build output, package.json, and the full node_modules from builder.
-# adapter-node does NOT bundle dependencies — the runtime needs node_modules
-# for drizzle-orm, postgres, @supabase/ssr, pino, etc.
+# Workspace root deps (hoisted by pnpm) — covers most packages
+COPY --from=builder /app/node_modules /app/node_modules
+
+# Workspace packages (local packages/* deps)
+COPY --from=builder /app/packages /app/packages
+
+# Platform-specific deps that pnpm did NOT hoist to the root
+COPY --from=builder /app/apps/platform/node_modules ./node_modules
+
+# Build output and manifest
 COPY --from=builder /app/apps/platform/build ./build
 COPY --from=builder /app/apps/platform/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
 
 ENV NODE_ENV=production
 ENV PORT=3000
