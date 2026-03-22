@@ -108,7 +108,7 @@
 - name: Build images on droplet
   shell: |
     cd /opt/notflix
-    docker compose -f docker-compose.prod.yml --env-file .env build --pull
+    docker compose -f docker-compose.prod.yml --env-file .env build
   environment:
     DOCKER_BUILDKIT: "1"
   async: 10800  # 3 hour timeout
