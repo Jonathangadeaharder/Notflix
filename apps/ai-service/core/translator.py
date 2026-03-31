@@ -18,7 +18,6 @@ FALLBACK_MAPPING = {
 
 class OpusTranslator(ITranslator):
     """OpusTranslator class for translation using MarianMT models."""
-    # pylint: disable=too-few-public-methods
 
     def __init__(self, device=None):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")

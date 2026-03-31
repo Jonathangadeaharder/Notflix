@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 class Segment(BaseModel):
     """Segment class for transcription results."""
-    # pylint: disable=too-few-public-methods
     start: float
     end: float
     text: str
@@ -13,7 +12,6 @@ class Segment(BaseModel):
 
 class TokenAnalysis(BaseModel):
     """TokenAnalysis class for analyzed tokens."""
-    # pylint: disable=too-few-public-methods
     text: str
     lemma: str
     pos: str
@@ -24,7 +22,6 @@ class TokenAnalysis(BaseModel):
 
 class TranscriptionResult(BaseModel):
     """TranscriptionResult class for transcription results."""
-    # pylint: disable=too-few-public-methods
     segments: List[Segment]
     language: str
     language_probability: float

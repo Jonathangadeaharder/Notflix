@@ -11,7 +11,6 @@ logger = structlog.get_logger()
 
 class WhisperTranscriber(ITranscriber):
     """WhisperTranscriber class for transcription using faster-whisper."""
-    # pylint: disable=too-few-public-methods
 
     def __init__(self, model_size="tiny", device=None, compute_type="float32"):
         self._test_mode = os.getenv("AI_SERVICE_TEST_MODE") == "1"
