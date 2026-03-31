@@ -2,10 +2,12 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel
 
+
 class Segment(BaseModel):
     start: float
     end: float
     text: str
+
 
 class TokenAnalysis(BaseModel):
     text: str
@@ -15,19 +17,22 @@ class TokenAnalysis(BaseModel):
     whitespace: str = ""
     translation: Optional[str] = None
 
+
 class TranscriptionResult(BaseModel):
     segments: List[Segment]
     language: str
     language_probability: float
 
+
 class ITranscriber(ABC):
     @abstractmethod
     def transcribe(
-        self, 
-        file_path: str, 
+        self,
+        file_path: str,
         language: Optional[str] = None
     ) -> TranscriptionResult:
         pass
+
 
 class IFilter(ABC):
     @abstractmethod
@@ -36,18 +41,19 @@ class IFilter(ABC):
 
     @abstractmethod
     def analyze_batch(
-        self, 
-        texts: List[str], 
+        self,
+        texts: List[str],
         language: str
     ) -> List[List[TokenAnalysis]]:
         pass
 
+
 class ITranslator(ABC):
     @abstractmethod
     def translate(
-        self, 
-        texts: List[str], 
-        source_lang: str, 
+        self,
+        texts: List[str],
+        source_lang: str,
         target_lang: str
     ) -> List[str]:
         pass

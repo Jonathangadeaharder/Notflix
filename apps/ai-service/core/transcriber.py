@@ -1,12 +1,13 @@
 from typing import Optional
 import os
+import threading
 import torch
 import structlog
-import threading
 from faster_whisper import WhisperModel
 from .interfaces import ITranscriber, TranscriptionResult, Segment
 
 logger = structlog.get_logger()
+
 
 class WhisperTranscriber(ITranscriber):
     def __init__(self, model_size="tiny", device=None, compute_type="float32"):
@@ -20,8 +21,8 @@ class WhisperTranscriber(ITranscriber):
         self._lock = threading.Lock()
 
     def transcribe(
-        self, 
-        file_path: str, 
+        self,
+        file_path: str,
         language: Optional[str] = None
     ) -> TranscriptionResult:
         with self._lock:
@@ -32,8 +33,8 @@ class WhisperTranscriber(ITranscriber):
                     language_probability=1.0
                 )
             segments, info = self.model.transcribe(
-                file_path, 
-                language=language, 
+                file_path,
+                language=language,
                 beam_size=5
             )
 
@@ -54,12 +55,12 @@ class WhisperTranscriber(ITranscriber):
         )
 
     def transcribe_stream(self, file_path: str, language: Optional[str] = None):
-         # Streaming might need careful locking or a different approach if it blocks iterator
-         # For now, we lock the initialization of the stream
-         with self._lock:
+        # Streaming might need careful locking or a different approach if it blocks iterator
+        # For now, we lock the initialization of the stream
+        with self._lock:
             segments, info = self.model.transcribe(
-                file_path, 
-                language=language, 
+                file_path,
+                language=language,
                 beam_size=5
             )
 
