@@ -35,7 +35,9 @@ class WhisperTranscriber(ITranscriber):
                 result_segments.append(Segment(start=s.start, end=s.end, text=s.text))
 
         logger.info(
-            "whisper_detected_language", language=info.language, probability=info.language_probability
+            "whisper_detected_language",
+            language=info.language,
+            probability=info.language_probability
         )
 
         return TranscriptionResult(
