@@ -13,6 +13,7 @@ class WhisperTranscriber(ITranscriber):
     """WhisperTranscriber class for transcription using faster-whisper."""
 
     def __init__(self, model_size="tiny", device=None, compute_type="float32"):
+        """Initializes the WhisperTranscriber with given model size and device."""
         self._test_mode = os.getenv("AI_SERVICE_TEST_MODE") == "1"
         if self._test_mode:
             self.model = None

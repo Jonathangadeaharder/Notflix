@@ -12,6 +12,7 @@ class SpacyFilter(IFilter):
     """SpacyFilter class for linguistic filtering using spaCy."""
 
     def __init__(self):
+        """Initializes the SpacyFilter with an empty model cache."""
         self._models: Dict[str, spacy.language.Language] = {}
         self._lock = threading.Lock()
 

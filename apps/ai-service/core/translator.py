@@ -20,6 +20,7 @@ class OpusTranslator(ITranslator):
     """OpusTranslator class for translation using MarianMT models."""
 
     def __init__(self, device=None):
+        """Initializes the OpusTranslator with a computation device."""
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self._models = {}
         self._lock = threading.RLock()
