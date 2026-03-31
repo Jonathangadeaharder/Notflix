@@ -10,10 +10,9 @@ export function parseVTT(vttText: string): Subtitle[] {
 
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].includes("-->")) {
+      // prettier-ignore
       // eslint-disable-next-line sonarjs/slow-regex
-      const timeMatch = lines[i].match(
-        /(\d+:\d+:\d+\.\d+)\s-->\s+(\d+:\d+:\d+\.\d+)/,
-      );
+      const timeMatch = lines[i].match(/(\d+:\d+:\d+\.\d+)\s-->\s+(\d+:\d+:\d+\.\d+)/);
       if (timeMatch) {
         const start = parseTime(timeMatch[1]);
         const end = parseTime(timeMatch[2]);

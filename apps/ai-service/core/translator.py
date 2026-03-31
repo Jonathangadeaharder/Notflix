@@ -39,8 +39,8 @@ class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
             if model_name not in self._models:
                 logger.info("loading_marian_model", model_name=model_name)
                 try:
-                    tokenizer = MarianTokenizer.from_pretrained(model_name)  # nosec B615
-                    model = MarianMTModel.from_pretrained(model_name).to(self.device)  # nosec B615
+                    tokenizer = MarianTokenizer.from_pretrained(model_name)  # nosec
+                    model = MarianMTModel.from_pretrained(model_name).to(self.device)  # nosec
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
                     logger.error(
