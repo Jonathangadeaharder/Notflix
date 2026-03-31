@@ -1,5 +1,10 @@
+/* eslint-disable max-lines-per-function */
 import { describe, expect, it } from "vitest";
-import { isPathWithinRoot, toPosixPath, toRelativePathFromRoot } from "./path-utils";
+import {
+  isPathWithinRoot,
+  toPosixPath,
+  toRelativePathFromRoot,
+} from "./path-utils";
 import path from "path";
 
 describe("path-utils", () => {
@@ -11,8 +16,12 @@ describe("path-utils", () => {
     });
 
     it("returns true if candidate path is inside root path", () => {
-      expect(isPathWithinRoot(path.join(rootPath, "subdir"), rootPath)).toBe(true);
-      expect(isPathWithinRoot(path.join(rootPath, "subdir", "file.txt"), rootPath)).toBe(true);
+      expect(isPathWithinRoot(path.join(rootPath, "subdir"), rootPath)).toBe(
+        true,
+      );
+      expect(
+        isPathWithinRoot(path.join(rootPath, "subdir", "file.txt"), rootPath),
+      ).toBe(true);
     });
 
     it("returns false if candidate path is outside root path (parent)", () => {
@@ -33,7 +42,12 @@ describe("path-utils", () => {
 
   describe("toRelativePathFromRoot", () => {
     it("returns normalized relative path if inside root", () => {
-      expect(toRelativePathFromRoot(path.join(rootPath, "subdir", "file.txt"), rootPath)).toBe("subdir/file.txt");
+      expect(
+        toRelativePathFromRoot(
+          path.join(rootPath, "subdir", "file.txt"),
+          rootPath,
+        ),
+      ).toBe("subdir/file.txt");
     });
 
     it("returns empty string if candidate path is root path", () => {
@@ -57,15 +71,21 @@ describe("path-utils", () => {
 
   describe("toPosixPath", () => {
     it("converts backslashes to forward slashes", () => {
-      expect(toPosixPath("path\\with\\backslashes")).toBe("path/with/backslashes");
+      expect(toPosixPath("path\\with\\backslashes")).toBe(
+        "path/with/backslashes",
+      );
     });
 
     it("leaves forward slashes unchanged", () => {
-      expect(toPosixPath("path/with/forward/slashes")).toBe("path/with/forward/slashes");
+      expect(toPosixPath("path/with/forward/slashes")).toBe(
+        "path/with/forward/slashes",
+      );
     });
 
     it("handles mixed slashes", () => {
-      expect(toPosixPath("path\\with/mixed\\slashes")).toBe("path/with/mixed/slashes");
+      expect(toPosixPath("path\\with/mixed\\slashes")).toBe(
+        "path/with/mixed/slashes",
+      );
     });
   });
 });

@@ -69,6 +69,7 @@ export const GET = async ({ params, locals }: RequestEvent) => {
   });
 };
 
+// eslint-disable-next-line max-lines-per-function
 export const POST = async ({ params, request, locals }: RequestEvent) => {
   const session = await locals.auth();
   if (!session) {

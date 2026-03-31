@@ -18,7 +18,7 @@ const config: PlaywrightTestConfig = {
   },
 
   testDir: "tests",
-  testMatch: ["**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js"],
+  testMatch: ["**/*.spec.ts", "**/*.spec.js"],
 
   use: {
     baseURL: "http://localhost:5173",
