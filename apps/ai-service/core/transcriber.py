@@ -28,11 +28,17 @@ class WhisperTranscriber(ITranscriber):
                     language=language or "en",
                     language_probability=1.0,
                 )
-            segments, info = self.model.transcribe(file_path, language=language, beam_size=5)
+            segments, info = self.model.transcribe(
+                file_path,
+                language=language,
+                beam_size=5
+            )
 
             result_segments = []
             for s in segments:
-                result_segments.append(Segment(start=s.start, end=s.end, text=s.text))
+                result_segments.append(
+                    Segment(start=s.start, end=s.end, text=s.text)
+                )
 
         logger.info(
             "whisper_detected_language",
@@ -47,10 +53,14 @@ class WhisperTranscriber(ITranscriber):
         )
 
     def transcribe_stream(self, file_path: str, language: Optional[str] = None):
-        # Streaming might need careful locking or a different approach if it blocks iterator
+        # Streaming might need careful locking
         # For now, we lock the initialization of the stream
         with self._lock:
-            segments, info = self.model.transcribe(file_path, language=language, beam_size=5)
+            segments, info = self.model.transcribe(
+                file_path,
+                language=language,
+                beam_size=5
+            )
 
             logger.info(
                 "whisper_stream_detected_language",
@@ -59,7 +69,14 @@ class WhisperTranscriber(ITranscriber):
             )
 
             # Yield initial info
-            yield {"language": info.language, "probability": info.language_probability}
+            yield {
+                "language": info.language,
+                "probability": info.language_probability
+            }
 
             for segment in segments:
-                yield {"start": segment.start, "end": segment.end, "text": segment.text}
+                yield {
+                    "start": segment.start,
+                    "end": segment.end,
+                    "text": segment.text
+                }

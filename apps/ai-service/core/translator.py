@@ -52,7 +52,10 @@ class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
             return self._models[model_name]
 
     def translate(self, texts: List[str], source_lang: str, target_lang: str) -> List[str]:
-        """Translates a list of texts from source language to target language."""
+        # pylint: disable=too-many-locals
+        """
+        Translates a list of texts from source language to target language.
+        """
         # Lock during inference to prevent OOM/Concurrency issues
         # MarianMT inference is relatively heavy.
         with self._lock:
