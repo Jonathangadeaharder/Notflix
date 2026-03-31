@@ -1,6 +1,10 @@
+/* eslint-disable max-lines-per-function */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "../../src/routes/api/words/known/+server";
 import { db } from "$lib/server/infrastructure/database";
+import { HTTP_STATUS } from "$lib/constants";
+
+const WORDS_KNOWN_URL = "http://localhost/api/words/known";
 
 vi.mock("$lib/server/infrastructure/database", () => ({
   db: {
@@ -14,7 +18,7 @@ describe("POST /api/words/known", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    const request = new Request("http://localhost/api/words/known", {
+    const request = new Request(WORDS_KNOWN_URL, {
       method: "POST",
     });
     const response = await POST({
@@ -22,11 +26,11 @@ describe("POST /api/words/known", () => {
       locals: { auth: vi.fn().mockResolvedValue(null) },
     } as never);
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
   });
 
   it("returns 400 for invalid JSON", async () => {
-    const request = new Request("http://localhost/api/words/known", {
+    const request = new Request(WORDS_KNOWN_URL, {
       method: "POST",
       body: "{bad-json",
     });
@@ -36,11 +40,11 @@ describe("POST /api/words/known", () => {
       locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
     } as never);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
   });
 
   it("returns 400 when lemma or lang is missing", async () => {
-    const request = new Request("http://localhost/api/words/known", {
+    const request = new Request(WORDS_KNOWN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lemma: "hola" }),
@@ -51,7 +55,7 @@ describe("POST /api/words/known", () => {
       locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
     } as never);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
   });
 
   it("stores known words for authenticated users", async () => {
@@ -61,7 +65,7 @@ describe("POST /api/words/known", () => {
     };
     vi.mocked(db.insert).mockReturnValue(chain as never);
 
-    const request = new Request("http://localhost/api/words/known", {
+    const request = new Request(WORDS_KNOWN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lemma: "hola", lang: "es" }),
@@ -72,7 +76,7 @@ describe("POST /api/words/known", () => {
       locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
     } as never);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(HTTP_STATUS.OK);
     expect(chain.values).toHaveBeenCalledWith(
       expect.objectContaining({ userId: "u1", lemma: "hola", lang: "es" }),
     );
