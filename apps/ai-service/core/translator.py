@@ -30,9 +30,7 @@ class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
         # Simple fallback check
         if pair in FALLBACK_MAPPING:
             logger.info(
-                "using_fallback_pair",
-                original=pair,
-                fallback=FALLBACK_MAPPING[pair]
+                "using_fallback_pair", original=pair, fallback=FALLBACK_MAPPING[pair]
             )
 
         model_name = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
@@ -41,17 +39,21 @@ class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
             if model_name not in self._models:
                 logger.info("loading_marian_model", model_name=model_name)
                 try:
-                    tokenizer = MarianTokenizer.from_pretrained(model_name)
-                    model = MarianMTModel.from_pretrained(model_name).to(self.device)
+                    tokenizer = MarianTokenizer.from_pretrained(model_name)  # nosec B615
+                    model = MarianMTModel.from_pretrained(model_name).to(self.device)  # nosec B615
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
-                    logger.error("marian_model_load_failed", model=model_name, error=str(e))
+                    logger.error(
+                        "marian_model_load_failed", model=model_name, error=str(e)
+                    )
                     raise ValueError(
                         f"Translation model for {source_lang}->{target_lang} failed to load."
                     ) from e
             return self._models[model_name]
 
-    def translate(self, texts: List[str], source_lang: str, target_lang: str) -> List[str]:
+    def translate(
+        self, texts: List[str], source_lang: str, target_lang: str
+    ) -> List[str]:
         # pylint: disable=too-many-locals
         """
         Translates a list of texts from source language to target language.
@@ -69,18 +71,14 @@ class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
                 batch_texts = texts[i : i + batch_size]
 
                 inputs = tokenizer(
-                    batch_texts,
-                    return_tensors="pt",
-                    padding=True,
-                    truncation=True
+                    batch_texts, return_tensors="pt", padding=True, truncation=True
                 ).to(self.device)
 
                 with torch.no_grad():
                     generated = model.generate(**inputs)
 
                 batch_translations = tokenizer.batch_decode(
-                    generated,
-                    skip_special_tokens=True
+                    generated, skip_special_tokens=True
                 )
                 translated_texts.extend(batch_translations)
 

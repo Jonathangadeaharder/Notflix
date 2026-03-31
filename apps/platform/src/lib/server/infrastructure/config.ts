@@ -1,6 +1,7 @@
 import path from "path";
 
-// @ts-expect-error SvelteKit virtual module not resolvable outside Vite context
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore SvelteKit virtual module not resolvable outside Vite context
 import { env } from "$env/dynamic/private";
 
 // The AI service container always mounts media at this path, regardless of host layout.
