@@ -32,7 +32,9 @@ class OpusTranslator(ITranslator):
 
         # Simple fallback check
         if pair in FALLBACK_MAPPING:
-            logger.info("using_fallback_pair", original=pair, fallback=FALLBACK_MAPPING[pair])
+            logger.info(
+                "using_fallback_pair", original=pair, fallback=FALLBACK_MAPPING[pair]
+            )
             # In reality, swapping src/tgt isn't a fallback for translation,
             # but creating a pivot is hard.
             # We'll just stick to trying usage.
@@ -47,7 +49,9 @@ class OpusTranslator(ITranslator):
                     model = MarianMTModel.from_pretrained(model_name).to(self.device)
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
-                    logger.error("marian_model_load_failed", model=model_name, error=str(e))
+                    logger.error(
+                        "marian_model_load_failed", model=model_name, error=str(e)
+                    )
                     raise ValueError(
                         f"Translation model for {source_lang}->{target_lang} "
                         "not found or failed to load."
@@ -55,10 +59,7 @@ class OpusTranslator(ITranslator):
             return self._models[model_name]
 
     def translate(
-        self,
-        texts: List[str],
-        source_lang: str,
-        target_lang: str
+        self, texts: List[str], source_lang: str, target_lang: str
     ) -> List[str]:
         """Translates a list of texts from source language to target language."""
         # pylint: disable=too-many-locals
@@ -75,18 +76,14 @@ class OpusTranslator(ITranslator):
                 batch_texts = texts[i : i + batch_size]
 
                 inputs = tokenizer(
-                    batch_texts,
-                    return_tensors="pt",
-                    padding=True,
-                    truncation=True
+                    batch_texts, return_tensors="pt", padding=True, truncation=True
                 ).to(self.device)
 
                 with torch.no_grad():
                     generated = model.generate(**inputs)
 
                 batch_translations = tokenizer.batch_decode(
-                    generated,
-                    skip_special_tokens=True
+                    generated, skip_special_tokens=True
                 )
                 translated_texts.extend(batch_translations)
 
@@ -94,6 +91,10 @@ class OpusTranslator(ITranslator):
             "translation_complete",
             count=len(translated_texts),
             source=source_lang,
-            target=target_lang
+            target=target_lang,
         )
         return translated_texts
+
+    def supports_pair(self, source_lang: str, target_lang: str) -> bool:
+        """Opus models cover many pairs; gate only on non-empty inputs."""
+        return bool(source_lang) and bool(target_lang)

@@ -3,10 +3,23 @@ import { env as publicEnv } from "$env/dynamic/public";
 import { goto } from "$app/navigation";
 import { page } from "$app/stores";
 
-const supabase = createBrowserClient(
+function requireEnv(value: string | undefined, key: string): string {
+  if (!value) {
+    throw new Error(`${key} is not set`);
+  }
+  return value;
+}
+
+const supabaseUrl = requireEnv(
   publicEnv.PUBLIC_SUPABASE_URL,
-  publicEnv.PUBLIC_SUPABASE_ANON_KEY,
+  "PUBLIC_SUPABASE_URL",
 );
+const supabaseAnonKey = requireEnv(
+  publicEnv.PUBLIC_SUPABASE_ANON_KEY,
+  "PUBLIC_SUPABASE_ANON_KEY",
+);
+
+const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 export async function signInEmail(
   email: string,
