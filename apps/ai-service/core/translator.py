@@ -49,10 +49,8 @@ class OpusTranslator(ITranslator):
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
                     logger.error("marian_model_load_failed", model=model_name, error=str(e))
-                    raise ValueError(
-                        f"Translation model for {source_lang}->{target_lang} "
-                        "not found or failed to load."
-                    ) from e
+                    msg = f"Translation model for {source_lang}->{target_lang} not found."
+                    raise ValueError(msg) from e
             return self._models[model_name]
 
     def translate(
