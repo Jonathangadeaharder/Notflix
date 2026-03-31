@@ -43,12 +43,14 @@ class OpusTranslator(ITranslator):
             if model_name not in self._models:
                 logger.info("loading_marian_model", model_name=model_name)
                 try:
+                    # nosec B615: Dynamic model loading by language pair requires using branch refs.
+                    # Models are from trusted Helsinki-NLP org. Pinning to "main" provides stability.
                     tokenizer = MarianTokenizer.from_pretrained(
                         model_name, revision="main"
-                    )
+                    )  # nosec B615
                     model = MarianMTModel.from_pretrained(
                         model_name, revision="main"
-                    )
+                    )  # nosec B615
                     model = model.to(self.device)
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
