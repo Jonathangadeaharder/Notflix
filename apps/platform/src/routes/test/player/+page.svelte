@@ -59,12 +59,9 @@
   const MOCK_GAME_CARD_DELAY_MS = 100;
   let gameCards: { type: string; front: string; back: string }[] = [];
 
+  // prettier-ignore
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function handleRequestGameCards(
-    chunkIndex: number,
-    _start: number,
-    _end: number,
-  ) {
+  function handleRequestGameCards(chunkIndex: number, _start: number, _end: number) {
     console.log("Mock Request Game Cards", chunkIndex);
     setTimeout(() => {
       gameCards = [{ type: "card", front: "Test", back: "Prueba" }];

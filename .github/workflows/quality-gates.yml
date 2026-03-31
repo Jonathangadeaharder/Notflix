@@ -119,8 +119,22 @@ jobs:
         working-directory: apps/platform
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Install AI Service dependencies (CPU-only)
+        working-directory: apps/ai-service
+        run: uv pip install --system -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+
       - name: Apply database schema
         run: pnpm --filter @notflix/database db:push
+
+      - name: Start AI Service
+        working-directory: apps/ai-service
+        env:
+          AI_SERVICE_API_KEY: dev_secret_key
+          MEDIA_ROOT: ${{ github.workspace }}/media
+          AUDIO_BASE_DIR: ${{ github.workspace }}/media
+        run: |
+          nohup python -m uvicorn main:app --host 127.0.0.1 --port 8000 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/health && break || sleep 2; done
 
       - name: Run platform E2E tests
         run: pnpm --filter @notflix/platform test:e2e
