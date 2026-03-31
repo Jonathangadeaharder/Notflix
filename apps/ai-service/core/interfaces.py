@@ -22,12 +22,9 @@ class TranscriptionResult(BaseModel):
 
 class ITranscriber(ABC):
     @abstractmethod
-    def transcribe(
-        self, 
-        file_path: str, 
-        language: Optional[str] = None
-    ) -> TranscriptionResult:
+    def transcribe(self, file_path: str, language: Optional[str] = None) -> TranscriptionResult:
         pass
+
 
 class IFilter(ABC):
     @abstractmethod
@@ -35,19 +32,11 @@ class IFilter(ABC):
         pass
 
     @abstractmethod
-    def analyze_batch(
-        self, 
-        texts: List[str], 
-        language: str
-    ) -> List[List[TokenAnalysis]]:
+    def analyze_batch(self, texts: List[str], language: str) -> List[List[TokenAnalysis]]:
         pass
+
 
 class ITranslator(ABC):
     @abstractmethod
-    def translate(
-        self, 
-        texts: List[str], 
-        source_lang: str, 
-        target_lang: str
-    ) -> List[str]:
+    def translate(self, texts: List[str], source_lang: str, target_lang: str) -> List[str]:
         pass
