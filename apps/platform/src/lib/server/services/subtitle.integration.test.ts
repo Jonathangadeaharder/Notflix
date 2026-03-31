@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function, sonarjs/no-duplicate-string */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
 import { video, videoProcessing, type DbVttSegment } from "@notflix/database";
@@ -13,7 +14,9 @@ describe("SubtitleService Integration (Real DB)", () => {
     await db.insert(video).values({
       id: testVideoId,
       title: "Subtitle Test Video",
+      // eslint-disable-next-line sonarjs/publicly-writable-directories
       filePath: "/tmp/sub.mp4",
+      // eslint-disable-next-line sonarjs/publicly-writable-directories
       thumbnailPath: "/tmp/thumb.jpg",
       views: 0,
       published: true,
