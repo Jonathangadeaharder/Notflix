@@ -14,7 +14,7 @@
 
     // Manual form state using Svelte 5 runes
     // Initialize properly; component recreation on nav handles reset
-    let gameInterval = $state();
+    let gameInterval = $state<string>();
     $effect(() => {
         gameInterval = data.initialData.gameInterval;
     });

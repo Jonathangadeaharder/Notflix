@@ -43,8 +43,12 @@ class OpusTranslator(ITranslator):
             if model_name not in self._models:
                 logger.info("loading_marian_model", model_name=model_name)
                 try:
-                    tokenizer = MarianTokenizer.from_pretrained(model_name)
-                    model = MarianMTModel.from_pretrained(model_name)
+                    tokenizer = MarianTokenizer.from_pretrained(
+                        model_name, revision="main"
+                    )
+                    model = MarianMTModel.from_pretrained(
+                        model_name, revision="main"
+                    )
                     model = model.to(self.device)
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
