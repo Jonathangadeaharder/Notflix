@@ -20,14 +20,16 @@ class TranscriptionResult(BaseModel):
     language: str
     language_probability: float
 
+# pylint: disable=too-few-public-methods
 class ITranscriber(ABC):
     @abstractmethod
     def transcribe(
-        self, 
-        file_path: str, 
+        self,
+        file_path: str,
         language: Optional[str] = None
     ) -> TranscriptionResult:
         pass
+
 
 class IFilter(ABC):
     @abstractmethod
@@ -36,18 +38,20 @@ class IFilter(ABC):
 
     @abstractmethod
     def analyze_batch(
-        self, 
-        texts: List[str], 
+        self,
+        texts: List[str],
         language: str
     ) -> List[List[TokenAnalysis]]:
         pass
 
+
+# pylint: disable=too-few-public-methods
 class ITranslator(ABC):
     @abstractmethod
     def translate(
-        self, 
-        texts: List[str], 
-        source_lang: str, 
+        self,
+        texts: List[str],
+        source_lang: str,
         target_lang: str
     ) -> List[str]:
         pass
