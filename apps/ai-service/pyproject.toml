@@ -21,6 +21,7 @@ skips = ["B101"] # Skip assert checks in non-test files if desired, but we exclu
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
+addopts = "--ignore=tests/manual"
 
 filterwarnings = [
     "ignore::DeprecationWarning:importlib.*:",      # Ignore importlib/SWIG DeprecationWarnings

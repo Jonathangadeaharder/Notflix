@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
 import { video, videoProcessing, user, knownWords } from "@notflix/database";
@@ -26,7 +27,9 @@ describe("ChunkerService Integration (Real DB)", () => {
     await db.insert(video).values({
       id: testVideoId,
       title: "Chunker Integration Video",
+      // eslint-disable-next-line sonarjs/publicly-writable-directories
       filePath: "/tmp/chunker_test.mp4",
+      // eslint-disable-next-line sonarjs/publicly-writable-directories
       thumbnailPath: "/tmp/thumb.jpg",
       views: 0,
       published: true,
@@ -77,19 +80,21 @@ describe("ChunkerService Integration (Real DB)", () => {
 
   it("should generate a deck from real DB data with correct known status", async () => {
     // ACT
+    const CHUNK_END_SECONDS = 5;
+    const EXPECTED_CONTENT_WORDS = 2;
     // Request chunk 0-5s
     const deck = await generateDeck(
       testUserId,
       testVideoId,
       0,
-      5,
+      CHUNK_END_SECONDS,
       testTargetLang,
     );
 
     // ASSERT
     // Should contain 'gato' (NOUN) and 'sentar' (VERB)
     // 'el' and 'se' are stop words/not CONTENT_POS
-    expect(deck).toHaveLength(2);
+    expect(deck).toHaveLength(EXPECTED_CONTENT_WORDS);
 
     const gatoCard = deck.find((c) => c.lemma === "gato");
     const sentarCard = deck.find((c) => c.lemma === "sentar");
@@ -104,11 +109,13 @@ describe("ChunkerService Integration (Real DB)", () => {
   });
 
   it("should return empty deck for out-of-range chunk", async () => {
+    const OUT_OF_RANGE_START = 100;
+    const OUT_OF_RANGE_END = 105;
     const deck = await generateDeck(
       testUserId,
       testVideoId,
-      100,
-      105,
+      OUT_OF_RANGE_START,
+      OUT_OF_RANGE_END,
       testTargetLang,
     );
     expect(deck).toEqual([]);

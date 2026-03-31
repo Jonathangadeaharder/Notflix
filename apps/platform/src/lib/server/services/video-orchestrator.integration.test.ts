@@ -53,7 +53,7 @@ describe("VideoOrchestratorService Integration", () => {
     expect(processingRecord[0].vttJson).toBeDefined();
 
     // precise check on json content if possible
-    const segments = processingRecord[0].vttJson as any[];
+    const segments = processingRecord[0].vttJson as Array<{ text: string }>;
     expect(segments[0].text).toBe("Hola mundo");
   });
 
