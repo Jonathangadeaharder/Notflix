@@ -59,6 +59,7 @@ class OpusTranslator(ITranslator):
         source_lang: str,
         target_lang: str
     ) -> List[str]:
+        """Translates a list of texts from source language to target language."""
         # Lock during inference to prevent OOM/Concurrency issues
         # MarianMT inference is relatively heavy.
         with self._lock:

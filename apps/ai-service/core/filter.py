@@ -9,6 +9,9 @@ logger = structlog.get_logger()
 
 
 class SpacyFilter(IFilter):
+    """SpacyFilter class for linguistic filtering using spaCy."""
+    # pylint: disable=too-few-public-methods
+
     def __init__(self):
         self._models: Dict[str, spacy.language.Language] = {}
         self._lock = threading.Lock()
