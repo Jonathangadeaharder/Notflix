@@ -26,6 +26,7 @@ class OpusTranslator(ITranslator):
         self._lock = threading.RLock()
 
     def _get_model(self, source_lang: str, target_lang: str):
+        """Internal helper to load or retrieve a translation model."""
         # Normalize
         pair = f"{source_lang}-{target_lang}"
 
@@ -60,6 +61,7 @@ class OpusTranslator(ITranslator):
         target_lang: str
     ) -> List[str]:
         """Translates a list of texts from source language to target language."""
+        # pylint: disable=too-many-locals
         # Lock during inference to prevent OOM/Concurrency issues
         # MarianMT inference is relatively heavy.
         with self._lock:

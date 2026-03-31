@@ -17,6 +17,7 @@ class SpacyFilter(IFilter):
         self._lock = threading.Lock()
 
     def _get_model(self, lang: str):
+        """Internal helper to load or retrieve a spaCy model."""
         # Double checked locking optimization or just lock the whole method
         # Since this is lazy loading, locking the whole method is safer and simple enough
         if lang not in self._models:
@@ -48,6 +49,7 @@ class SpacyFilter(IFilter):
         return self._models[lang]
 
     def analyze(self, text: str, language: str) -> List[TokenAnalysis]:
+        """Analyzes a single text string and returns a list of tokens."""
         with self._lock:
             nlp = self._get_model(language)
             doc = nlp(text)
@@ -68,6 +70,7 @@ class SpacyFilter(IFilter):
         texts: List[str],
         language: str
     ) -> List[List[TokenAnalysis]]:
+        """Analyzes a batch of text strings and returns a list of token lists."""
         with self._lock:
             nlp = self._get_model(language)
             # Using nlp.pipe for efficient batch processing

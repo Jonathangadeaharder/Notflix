@@ -28,6 +28,7 @@ class WhisperTranscriber(ITranscriber):
         file_path: str,
         language: Optional[str] = None
     ) -> TranscriptionResult:
+        """Transcribes an audio file and returns the result."""
         with self._lock:
             if self._test_mode:
                 return TranscriptionResult(
@@ -58,6 +59,7 @@ class WhisperTranscriber(ITranscriber):
         )
 
     def transcribe_stream(self, file_path: str, language: Optional[str] = None):
+        """Transcribes an audio file as a stream of segments."""
         # Streaming might need careful locking or a different approach if it blocks iterator
         # For now, we lock the initialization of the stream
         with self._lock:
