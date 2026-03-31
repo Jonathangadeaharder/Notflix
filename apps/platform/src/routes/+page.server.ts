@@ -145,14 +145,21 @@ function isContinueWatching(videoItem: DashboardVideo) {
 }
 
 function pickFeaturedVideo(videos: DashboardVideo[]) {
-  return (
-    videos.find(isContinueWatching) ??
-    videos.find(
-      (videoItem) => videoItem.status === ProcessingStatus.COMPLETED,
-    ) ??
-    videos[0] ??
-    null
-  );
+  let firstCompleted: DashboardVideo | null = null;
+
+  for (const videoItem of videos) {
+    if (isContinueWatching(videoItem)) {
+      return { featuredVideo: videoItem, continueWatching: videoItem };
+    }
+    if (!firstCompleted && videoItem.status === ProcessingStatus.COMPLETED) {
+      firstCompleted = videoItem;
+    }
+  }
+
+  return {
+    featuredVideo: firstCompleted ?? videos[0] ?? null,
+    continueWatching: null,
+  };
 }
 
 export const load = async ({ locals }: RequestEvent) => {
@@ -163,11 +170,12 @@ export const load = async ({ locals }: RequestEvent) => {
     rows.map((row) => row.id),
   );
   const videos = rows.map((row) => buildDashboardVideo(row, progressMap));
+  const { featuredVideo, continueWatching } = pickFeaturedVideo(videos);
 
   return {
     session,
-    continueWatching: videos.find(isContinueWatching) ?? null,
-    featuredVideo: pickFeaturedVideo(videos),
+    continueWatching,
+    featuredVideo,
     videos,
   };
 };
