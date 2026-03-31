@@ -9,11 +9,13 @@ describe('Debug API Authentication', () => {
         request: {} as Request,
         locals: {
             auth: vi.fn().mockResolvedValue(session)
-        }
+        },
+        route: { id: '/api/debug/translate' }
     } as unknown as RequestEvent);
 
     it('translate endpoint returns 401 if not authenticated', async () => {
         const event = mockEvent(null);
+        // @ts-expect-error - testing with mock
         const response = await translatePost(event);
         expect(response.status).toBe(401);
         const body = await response.json();
@@ -22,6 +24,7 @@ describe('Debug API Authentication', () => {
 
     it('filter endpoint returns 401 if not authenticated', async () => {
         const event = mockEvent(null);
+        // @ts-expect-error - testing with mock
         const response = await filterPost(event);
         expect(response.status).toBe(401);
         const body = await response.json();
@@ -30,6 +33,7 @@ describe('Debug API Authentication', () => {
 
     it('transcribe endpoint returns 401 if not authenticated', async () => {
         const event = mockEvent(null);
+        // @ts-expect-error - testing with mock
         const response = await transcribePost(event);
         expect(response.status).toBe(401);
         const body = await response.json();

@@ -19,8 +19,8 @@ export interface Session {
 }
 
 export function createSupabaseServerClient(event: RequestEvent) {
-  const supabaseUrl = env.SUPABASE_URL || publicEnv.PUBLIC_SUPABASE_URL;
-  return createServerClient(supabaseUrl, publicEnv.PUBLIC_SUPABASE_ANON_KEY, {
+  const supabaseUrl = env.SUPABASE_URL || publicEnv.PUBLIC_SUPABASE_URL || "";
+  return createServerClient(supabaseUrl, publicEnv.PUBLIC_SUPABASE_ANON_KEY || "", {
     cookies: {
       getAll() {
         return event.cookies.getAll();

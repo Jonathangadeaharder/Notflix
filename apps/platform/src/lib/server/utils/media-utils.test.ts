@@ -6,18 +6,16 @@ import { toMediaUrl } from "./media-utils";
 describe("media path helpers", () => {
   it("converts absolute media paths to media-root-relative AI inputs", () => {
     const absoluteMediaPath = path.join(
-      CONFIG.MEDIA_ROOT,
-      "uploads",
+      CONFIG.RESOLVED_UPLOAD_DIR,
       "sample.mp4",
     );
 
-    expect(toAiServicePath(absoluteMediaPath)).toBe("uploads/sample.mp4");
+    expect(toAiServicePath(absoluteMediaPath)).toBe(`${CONFIG.AI_SERVICE_MEDIA_PREFIX}/sample.mp4`);
   });
 
   it("converts absolute media paths to proxied media URLs", () => {
     const absoluteMediaPath = path.join(
-      CONFIG.MEDIA_ROOT,
-      "uploads",
+      CONFIG.RESOLVED_UPLOAD_DIR,
       "sample.mp4",
     );
 

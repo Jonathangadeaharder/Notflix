@@ -14,7 +14,10 @@
 
     // Manual form state using Svelte 5 runes
     // Initialize properly; component recreation on nav handles reset
-    let gameInterval = $state(data.initialData.gameInterval);
+    let gameInterval = $state();
+    $effect(() => {
+        gameInterval = data.initialData.gameInterval;
+    });
     let isSubmitting = $state(false);
 
     function getIntervalLabel(value: string) {

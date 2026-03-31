@@ -61,8 +61,8 @@ class OpusTranslator(ITranslator):
         source_lang: str,
         target_lang: str
     ) -> List[str]:
-        # Lock during inference to prevent OOM/Concurrency issues if multiple requests hit this worker
-        # MarianMT inference is relatively heavy.
+        # Lock during inference to prevent OOM/Concurrency issues if multiple
+        # requests hit this worker. MarianMT inference is relatively heavy.
         with self._lock:
             tokenizer, model = self._get_model(source_lang, target_lang)
 
