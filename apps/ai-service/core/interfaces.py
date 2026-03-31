@@ -2,10 +2,12 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel
 
+
 class Segment(BaseModel):
     start: float
     end: float
     text: str
+
 
 class TokenAnalysis(BaseModel):
     text: str
@@ -15,10 +17,12 @@ class TokenAnalysis(BaseModel):
     whitespace: str = ""
     translation: Optional[str] = None
 
+
 class TranscriptionResult(BaseModel):
     segments: List[Segment]
     language: str
     language_probability: float
+
 
 class ITranscriber(ABC):  # pylint: disable=too-few-public-methods
     """
@@ -27,14 +31,12 @@ class ITranscriber(ABC):  # pylint: disable=too-few-public-methods
 
     @abstractmethod
     def transcribe(
-        self,
-        file_path: str,
-        language: Optional[str] = None
+        self, file_path: str, language: Optional[str] = None
     ) -> TranscriptionResult:
         """
         Transcribes an audio file.
         """
-        pass
+        raise NotImplementedError
 
 
 class IFilter(ABC):
@@ -47,14 +49,16 @@ class IFilter(ABC):
         """
         Analyzes a single text.
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
-    def analyze_batch(self, texts: List[str], language: str) -> List[List[TokenAnalysis]]:
+    def analyze_batch(
+        self, texts: List[str], language: str
+    ) -> List[List[TokenAnalysis]]:
         """
         Analyzes a batch of texts.
         """
-        pass
+        raise NotImplementedError
 
 
 class ITranslator(ABC):  # pylint: disable=too-few-public-methods
@@ -63,8 +67,10 @@ class ITranslator(ABC):  # pylint: disable=too-few-public-methods
     """
 
     @abstractmethod
-    def translate(self, texts: List[str], source_lang: str, target_lang: str) -> List[str]:
+    def translate(
+        self, texts: List[str], source_lang: str, target_lang: str
+    ) -> List[str]:
         """
         Translates a list of texts.
         """
-        pass
+        raise NotImplementedError
