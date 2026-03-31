@@ -4,12 +4,16 @@ from pydantic import BaseModel
 
 
 class Segment(BaseModel):
+    """Segment class for transcription results."""
+    # pylint: disable=too-few-public-methods
     start: float
     end: float
     text: str
 
 
 class TokenAnalysis(BaseModel):
+    """TokenAnalysis class for analyzed tokens."""
+    # pylint: disable=too-few-public-methods
     text: str
     lemma: str
     pos: str
@@ -19,12 +23,15 @@ class TokenAnalysis(BaseModel):
 
 
 class TranscriptionResult(BaseModel):
+    """TranscriptionResult class for transcription results."""
+    # pylint: disable=too-few-public-methods
     segments: List[Segment]
     language: str
     language_probability: float
 
 
 class ITranscriber(ABC):
+    """ITranscriber interface for transcription services."""
     @abstractmethod
     def transcribe(
         self,
@@ -49,6 +56,7 @@ class IFilter(ABC):
 
 
 class ITranslator(ABC):
+    """ITranslator interface for translation services."""
     @abstractmethod
     def translate(
         self,
