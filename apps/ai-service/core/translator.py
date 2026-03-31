@@ -43,19 +43,16 @@ class OpusTranslator(ITranslator):
             if model_name not in self._models:
                 logger.info("loading_marian_model", model_name=model_name)
                 try:
-                    # nosec B615: Dynamic model loading by language pair requires using branch refs.
-                    # Models are from trusted Helsinki-NLP org. Pinning to "main" provides stability.
-                    tokenizer = MarianTokenizer.from_pretrained(
-                        model_name, revision="main"
-                    )  # nosec B615
-                    model = MarianMTModel.from_pretrained(
-                        model_name, revision="main"
-                    )  # nosec B615
+                    tokenizer = MarianTokenizer.from_pretrained(model_name)
+                    model = MarianMTModel.from_pretrained(model_name)
                     model = model.to(self.device)
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
                     logger.error("marian_model_load_failed", model=model_name, error=str(e))
-                    msg = f"Translation model for {source_lang}->{target_lang} not found."
+                    msg = (
+                        f"Translation model for {source_lang}->{target_lang} "
+                        "not found."
+                    )
                     raise ValueError(msg) from e
             return self._models[model_name]
 

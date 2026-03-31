@@ -14,13 +14,14 @@
 
     // Manual form state using Svelte 5 runes
     // Initialize properly; component recreation on nav handles reset
-    let gameInterval = $state<string>();
+    let gameInterval = $state();
     $effect(() => {
         gameInterval = data.initialData.gameInterval;
     });
     let isSubmitting = $state(false);
 
-    function getIntervalLabel(value: string) {
+    function getIntervalLabel(value: string | undefined) {
+        if (value === undefined) return "Select Interval";
         const num = Number(value);
         if (num === 0) return "Off (Netflix Mode)";
         return `Every ${num} Minutes`;
