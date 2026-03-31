@@ -45,6 +45,9 @@ class SpacyFilter(IFilter):
         return self._models[lang]
 
     def analyze(self, text: str, language: str) -> List[TokenAnalysis]:
+        """
+        Analyzes a single text using Spacy.
+        """
         with self._lock:
             nlp = self._get_model(language)
             doc = nlp(text)
@@ -57,12 +60,15 @@ class SpacyFilter(IFilter):
                     lemma=token.lemma_,
                     pos=token.pos_,
                     is_stop=token.is_stop,
-                    whitespace=token.whitespace_,
+                    whitespace=token.whitespace_
                 )
             )
         return tokens
 
     def analyze_batch(self, texts: List[str], language: str) -> List[List[TokenAnalysis]]:
+        """
+        Analyzes a batch of texts using Spacy.
+        """
         with self._lock:
             nlp = self._get_model(language)
             # Using nlp.pipe for efficient batch processing
@@ -74,7 +80,10 @@ class SpacyFilter(IFilter):
             for token in doc:
                 tokens.append(
                     TokenAnalysis(
-                        text=token.text, lemma=token.lemma_, pos=token.pos_, is_stop=token.is_stop
+                        text=token.text,
+                        lemma=token.lemma_,
+                        pos=token.pos_,
+                        is_stop=token.is_stop
                     )
                 )
             results.append(tokens)

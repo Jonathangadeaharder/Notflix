@@ -18,13 +18,7 @@ const config: PlaywrightTestConfig = {
   },
 
   testDir: "tests",
-  // Only run Playwright specs, excluding Vitest `.test` files in the same folder
-  testMatch: [
-    "**/e2e/**/*.spec.ts",
-    "**/e2e/**/*.spec.js",
-    "**/integration/**/*.spec.ts",
-    "**/integration/**/*.spec.js",
-  ],
+  testMatch: ["**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js"],
 
   use: {
     baseURL: "http://localhost:5173",

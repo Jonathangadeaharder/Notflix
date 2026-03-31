@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "../../src/routes/api/words/known/+server";
 import { db } from "$lib/server/infrastructure/database";
-import { HTTP_STATUS } from "$lib/constants";
 
 vi.mock("$lib/server/infrastructure/database", () => ({
   db: {
@@ -9,57 +8,50 @@ vi.mock("$lib/server/infrastructure/database", () => ({
   },
 }));
 
-const WORDS_KNOWN_URL = "http://localhost/api/words/known";
-const AUTH_USER = { user: { id: "u1" } };
-
-function createJsonRequest(body?: Record<string, unknown>) {
-  return new Request(WORDS_KNOWN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
+describe("POST /api/words/known", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
-}
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
-describe("POST /api/words/known authentication", () => {
   it("returns 401 when unauthenticated", async () => {
-    const request = createJsonRequest();
+    const request = new Request("http://localhost/api/words/known", {
+      method: "POST",
+    });
     const response = await POST({
       request,
       locals: { auth: vi.fn().mockResolvedValue(null) },
     } as never);
 
-    expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
+    expect(response.status).toBe(401);
   });
 
   it("returns 400 for invalid JSON", async () => {
-    const request = new Request(WORDS_KNOWN_URL, {
+    const request = new Request("http://localhost/api/words/known", {
       method: "POST",
       body: "{bad-json",
     });
 
     const response = await POST({
       request,
-      locals: { auth: vi.fn().mockResolvedValue(AUTH_USER) },
+      locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
     } as never);
 
-    expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+    expect(response.status).toBe(400);
   });
-});
 
-describe("POST /api/words/known payload validation", () => {
   it("returns 400 when lemma or lang is missing", async () => {
-    const request = createJsonRequest({ lemma: "hola" });
+    const request = new Request("http://localhost/api/words/known", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lemma: "hola" }),
+    });
 
     const response = await POST({
       request,
-      locals: { auth: vi.fn().mockResolvedValue(AUTH_USER) },
+      locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
     } as never);
 
-    expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+    expect(response.status).toBe(400);
   });
 
   it("stores known words for authenticated users", async () => {
@@ -69,14 +61,18 @@ describe("POST /api/words/known payload validation", () => {
     };
     vi.mocked(db.insert).mockReturnValue(chain as never);
 
-    const request = createJsonRequest({ lemma: "hola", lang: "es" });
+    const request = new Request("http://localhost/api/words/known", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lemma: "hola", lang: "es" }),
+    });
 
     const response = await POST({
       request,
-      locals: { auth: vi.fn().mockResolvedValue(AUTH_USER) },
+      locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
     } as never);
 
-    expect(response.status).toBe(HTTP_STATUS.OK);
+    expect(response.status).toBe(200);
     expect(chain.values).toHaveBeenCalledWith(
       expect.objectContaining({ userId: "u1", lemma: "hola", lang: "es" }),
     );

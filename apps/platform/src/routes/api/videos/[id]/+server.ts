@@ -3,6 +3,7 @@ import { video, videoProcessing } from "@notflix/database";
 import { eq } from "drizzle-orm";
 import { json } from "@sveltejs/kit";
 import { unlink } from "fs/promises";
+import { resolve } from "path";
 import type { RequestHandler } from "./$types";
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {

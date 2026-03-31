@@ -69,13 +69,19 @@ class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
                 batch_texts = texts[i : i + batch_size]
 
                 inputs = tokenizer(
-                    batch_texts, return_tensors="pt", padding=True, truncation=True
+                    batch_texts,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True
                 ).to(self.device)
 
                 with torch.no_grad():
                     generated = model.generate(**inputs)
 
-                batch_translations = tokenizer.batch_decode(generated, skip_special_tokens=True)
+                batch_translations = tokenizer.batch_decode(
+                    generated,
+                    skip_special_tokens=True
+                )
                 translated_texts.extend(batch_translations)
 
         logger.info(

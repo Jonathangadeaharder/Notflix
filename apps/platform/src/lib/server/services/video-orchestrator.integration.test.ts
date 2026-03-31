@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
-import { video, videoProcessing, type DbVttSegment } from "@notflix/database";
+import { video, videoProcessing } from "@notflix/database";
 import { eq } from "drizzle-orm";
 import { Orchestrator } from "./video-orchestrator.service";
 import { SmartFilter } from "./linguistic-filter.service";
@@ -53,7 +53,7 @@ describe("VideoOrchestratorService Integration", () => {
     expect(processingRecord[0].vttJson).toBeDefined();
 
     // precise check on json content if possible
-    const segments = processingRecord[0].vttJson as DbVttSegment[];
+    const segments = processingRecord[0].vttJson as any[];
     expect(segments[0].text).toBe("Hola mundo");
   });
 

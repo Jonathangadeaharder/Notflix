@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "../../src/routes/api/health/+server";
 import { db } from "$lib/server/infrastructure/database";
-import { HTTP_STATUS } from "$lib/constants";
 
 vi.mock("$lib/server/infrastructure/database", () => ({
   db: {
@@ -20,7 +19,7 @@ describe("GET /api/health", () => {
     const response = await GET({} as never);
     const body = await response.json();
 
-    expect(response.status).toBe(HTTP_STATUS.OK);
+    expect(response.status).toBe(200);
     expect(body.status).toBe("ok");
     expect(body.services.database).toBe("connected");
   });
@@ -31,7 +30,7 @@ describe("GET /api/health", () => {
     const response = await GET({} as never);
     const body = await response.json();
 
-    expect(response.status).toBe(HTTP_STATUS.SERVICE_UNAVAILABLE);
+    expect(response.status).toBe(503);
     expect(body.status).toBe("error");
   });
 });
