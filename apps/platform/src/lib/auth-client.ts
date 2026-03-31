@@ -4,8 +4,8 @@ import { goto } from "$app/navigation";
 import { page } from "$app/stores";
 
 const supabase = createBrowserClient(
-  publicEnv.PUBLIC_SUPABASE_URL,
-  publicEnv.PUBLIC_SUPABASE_ANON_KEY,
+  publicEnv.PUBLIC_SUPABASE_URL || "",
+  publicEnv.PUBLIC_SUPABASE_ANON_KEY || "",
 );
 
 export async function signInEmail(

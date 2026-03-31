@@ -20,16 +20,12 @@ class TranscriptionResult(BaseModel):
     language: str
     language_probability: float
 
-class ITranscriber(ABC):
+class ITranscriber(ABC):  # pylint: disable=too-few-public-methods
     """Interface for transcription services."""
 
     @abstractmethod
     def transcribe(self, file_path: str, language: Optional[str] = None) -> TranscriptionResult:
         """Transcribes an audio file."""
-        pass
-
-    def dummy(self):
-        """Dummy method to satisfy too-few-public-methods."""
         pass
 
 
@@ -47,14 +43,10 @@ class IFilter(ABC):
         pass
 
 
-class ITranslator(ABC):
+class ITranslator(ABC):  # pylint: disable=too-few-public-methods
     """Interface for translation services."""
 
     @abstractmethod
     def translate(self, texts: List[str], source_lang: str, target_lang: str) -> List[str]:
         """Translates a list of texts."""
-        pass
-
-    def dummy(self):
-        """Dummy method to satisfy too-few-public-methods."""
         pass

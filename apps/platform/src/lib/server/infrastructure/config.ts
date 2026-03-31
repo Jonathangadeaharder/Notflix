@@ -1,5 +1,7 @@
-import { env } from '$env/dynamic/private';
 import path from 'path';
+
+// Mock env for non-SvelteKit environments (like Playwright tests importing this)
+const env = typeof process !== 'undefined' ? process.env : {} as any;
 
 // The AI service container always mounts media at this path, regardless of host layout.
 const AI_MEDIA_PATH = '/app/media/uploads';
@@ -23,6 +25,7 @@ export const CONFIG = {
     AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || 'dev_secret_key',
     UPLOAD_DIR: uploadDir,
     RESOLVED_UPLOAD_DIR: resolvedUploadDir,
+    MEDIA_ROOT: resolvedUploadDir,
     AI_SERVICE_MEDIA_PREFIX: AI_MEDIA_PATH,
     IS_DOCKER: isDocker,
     DEFAULT_TARGET_LANG: 'es',
