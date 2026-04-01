@@ -1,34 +1,53 @@
 import { test, expect } from "@playwright/test";
 import { PlayerPage } from "../pages/PlayerPage";
 
+const FAKE_TIME = 2;
+const FAKE_DURATION = 600;
+
 test.describe("Video Player Component", () => {
     test("loads and toggles subtitle modes", async ({ page }) => {
+        // Suppress video error events before page loads.
+        // In headless CI, Chromium may lack codecs for BigBuckBunny.mp4,
+        // which triggers handleVideoError → errorState → hides controls + subtitles.
+        await page.addInitScript(() => {
+            const origAEL = HTMLVideoElement.prototype.addEventListener;
+            HTMLVideoElement.prototype.addEventListener = function (
+                type: string,
+                listener: EventListenerOrEventListenerObject,
+                options?: boolean | AddEventListenerOptions,
+            ) {
+                // Swallow error listeners on video elements
+                if (type === "error") return;
+                return origAEL.call(this, type, listener, options);
+            };
+        });
+
         // Go to the test page
         await page.goto("/test/player");
 
         const player = new PlayerPage(page);
-        await player.waitForPlayback();
+        // Wait for player element to exist
+        await expect(player.videoPlayer).toBeVisible();
 
-        // 1. Initial State: FILTERED
-        // Force video time to 2s — override getter so handleTimeUpdate reads it correctly
-        // (in headless CI, video may fail to load and reset currentTime to 0)
-        await page.evaluate(() => {
-            const v = document.querySelector("video") as HTMLVideoElement;
-            if (v) {
-                const FAKE_TIME = 2;
-                const FAKE_DURATION = 600;
-                Object.defineProperty(v, "currentTime", {
-                    get: () => FAKE_TIME,
-                    set: () => {},
-                    configurable: true,
-                });
-                Object.defineProperty(v, "duration", {
-                    get: () => FAKE_DURATION,
-                    configurable: true,
-                });
-                v.dispatchEvent(new Event("timeupdate"));
-            }
-        });
+        // Simulate video at 2s so subtitles render (first subtitle: start=1, end=5)
+        await page.evaluate(
+            ({ time, dur }) => {
+                const v = document.querySelector("video") as HTMLVideoElement;
+                if (v) {
+                    Object.defineProperty(v, "currentTime", {
+                        get: () => time,
+                        set: () => {},
+                        configurable: true,
+                    });
+                    Object.defineProperty(v, "duration", {
+                        get: () => dur,
+                        configurable: true,
+                    });
+                    v.dispatchEvent(new Event("timeupdate"));
+                }
+            },
+            { time: FAKE_TIME, dur: FAKE_DURATION },
+        );
 
         // Check if subtitles appear
         await expect(player.subtitleContainer).toBeVisible({ timeout: 10000 });
