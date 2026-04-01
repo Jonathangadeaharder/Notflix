@@ -2,7 +2,7 @@
 FROM node:25-slim AS builder
 
 # Install pnpm
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@10
 
 WORKDIR /app
 
