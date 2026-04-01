@@ -17,7 +17,7 @@ const config: PlaywrightTestConfig = {
     },
   },
 
-  testDir: "tests/e2e",
+  testDir: "tests",
   testMatch: ["**/*.spec.ts", "**/*.spec.js"],
 
   use: {

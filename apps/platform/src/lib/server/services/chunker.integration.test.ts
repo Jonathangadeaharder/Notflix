@@ -79,6 +79,8 @@ describe("ChunkerService Integration (Real DB)", () => {
   });
 
   it("should generate a deck from real DB data with correct known status", async () => {
+    const CHUNK_END_SECONDS = 5;
+    const EXPECTED_CONTENT_WORDS = 2;
     // ACT
     const CHUNK_END_SECONDS = 5;
     const EXPECTED_CONTENT_WORDS = 2;

@@ -18,38 +18,26 @@ export interface Session {
   expires: string;
 }
 
-function requireEnv(value: string | undefined, key: string): string {
-  if (!value) {
-    throw new Error(`${key} is not set`);
-  }
-  return value;
-}
-
 export function createSupabaseServerClient(event: RequestEvent) {
-  const supabaseUrl = env.SUPABASE_URL ?? publicEnv.PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = publicEnv.PUBLIC_SUPABASE_ANON_KEY;
-  return createServerClient(
-    requireEnv(supabaseUrl, "SUPABASE_URL"),
-    requireEnv(supabaseAnonKey, "PUBLIC_SUPABASE_ANON_KEY"),
-    {
-      cookies: {
-        getAll() {
-          return event.cookies.getAll();
-        },
-        setAll(
-          cookiesToSet: Array<{
-            name: string;
-            value: string;
-            options: CookieOptions;
-          }>,
-        ) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            event.cookies.set(name, value, { ...options, path: "/" }),
-          );
-        },
+  const supabaseUrl = env.SUPABASE_URL || publicEnv.PUBLIC_SUPABASE_URL || "";
+  return createServerClient(supabaseUrl, publicEnv.PUBLIC_SUPABASE_ANON_KEY || "", {
+    cookies: {
+      getAll() {
+        return event.cookies.getAll();
+      },
+      setAll(
+        cookiesToSet: Array<{
+          name: string;
+          value: string;
+          options: CookieOptions;
+        }>,
+      ) {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          event.cookies.set(name, value, { ...options, path: "/" }),
+        );
       },
     },
-  );
+  });
 }
 
 type SupabaseAuthUser = {

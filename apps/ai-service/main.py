@@ -14,8 +14,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Security
 from fastapi.responses import JSONResponse
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, field_validator
-from core.interfaces import Segment, TokenAnalysis
 from core.filter import SpacyFilter
+from core.interfaces import Segment, TokenAnalysis
 from core.transcriber import WhisperTranscriber
 from core.translator import OpusTranslator
 

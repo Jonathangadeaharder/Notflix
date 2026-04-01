@@ -63,4 +63,3 @@ export const INDICES = {
   FIRST: 0,
   SECOND: 1,
 } as const;
-// Trigger lint check

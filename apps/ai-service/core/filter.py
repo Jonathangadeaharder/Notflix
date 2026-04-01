@@ -1,23 +1,19 @@
 import os
 import threading
 from typing import List, Dict
+
 import spacy
 import structlog
 from .interfaces import IFilter, TokenAnalysis
 
 logger = structlog.get_logger()
 
-
 class SpacyFilter(IFilter):
-    """SpacyFilter class for linguistic filtering using spaCy."""
-
     def __init__(self):
-        """Initializes the SpacyFilter with an empty model cache."""
         self._models: Dict[str, spacy.language.Language] = {}
         self._lock = threading.Lock()
 
     def _get_model(self, lang: str):
-        """Internal helper to load or retrieve a spaCy model."""
         # Double checked locking optimization or just lock the whole method
         # Since this is lazy loading, locking the whole method is safer and simple enough
         if lang not in self._models:
@@ -49,28 +45,30 @@ class SpacyFilter(IFilter):
         return self._models[lang]
 
     def analyze(self, text: str, language: str) -> List[TokenAnalysis]:
-        """Analyzes a single text string and returns a list of tokens."""
+        """
+        Analyzes a single text using Spacy.
+        """
         with self._lock:
             nlp = self._get_model(language)
             doc = nlp(text)
 
         tokens = []
         for token in doc:
-            tokens.append(TokenAnalysis(
-                text=token.text,
-                lemma=token.lemma_,
-                pos=token.pos_,
-                is_stop=token.is_stop,
-                whitespace=token.whitespace_
-            ))
+            tokens.append(
+                TokenAnalysis(
+                    text=token.text,
+                    lemma=token.lemma_,
+                    pos=token.pos_,
+                    is_stop=token.is_stop,
+                    whitespace=token.whitespace_
+                )
+            )
         return tokens
 
-    def analyze_batch(
-        self,
-        texts: List[str],
-        language: str
-    ) -> List[List[TokenAnalysis]]:
-        """Analyzes a batch of text strings and returns a list of token lists."""
+    def analyze_batch(self, texts: List[str], language: str) -> List[List[TokenAnalysis]]:
+        """
+        Analyzes a batch of texts using Spacy.
+        """
         with self._lock:
             nlp = self._get_model(language)
             # Using nlp.pipe for efficient batch processing
@@ -80,11 +78,13 @@ class SpacyFilter(IFilter):
         for doc in docs:
             tokens = []
             for token in doc:
-                tokens.append(TokenAnalysis(
-                    text=token.text,
-                    lemma=token.lemma_,
-                    pos=token.pos_,
-                    is_stop=token.is_stop
-                ))
+                tokens.append(
+                    TokenAnalysis(
+                        text=token.text,
+                        lemma=token.lemma_,
+                        pos=token.pos_,
+                        is_stop=token.is_stop
+                    )
+                )
             results.append(tokens)
         return results

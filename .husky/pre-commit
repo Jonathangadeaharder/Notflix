@@ -1,4 +1,7 @@
 #!/usr/bin/env sh
+
+# Ensure WSL-native node is in PATH (git hooks don't source ~/.bashrc)
 NVM_BIN="$HOME/.nvm/versions/node/$(ls -t "$HOME/.nvm/versions/node/" 2>/dev/null | head -1)/bin"
 [ -d "$NVM_BIN" ] && export PATH="$NVM_BIN:$PATH"
+
 node_modules/.bin/lint-staged --concurrent false

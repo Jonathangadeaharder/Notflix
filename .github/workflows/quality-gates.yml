@@ -49,8 +49,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Sync node_modules
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Sync SvelteKit
+        run: pnpm --filter @notflix/platform prepare
 
       - name: Apply database schema
         run: pnpm --filter @notflix/database db:push
@@ -110,8 +113,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Sync node_modules
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Sync SvelteKit
+        run: pnpm --filter @notflix/platform prepare
 
       - name: Install uv
         run: pip install uv
@@ -189,8 +195,8 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Sync node_modules
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint database package
         run: pnpm --filter @notflix/database lint
