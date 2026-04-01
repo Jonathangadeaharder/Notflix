@@ -64,6 +64,23 @@ services:
     volumes:
       - ./volumes/api:/var/lib/kong:ro
 
+  # ── DB Initialization (Drizzle migrations) ────────────
+  init-db:
+    image: notflix_platform
+    container_name: notflix-init-db
+    build:
+      context: .
+      dockerfile: apps/platform/Dockerfile
+    command: ["pnpm", "run", "--filter", "@notflix/database", "db:push"]
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/postgres
+    depends_on:
+      db: { condition: service_healthy }
+    volumes:
+      - ./packages/database:/app/packages/database
+      - /app/packages/database/node_modules
+      - /app/node_modules
+
   # ── Platform (SvelteKit) ──────────────────────────────
   platform:
     image: notflix_platform
@@ -93,6 +110,7 @@ services:
       RUNNING_IN_DOCKER:       "true"
     depends_on:
       db:         { condition: service_healthy }
+      init-db:    { condition: service_completed_successfully }
       kong:       { condition: service_started }
       ai-service: { condition: service_started }
 

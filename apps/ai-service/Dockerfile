@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python tooling ───────────────────────────────────────
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv@sha256:c152167fbb12521eafe9328693e88adb7474fbe2f1227576ceea87aeec18683e /uv /usr/local/bin/uv
 
 # ── Dependency layer (cached unless lockfile changes) ────
 COPY apps/ai-service/requirements.lock ./requirements.lock

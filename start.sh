@@ -9,6 +9,8 @@ if docker compose version &>/dev/null; then
 elif sudo docker compose version &>/dev/null; then
     printf '  Elevating with sudo for Docker socket access...\n\n'
     COMPOSE="sudo docker compose"
+elif podman compose version &>/dev/null; then
+    COMPOSE="podman compose"
 elif command -v podman-compose &>/dev/null; then
     COMPOSE="podman-compose"
 else
