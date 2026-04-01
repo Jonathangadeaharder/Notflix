@@ -83,7 +83,7 @@ services:
       - /app/apps/platform/node_modules
       - /app/packages/database/node_modules
     environment:
-      DATABASE_URL:            postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-db-password}@db:5432/postgres
+      DATABASE_URL:            postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/postgres
       AI_SERVICE_URL:          http://ai-service:8000
       AI_SERVICE_API_KEY:      dev_secret_key
       UPLOAD_DIR:              /app/media/uploads

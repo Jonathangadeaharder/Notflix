@@ -24,7 +24,7 @@ updates:
     open-pull-requests-limit: 10
     ignore:
       - dependency-name: "python"
-        versions: [">= 3.12"]
+        versions: [">= 3.14"]
 
   # Enable version updates for Docker (Platform)
   - package-ecosystem: "docker"
@@ -41,6 +41,7 @@ updates:
     open-pull-requests-limit: 5
     ignore:
       - dependency-name: "python"
+        versions: [">= 3.14"]
 
   # Enable version updates for Docker Compose (Infrastructure)
   - package-ecosystem: "docker"
