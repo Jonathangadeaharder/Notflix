@@ -7,9 +7,15 @@ import { CONFIG } from '$lib/server/infrastructure/config';
 import type { RequestHandler } from './$types';
 
 const HTTP_STATUS_BAD_REQUEST = 400;
+const HTTP_STATUS_UNAUTHORIZED = 401;
 const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+    const session = await locals.auth();
+    if (!session) {
+        return json({ error: 'Unauthorized' }, { status: HTTP_STATUS_UNAUTHORIZED });
+    }
+
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File;
