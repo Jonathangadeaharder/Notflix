@@ -10,11 +10,22 @@ test.describe("Video Player Component", () => {
         await player.waitForPlayback();
 
         // 1. Initial State: FILTERED
-        // Force video time to 2s and dispatch timeupdate (video may not play in headless CI)
+        // Force video time to 2s — override getter so handleTimeUpdate reads it correctly
+        // (in headless CI, video may fail to load and reset currentTime to 0)
         await page.evaluate(() => {
             const v = document.querySelector("video") as HTMLVideoElement;
             if (v) {
-                v.currentTime = 2;
+                const FAKE_TIME = 2;
+                const FAKE_DURATION = 600;
+                Object.defineProperty(v, "currentTime", {
+                    get: () => FAKE_TIME,
+                    set: () => {},
+                    configurable: true,
+                });
+                Object.defineProperty(v, "duration", {
+                    get: () => FAKE_DURATION,
+                    configurable: true,
+                });
                 v.dispatchEvent(new Event("timeupdate"));
             }
         });
