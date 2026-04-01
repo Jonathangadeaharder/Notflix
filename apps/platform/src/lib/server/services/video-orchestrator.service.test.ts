@@ -18,8 +18,8 @@ vi.mock('../infrastructure/container', () => ({
     subtitleService: {}
 }));
 
-vi.mock('../infrastructure/database', () => ({
-    db: {
+vi.mock('../infrastructure/database', () => {
+    const chainMethods = () => ({
         select: vi.fn().mockReturnThis(),
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
@@ -29,8 +29,15 @@ vi.mock('../infrastructure/database', () => ({
         onConflictDoUpdate: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         set: vi.fn().mockReturnThis(),
-    }
-}));
+    });
+    return {
+        db: {
+            ...chainMethods(),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            transaction: vi.fn().mockImplementation((fn: any) => fn(chainMethods())),
+        }
+    };
+});
 
 const MOCK_TITLE = 'Test Video';
 const MOCK_TEXT = 'Hola mundo';
