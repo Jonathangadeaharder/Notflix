@@ -151,7 +151,6 @@
 
         <div
           class="mt-auto pt-10 flex justify-between gap-4"
-          role="presentation"
           onpointerdown={(e) => e.stopPropagation()}
         >
           <Button

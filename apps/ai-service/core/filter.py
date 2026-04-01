@@ -1,6 +1,7 @@
 import os
 import threading
 from typing import List, Dict
+
 import spacy
 import structlog
 from .interfaces import IFilter, TokenAnalysis
@@ -44,26 +45,30 @@ class SpacyFilter(IFilter):
         return self._models[lang]
 
     def analyze(self, text: str, language: str) -> List[TokenAnalysis]:
+        """
+        Analyzes a single text using Spacy.
+        """
         with self._lock:
             nlp = self._get_model(language)
             doc = nlp(text)
 
         tokens = []
         for token in doc:
-            tokens.append(TokenAnalysis(
-                text=token.text,
-                lemma=token.lemma_,
-                pos=token.pos_,
-                is_stop=token.is_stop,
-                whitespace=token.whitespace_
-            ))
+            tokens.append(
+                TokenAnalysis(
+                    text=token.text,
+                    lemma=token.lemma_,
+                    pos=token.pos_,
+                    is_stop=token.is_stop,
+                    whitespace=token.whitespace_
+                )
+            )
         return tokens
 
-    def analyze_batch(
-        self,
-        texts: List[str],
-        language: str
-    ) -> List[List[TokenAnalysis]]:
+    def analyze_batch(self, texts: List[str], language: str) -> List[List[TokenAnalysis]]:
+        """
+        Analyzes a batch of texts using Spacy.
+        """
         with self._lock:
             nlp = self._get_model(language)
             # Using nlp.pipe for efficient batch processing
@@ -73,11 +78,13 @@ class SpacyFilter(IFilter):
         for doc in docs:
             tokens = []
             for token in doc:
-                tokens.append(TokenAnalysis(
-                    text=token.text,
-                    lemma=token.lemma_,
-                    pos=token.pos_,
-                    is_stop=token.is_stop
-                ))
+                tokens.append(
+                    TokenAnalysis(
+                        text=token.text,
+                        lemma=token.lemma_,
+                        pos=token.pos_,
+                        is_stop=token.is_stop
+                    )
+                )
             results.append(tokens)
         return results

@@ -24,27 +24,49 @@ class TranscriptionResult(BaseModel):
     language_probability: float
 
 
-# pylint: disable=too-few-public-methods
-class ITranscriber(ABC):
+class ITranscriber(ABC):  # pylint: disable=too-few-public-methods
+    """
+    Interface for transcription services.
+    """
+
     @abstractmethod
     def transcribe(
         self, file_path: str, language: Optional[str] = None
-    ) -> TranscriptionResult: ...
+    ) -> TranscriptionResult:
+        """
+        Transcribes an audio file.
+        """
 
 
 class IFilter(ABC):
+    """
+    Interface for linguistic filtering services.
+    """
+
     @abstractmethod
-    def analyze(self, text: str, language: str) -> List[TokenAnalysis]: ...
+    def analyze(self, text: str, language: str) -> List[TokenAnalysis]:
+        """
+        Analyzes a single text.
+        """
 
     @abstractmethod
     def analyze_batch(
         self, texts: List[str], language: str
-    ) -> List[List[TokenAnalysis]]: ...
+    ) -> List[List[TokenAnalysis]]:
+        """
+        Analyzes a batch of texts.
+        """
 
 
-# pylint: disable=too-few-public-methods
-class ITranslator(ABC):
+class ITranslator(ABC):  # pylint: disable=too-few-public-methods
+    """
+    Interface for translation services.
+    """
+
     @abstractmethod
     def translate(
         self, texts: List[str], source_lang: str, target_lang: str
-    ) -> List[str]: ...
+    ) -> List[str]:
+        """
+        Translates a list of texts.
+        """

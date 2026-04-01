@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "../../src/routes/api/game/generate/+server";
 import { generateDeck } from "$lib/server/services/chunker.service";
@@ -60,6 +61,12 @@ describe("GET /api/game/generate", () => {
     expect(response.status).toBe(HTTP_STATUS.OK);
     expect(body.cards).toHaveLength(1);
     expect(body.nextChunkStart).toBe(CHUNK_END_SECONDS);
-    expect(generateDeck).toHaveBeenCalledWith("u1", "vid-1", 0, CHUNK_END_SECONDS, "es");
+    expect(generateDeck).toHaveBeenCalledWith(
+      "u1",
+      "vid-1",
+      0,
+      CHUNK_END_SECONDS,
+      "es",
+    );
   });
 });

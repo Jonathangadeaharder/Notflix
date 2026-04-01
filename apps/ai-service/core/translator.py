@@ -1,7 +1,8 @@
 import threading
 from typing import List
-import torch
+
 import structlog
+import torch
 from transformers import MarianMTModel, MarianTokenizer
 from .interfaces import ITranslator
 
@@ -16,8 +17,7 @@ FALLBACK_MAPPING = {
 }
 
 
-# pylint: disable=too-few-public-methods
-class OpusTranslator(ITranslator):
+class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
     def __init__(self, device=None):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self._models = {}
@@ -32,8 +32,6 @@ class OpusTranslator(ITranslator):
             logger.info(
                 "using_fallback_pair", original=pair, fallback=FALLBACK_MAPPING[pair]
             )
-            # In reality, swapping src/tgt isn't a fallback for translation, but creating a pivot
-            # is hard. We'll just stick to trying usage.
 
         model_name = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
 
@@ -42,24 +40,26 @@ class OpusTranslator(ITranslator):
                 logger.info("loading_marian_model", model_name=model_name)
                 try:
                     tokenizer = MarianTokenizer.from_pretrained(model_name)  # nosec
-                    model = MarianMTModel.from_pretrained(model_name)  # nosec
-                    model = model.to(self.device)
+                    model = MarianMTModel.from_pretrained(model_name).to(self.device)  # nosec
                     self._models[model_name] = (tokenizer, model)
                 except Exception as e:
                     logger.error(
                         "marian_model_load_failed", model=model_name, error=str(e)
                     )
-                    msg = (
-                        f"Translation model for {source_lang}->{target_lang} not found."
-                    )
-                    raise ValueError(msg) from e
+                    raise ValueError(
+                        f"Translation model for {source_lang}->{target_lang} failed to load."
+                    ) from e
             return self._models[model_name]
 
     def translate(
         self, texts: List[str], source_lang: str, target_lang: str
     ) -> List[str]:
-        # Lock during inference to prevent OOM/Concurrency issues if multiple
-        # requests hit this worker. MarianMT inference is relatively heavy.
+        # pylint: disable=too-many-locals
+        """
+        Translates a list of texts from source language to target language.
+        """
+        # Lock during inference to prevent OOM/Concurrency issues
+        # MarianMT inference is relatively heavy.
         with self._lock:
             tokenizer, model = self._get_model(source_lang, target_lang)
 
