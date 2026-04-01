@@ -22,6 +22,7 @@ export const HTTP_STATUS = {
   UNPROCESSABLE_ENTITY: 422,
   TOO_MANY_REQUESTS: 429,
   INTERNAL_SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
 } as const;
 
 export const TIME = {
@@ -62,4 +63,3 @@ export const INDICES = {
   FIRST: 0,
   SECOND: 1,
 } as const;
-// Trigger lint check

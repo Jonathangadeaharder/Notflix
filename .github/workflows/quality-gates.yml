@@ -42,8 +42,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -51,8 +49,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Sync node_modules
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Sync SvelteKit
+        run: pnpm --filter @notflix/platform prepare
 
       - name: Apply database schema
         run: pnpm --filter @notflix/database db:push
@@ -93,14 +94,13 @@ jobs:
       AI_SERVICE_URL: http://127.0.0.1:8000
       AI_SERVICE_API_KEY: dev_secret_key
       PLAYWRIGHT_TEST: "true"
+      MEDIA_ROOT_INTERNAL: ${{ github.workspace }}/media/uploads
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -113,8 +113,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Sync node_modules
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Sync SvelteKit
+        run: pnpm --filter @notflix/platform prepare
 
       - name: Install uv
         run: pip install uv
@@ -123,8 +126,24 @@ jobs:
         working-directory: apps/platform
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Install AI Service dependencies (CPU-only)
+        working-directory: apps/ai-service
+        run: |
+          uv pip install --system torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          uv pip install --system -r requirements.txt
+
       - name: Apply database schema
         run: pnpm --filter @notflix/database db:push
+
+      - name: Start AI Service
+        working-directory: apps/ai-service
+        env:
+          AI_SERVICE_API_KEY: dev_secret_key
+          MEDIA_ROOT: ${{ github.workspace }}/media
+          AUDIO_BASE_DIR: ${{ github.workspace }}/media
+        run: |
+          nohup python -m uvicorn main:app --host 127.0.0.1 --port 8000 &
+          for i in $(seq 1 30); do curl -sf -H "X-API-Key: dev_secret_key" http://127.0.0.1:8000/health && break || sleep 2; done
 
       - name: Run platform E2E tests
         run: pnpm --filter @notflix/platform test:e2e
@@ -169,8 +188,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -178,8 +195,8 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Sync node_modules
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint database package
         run: pnpm --filter @notflix/database lint
@@ -201,6 +218,10 @@ jobs:
              [ "${{ needs.ai-service-quality.result }}" != "success" ] || \
              [ "${{ needs.database-quality.result }}" != "success" ]; then
             echo "One or more required quality jobs failed."
+            echo "platform-quality: ${{ needs.platform-quality.result }}"
+            echo "platform-e2e: ${{ needs.platform-e2e.result }}"
+            echo "ai-service-quality: ${{ needs.ai-service-quality.result }}"
+            echo "database-quality: ${{ needs.database-quality.result }}"
             exit 1
           fi
           echo "All required quality jobs passed."
