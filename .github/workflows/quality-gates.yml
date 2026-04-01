@@ -214,15 +214,14 @@ jobs:
       - name: Verify all quality jobs passed
         run: |
           if [ "${{ needs.platform-quality.result }}" != "success" ] || \
+             [ "${{ needs.platform-e2e.result }}" != "success" ] || \
              [ "${{ needs.ai-service-quality.result }}" != "success" ] || \
              [ "${{ needs.database-quality.result }}" != "success" ]; then
             echo "One or more required quality jobs failed."
             echo "platform-quality: ${{ needs.platform-quality.result }}"
+            echo "platform-e2e: ${{ needs.platform-e2e.result }}"
             echo "ai-service-quality: ${{ needs.ai-service-quality.result }}"
             echo "database-quality: ${{ needs.database-quality.result }}"
             exit 1
           fi
           echo "All required quality jobs passed."
-          if [ "${{ needs.platform-e2e.result }}" != "success" ]; then
-            echo "⚠ Platform E2E failed (non-blocking): ${{ needs.platform-e2e.result }}"
-          fi
