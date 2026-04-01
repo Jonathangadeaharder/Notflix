@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "../../src/routes/api/game/generate/+server";
 import { generateDeck } from "$lib/server/services/chunker.service";
