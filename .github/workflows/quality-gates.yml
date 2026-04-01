@@ -127,7 +127,9 @@ jobs:
 
       - name: Install AI Service dependencies (CPU-only)
         working-directory: apps/ai-service
-        run: uv pip install --system -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+        run: |
+          uv pip install --system torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          uv pip install --system -r requirements.txt
 
       - name: Apply database schema
         run: pnpm --filter @notflix/database db:push
