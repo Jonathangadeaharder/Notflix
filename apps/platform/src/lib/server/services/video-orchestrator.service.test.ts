@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import type { IAiGateway } from '../domain/interfaces';
 import type { SmartFilter } from './linguistic-filter.service';
