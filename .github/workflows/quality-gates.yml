@@ -91,6 +91,7 @@ jobs:
       AI_SERVICE_URL: http://127.0.0.1:8000
       AI_SERVICE_API_KEY: dev_secret_key
       PLAYWRIGHT_TEST: "true"
+      MEDIA_ROOT_INTERNAL: ${{ github.workspace }}/media/uploads
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -136,7 +137,7 @@ jobs:
           AUDIO_BASE_DIR: ${{ github.workspace }}/media
         run: |
           nohup python -m uvicorn main:app --host 127.0.0.1 --port 8000 &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/health && break || sleep 2; done
+          for i in $(seq 1 30); do curl -sf -H "X-API-Key: dev_secret_key" http://127.0.0.1:8000/health && break || sleep 2; done
 
       - name: Run platform E2E tests
         run: pnpm --filter @notflix/platform test:e2e
