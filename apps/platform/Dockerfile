@@ -1,15 +1,18 @@
-FROM node:20-slim
+FROM node:25-slim
+
+# Install pnpm
+RUN npm install -g pnpm@10
 
 WORKDIR /app
 
 # Copy monorepo manifests
-COPY package.json package-lock.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/database/package.json packages/database/
 COPY apps/platform/package.json apps/platform/
 
 # Install dependencies for the specific workspace and its dependencies
 # This uses the root lockfile for deterministic builds
-RUN npm ci --workspace=@notflix/platform --workspace=@notflix/database --include=dev && npm cache clean --force
+RUN pnpm install --filter @notflix/platform --filter @notflix/database
 
 # Setup Web App Configs (required for svelte-kit sync in 'prepare' script)
 COPY apps/platform/svelte.config.js apps/platform/
@@ -32,4 +35,4 @@ USER appuser
 EXPOSE 5173
 
 # Start in dev mode, binding to all interfaces
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["pnpm", "run", "dev", "--", "--host"]
