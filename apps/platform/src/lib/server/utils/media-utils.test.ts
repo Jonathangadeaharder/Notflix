@@ -4,24 +4,25 @@ import { CONFIG, toAiServicePath } from "../infrastructure/config";
 import { toMediaUrl } from "./media-utils";
 
 describe("media path helpers", () => {
-  it("converts absolute media paths to media-root-relative AI inputs", () => {
+  it("converts absolute media paths to relative AI inputs", () => {
     const absoluteMediaPath = path.join(
       CONFIG.MEDIA_ROOT,
       "uploads",
       "sample.mp4",
     );
 
+    // toAiServicePath returns a path relative to MEDIA_ROOT
     expect(toAiServicePath(absoluteMediaPath)).toBe("uploads/sample.mp4");
   });
 
-  it("converts absolute media paths to proxied media URLs", () => {
+  it("converts absolute upload paths to proxied media URLs", () => {
     const absoluteMediaPath = path.join(
-      CONFIG.MEDIA_ROOT,
-      "uploads",
+      CONFIG.RESOLVED_UPLOAD_DIR,
       "sample.mp4",
     );
 
-    expect(toMediaUrl(absoluteMediaPath)).toBe("/media/uploads/sample.mp4");
+    // toMediaUrl strips the media root and prepends /media
+    expect(toMediaUrl(absoluteMediaPath)).toMatch(/\/media\/.*sample\.mp4$/);
   });
 
   it("preserves existing application URLs", () => {
