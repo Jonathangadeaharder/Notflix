@@ -7,7 +7,7 @@ import { CONFIG } from '../infrastructure/config';
  */
 export function toMediaUrl(absolutePath: string | null | undefined): string {
     if (!absolutePath) return '';
-    if (absolutePath.startsWith('http') || absolutePath.startsWith('/')) return absolutePath;
+    if (absolutePath.startsWith('http') || absolutePath.startsWith('/media')) return absolutePath;
 
     const mediaRoot = path.resolve(CONFIG.RESOLVED_UPLOAD_DIR, '..');
 

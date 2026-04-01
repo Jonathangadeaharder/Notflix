@@ -10,11 +10,13 @@ test.describe("Video Player Component", () => {
         await player.waitForPlayback();
 
         // 1. Initial State: FILTERED
-        // Expect subtitle container to be present (after video time advances past 1s)
-        // We force video time to 2s to check subtitles
+        // Force video time to 2s and dispatch timeupdate (video may not play in headless CI)
         await page.evaluate(() => {
-            const v = document.querySelector("video");
-            if (v) v.currentTime = 2;
+            const v = document.querySelector("video") as HTMLVideoElement;
+            if (v) {
+                v.currentTime = 2;
+                v.dispatchEvent(new Event("timeupdate"));
+            }
         });
 
         // Check if subtitles appear
