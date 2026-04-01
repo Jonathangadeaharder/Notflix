@@ -1,2 +1,6 @@
 @echo off
-node scripts/manager.mjs
+echo.
+echo   Notflix Dev Environment
+echo   =======================
+echo.
+docker compose up --build

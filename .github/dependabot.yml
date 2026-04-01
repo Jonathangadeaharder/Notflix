@@ -16,12 +16,15 @@ updates:
           - "*"
     open-pull-requests-limit: 10
 
-  # Enable version updates for pip (Python AI service)
-  - package-ecosystem: "pip"
+  # Enable version updates for uv (Python AI service)
+  - package-ecosystem: "uv"
     directory: "/apps/ai-service"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "python"
+        versions: [">= 3.12"]
 
   # Enable version updates for Docker (Platform)
   - package-ecosystem: "docker"
@@ -36,10 +39,12 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "python"
 
   # Enable version updates for Docker Compose (Infrastructure)
   - package-ecosystem: "docker"
-    directory: "/infra"
+    directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

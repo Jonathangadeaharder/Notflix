@@ -1,38 +1,30 @@
 FROM node:25-slim
 
-# Install pnpm
 RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-# Copy monorepo manifests
+# ── Dependency layer (cached unless manifests change) ────
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/database/package.json packages/database/
 COPY apps/platform/package.json apps/platform/
 
-# Install dependencies for the specific workspace and its dependencies
-# This uses the root lockfile for deterministic builds
 RUN pnpm install --filter @notflix/platform --filter @notflix/database
 
-# Setup Web App Configs (required for svelte-kit sync in 'prepare' script)
+# ── Config layer (cached unless build config changes) ────
 COPY apps/platform/svelte.config.js apps/platform/
-COPY apps/platform/vite.config.ts apps/platform/
-COPY apps/platform/tsconfig.json apps/platform/
+COPY apps/platform/vite.config.ts   apps/platform/
+COPY apps/platform/tsconfig.json    apps/platform/
 
-# Copy source code
+# ── Source layer ─────────────────────────────────────────
 COPY packages/database packages/database
-COPY apps/platform apps/platform
+COPY apps/platform     apps/platform
 
-# Set working directory to the app
 WORKDIR /app/apps/platform
 
-# Create non-root user for security
+# ── Security: drop to non-root ──────────────────────────
 RUN useradd -m appuser && chown -R appuser /app
-RUN chown -R appuser /app
 USER appuser
 
-# Expose Vite port
 EXPOSE 5173
-
-# Start in dev mode, binding to all interfaces
 CMD ["pnpm", "run", "dev", "--", "--host"]

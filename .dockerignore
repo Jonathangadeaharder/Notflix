@@ -1,11 +1,27 @@
+# ── Version control ──────────────────────────────────────
 .git
-node_modules
+
+# ── Dependencies (host-specific, never belong in images) ─
 **/node_modules
-venv
+**/.pnpm-store
 **/venv
-media
+**/.venv
+**/__pycache__
+
+# ── Build artifacts ──────────────────────────────────────
 apps/platform/.svelte-kit
-apps/ai-service/__pycache__
-*.log
 .pytest_cache
 .ruff_cache
+
+# ── Test artifacts ───────────────────────────────────────
+test-results
+playwright-report
+
+# ── Editor / IDE ─────────────────────────────────────────
+.vscode
+.idea
+
+# ── Runtime data (bind-mounted separately) ───────────────
+media
+logs
+*.log
