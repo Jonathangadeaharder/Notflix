@@ -53,16 +53,22 @@ media/uploads/*
 # Repomix / AI Context
 codebase.txt
 repomix-output.xml
+repomix_output.txt
 repomix.config.json
 .repomixignore
 GEMINI.md
 plan.txt
+all_package_jsons.txt
 
 # Playwright
 test-results/
 playwright-report/
 blob-report/
-node_modules
+
+# Deploy Keys (NEVER commit)
+*.key
+*.key.pub
 
 # AI agent planning artifacts
 .claude/
+.benchmarks/
