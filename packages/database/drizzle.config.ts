@@ -7,6 +7,6 @@ export default defineConfig({
   dbCredentials: {
     url:
       process.env.DATABASE_URL ||
-      "postgres://postgres:your-super-secret-db-password@127.0.0.1:5432/postgres",
+      "postgres://admin:password@127.0.0.1:5432/main_db",
   },
 });
