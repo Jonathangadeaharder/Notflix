@@ -50,6 +50,7 @@ The displayed percentage is the rounded weighted average across all processed se
 ## 6. Game Overlay Behavior
 
 - Intermissions are generated from the upcoming interval window, not the segment just watched.
+- The interval window boundaries are computed by the pure function `getUpcomingGameWindow(startTime, intervalSeconds)` in `$lib/utils/game-window.ts`. It returns `{ start, end }` with a fixed look-ahead cap. The watch page calls this function; it is independently unit-testable with no player or DOM dependency.
 - The flashcard overlay is keyboard-first:
   - `Space` or `Enter` flips the card
   - `ArrowLeft`, `1`, or `2` mark the card as unknown
