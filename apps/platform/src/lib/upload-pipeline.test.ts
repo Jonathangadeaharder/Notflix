@@ -16,4 +16,28 @@ describe("upload-pipeline", () => {
       "active",
     );
   });
+
+  it("marks steps as error when processing failed", () => {
+    expect(
+      getUploadStepState("TRANSCRIBING", "ANALYZING", "ERROR", false),
+    ).toBe("error");
+  });
+
+  it("marks future steps as pending", () => {
+    expect(
+      getUploadStepState("TRANSLATING", "ANALYZING", "PENDING", false),
+    ).toBe("pending");
+  });
+
+  it("marks pending steps after error as pending", () => {
+    expect(
+      getUploadStepState("TRANSLATING", "TRANSCRIBING", "ERROR", false),
+    ).toBe("pending");
+  });
+
+  it("uses UPLOADING as active stage when isSubmitting is true", () => {
+    expect(getUploadStepState("UPLOADING", "QUEUED", "PENDING", true)).toBe(
+      "active",
+    );
+  });
 });

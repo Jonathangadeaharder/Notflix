@@ -9,7 +9,7 @@ vi.mock("$lib/logger", () => ({
   },
 }));
 
-describe("TaskRegistry", () => {
+describe("TaskRegistry: resolved tasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -52,5 +52,45 @@ describe("TaskRegistry", () => {
       }),
       "Background task failed",
     );
+  });
+});
+
+describe("TaskRegistry: failure handling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("handles non-Error rejections gracefully", async () => {
+    const work = Promise.reject("string error");
+
+    taskRegistry.register("unit-test-string-error", work);
+    await work.catch(() => undefined);
+    await taskRegistry.waitForAll();
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: "string error",
+      }),
+      "Background task failed",
+    );
+  });
+
+  it("logs pending count when waitForAll called with active tasks", async () => {
+    let resolveTask: () => void;
+    const work = new Promise<void>((resolve) => {
+      resolveTask = resolve;
+    });
+
+    taskRegistry.register("pending-test", work);
+
+    // Start waitForAll while task is still pending
+    const waitPromise = taskRegistry.waitForAll();
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ count: expect.any(Number) }),
+      "Waiting for background tasks to complete...",
+    );
+
+    resolveTask();
+    await waitPromise;
   });
 });
