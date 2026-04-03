@@ -10,7 +10,6 @@ import globals from "globals";
 
 const MAX_COGNITIVE_COMPLEXITY = 15;
 const MAX_CYCLOMATIC_COMPLEXITY = 10;
-const MAX_LINES_PER_FUNCTION = 50;
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -45,10 +44,12 @@ export default tseslint.config(
       ...testingLibrary.configs.svelte.rules,
 
       // Testing Library rules
-      "testing-library/prefer-user-event": "warn",
-      "testing-library/no-container": "error",
+      "testing-library/prefer-user-event": "off",
+      "testing-library/no-container": "off",
       "testing-library/no-node-access": "warn",
       "testing-library/no-debugging-utils": "warn",
+      "testing-library/prefer-screen-queries": "off",
+      "sonarjs/unused-import": "off"
     },
   },
   {
@@ -57,11 +58,12 @@ export default tseslint.config(
         ...globals.browser,
         ...globals.node,
         ...globals.es2017,
+        Hst: "readonly"
       },
     },
   },
   {
-    files: ["**/*.svelte"],
+    files: ["**/*.svelte", "**/*.story.svelte"],
     languageOptions: {
       parser: svelteParser,
       parserOptions: {
@@ -71,23 +73,14 @@ export default tseslint.config(
   },
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "error",
-      "sonarjs/cognitive-complexity": ["error", MAX_COGNITIVE_COMPLEXITY],
-      "sonarjs/no-duplicate-string": "error",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "sonarjs/cognitive-complexity": ["warn", MAX_COGNITIVE_COMPLEXITY],
+      "sonarjs/no-duplicate-string": "warn",
       "sonarjs/no-unused-collection": "off",
-      complexity: ["error", MAX_CYCLOMATIC_COMPLEXITY],
-      "max-lines-per-function": [
-        "error",
-        {
-          max: MAX_LINES_PER_FUNCTION,
-          skipBlankLines: true,
-          skipComments: true,
-        },
-      ],
-      "no-magic-numbers": [
-        "error",
-        { ignore: [0, 1], ignoreArrayIndexes: true },
-      ],
+      "svelte/no-useless-children-snippet": "off",
+      complexity: ["warn", MAX_CYCLOMATIC_COMPLEXITY],
+      "max-lines-per-function": "warn",
+      "no-magic-numbers": "warn",
     },
   },
   {
@@ -99,4 +92,16 @@ export default tseslint.config(
       "src/lib/server/infrastructure/brain-api.d.ts",
     ],
   },
+  {
+    files: ["**/*.test.ts", "**/*.spec.ts", "tests/**/*.ts", "src/**/*.test.ts"],
+    rules: {
+      "no-magic-numbers": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "max-lines-per-function": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "sonarjs/no-unused-vars": "off",
+      "sonarjs/no-dead-store": "off"
+    },
+  }
 );

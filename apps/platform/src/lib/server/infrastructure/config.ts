@@ -21,8 +21,13 @@ function resolveUploadDir(dir: string, docker: boolean): string {
 const resolvedUploadDir = resolveUploadDir(uploadDir, isDocker);
 
 export const CONFIG = {
-  DATABASE_URL:
-    env.DATABASE_URL || "postgres://admin:password@localhost:5432/main_db",
+  get DATABASE_URL() {
+    return (
+      process.env.DATABASE_URL ||
+      env.DATABASE_URL ||
+      "postgres://admin:password@localhost:5432/main_db"
+    );
+  },
   AI_SERVICE_URL: env.AI_SERVICE_URL || "http://127.0.0.1:8000",
   AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || "dev_secret_key",
   UPLOAD_DIR: uploadDir,

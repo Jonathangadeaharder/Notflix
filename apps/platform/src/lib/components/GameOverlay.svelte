@@ -1,11 +1,28 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
-  import { base } from "$app/paths";
+
   import { Button } from "$lib/components/ui/button";
   import { X, Check } from "lucide-svelte";
   import { UI } from "$lib/constants";
 
-  let { cards = [], onComplete } = $props();
+  let {
+    cards = [],
+    onComplete,
+    onAnswerSubmitted,
+  } = $props<{
+    cards: Array<{
+      lemma: string;
+      lang: string;
+      original: string;
+      contextSentence: string;
+    }>;
+    onComplete: () => void;
+    onAnswerSubmitted?: (answer: {
+      lemma: string;
+      lang: string;
+      isKnown: boolean;
+    }) => void;
+  }>();
 
   const SWIPE_THRESHOLD = 100;
   const SWIPE_HINT_THRESHOLD = 20;
@@ -67,15 +84,23 @@
     }
 
     if (direction === "right") {
-      // Known - Fire and forget (Optimistic)
-      console.log("Marking as known (Optimistic):", lemmaToMark);
-      fetch(`${base}/api/words/known`, {
-        method: "POST",
-        body: JSON.stringify({
+      // Known - Delegate to parent
+      console.log("Delegating known mark to parent:", lemmaToMark);
+      if (onAnswerSubmitted) {
+        onAnswerSubmitted({
           lemma: lemmaToMark,
           lang: langToMark,
-        }),
-      }).catch((e) => console.error("Failed to mark known:", e));
+          isKnown: true,
+        });
+      }
+    } else {
+      if (onAnswerSubmitted) {
+        onAnswerSubmitted({
+          lemma: lemmaToMark,
+          lang: langToMark,
+          isKnown: false,
+        });
+      }
     }
   }
 
@@ -151,6 +176,7 @@
 
         <div
           class="mt-auto pt-10 flex justify-between gap-4"
+          role="none"
           onpointerdown={(e) => e.stopPropagation()}
         >
           <Button

@@ -42,6 +42,7 @@ describe("Video Pipeline Integration", () => {
 
   it("should process a video through the full pipeline and persist results", async () => {
     // 1. Arrange: Insert a video record
+    console.log("DB URL USED BY DRIZZLE:", process.env.DATABASE_URL);
     await db.insert(video).values({
       id: testVideoId,
       title: "Pipeline Integration Test Video",
@@ -50,13 +51,19 @@ describe("Video Pipeline Integration", () => {
 
     // 2. Act: Emit VIDEO_UPLOADED and wait for COMPLETED
     const completed = new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error("Pipeline timed out")), 10000);
-      globalEvents.on(EVENTS.PROCESSING_UPDATE, (data: { videoId: string; status: string }) => {
-        if (data.videoId === testVideoId && data.status === "COMPLETED") {
-          clearTimeout(timeout);
-          resolve();
-        }
-      });
+      const timeout = setTimeout(
+        () => reject(new Error("Pipeline timed out")),
+        10000,
+      );
+      globalEvents.on(
+        EVENTS.PROCESSING_UPDATE,
+        (data: { videoId: string; status: string }) => {
+          if (data.videoId === testVideoId && data.status === "COMPLETED") {
+            clearTimeout(timeout);
+            resolve();
+          }
+        },
+      );
     });
 
     globalEvents.emit(EVENTS.VIDEO_UPLOADED, {

@@ -18,6 +18,7 @@
     gameCards = [],
     onRequestGameCards,
     onProgressUpdate,
+    onAnswerSubmitted,
   } = $props<{
     video: PlayerVideo;
     subtitles: Subtitle[];
@@ -34,6 +35,7 @@
       duration: number;
       progressPercent: number;
     }) => void;
+    onAnswerSubmitted?: (answer: { lemma: string; lang: string; isKnown: boolean }) => void;
   }>();
 
   const SECONDS_IN_MINUTE = 60;
@@ -633,7 +635,11 @@
       class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
       data-testid="game-overlay"
     >
-      <GameOverlay cards={gameCards} onComplete={handleGameComplete} />
+      <GameOverlay 
+        cards={gameCards} 
+        onComplete={handleGameComplete} 
+        onAnswerSubmitted={onAnswerSubmitted}
+      />
     </div>
   {/if}
 </div>

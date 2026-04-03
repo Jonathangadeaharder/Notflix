@@ -99,6 +99,19 @@
         videoElement?.play().catch((err) => console.error("Play failed:", err));
     }
 
+    async function handleAnswerSubmitted(answer: { lemma: string; lang: string; isKnown: boolean }) {
+        if (answer.isKnown) {
+            console.log("Marking word as known securely from root view layer:", answer.lemma);
+            fetch(`${base}/api/words/known`, {
+                method: "POST",
+                body: JSON.stringify({
+                    lemma: answer.lemma,
+                    lang: answer.lang,
+                }),
+            }).catch((e) => console.error("Failed to mark known:", e));
+        }
+    }
+
     function drawHeatmap(canvas: HTMLCanvasElement, heatmap: HeatmapSegment[]) {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -201,6 +214,7 @@
                         <GameOverlay
                             cards={gameCards}
                             onComplete={handleGameComplete}
+                            onAnswerSubmitted={handleAnswerSubmitted}
                         />
                     </div>
                 {/if}

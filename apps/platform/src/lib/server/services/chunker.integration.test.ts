@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
 import { video, videoProcessing, user, knownWords } from "@notflix/database";

@@ -1,7 +1,20 @@
-import postgres from 'postgres';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { CONFIG } from './config';
-import * as schema from '@notflix/database';
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { CONFIG } from "./config";
+import * as schema from "@notflix/database";
 
-const client = postgres(CONFIG.DATABASE_URL);
-export const db = drizzle(client, { schema });
+let _client: postgres.Sql | undefined;
+let _db: ReturnType<typeof drizzle> | undefined;
+
+export const db = new Proxy(
+  {},
+  {
+    get(target, prop) {
+      if (!_db) {
+        _client = postgres(CONFIG.DATABASE_URL);
+        _db = drizzle(_client, { schema });
+      }
+      return (_db as any)[prop];
+    },
+  },
+) as any as ReturnType<typeof drizzle>;
