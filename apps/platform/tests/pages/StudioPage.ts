@@ -18,6 +18,7 @@ export class StudioPage {
 
     async clickUpload() {
         await this.uploadButton.click();
+        await this.page.waitForURL('**/upload');
     }
 
     async waitForVideoStatus(title: string, status: string, timeout = DEFAULT_WAIT_TIMEOUT) {

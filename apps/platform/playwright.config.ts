@@ -5,6 +5,7 @@ const CI_RETRIES = 2;
 const config: PlaywrightTestConfig = {
   timeout: 120000, // 2 min for video processing
   retries: process.env.CI ? CI_RETRIES : 0,
+  workers: 1,
 
   webServer: {
     command: "pnpm run test:e2e:server",
