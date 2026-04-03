@@ -1,4 +1,3 @@
-import { aiGateway } from '$lib/server/infrastructure/container';
 import { generateSrt, secondsToSrtTime } from '$lib/server/utils/subtitle-utils';
 import { json } from '@sveltejs/kit';
 import fs from 'fs';
@@ -28,7 +27,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const tempFilePath = await saveTempFile(file);
 
         try {
-            const transcription = await aiGateway.transcribe(tempFilePath, language);
+            const transcription = await locals.aiGateway.transcribe(tempFilePath, language);
 
             const srtSegments = transcription.segments.map((seg, i) => ({
                 index: i + 1,

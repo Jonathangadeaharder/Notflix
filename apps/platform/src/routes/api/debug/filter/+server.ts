@@ -1,4 +1,3 @@
-import { aiGateway } from '$lib/server/infrastructure/container';
 import { parseSrt, generateSrt } from '$lib/server/utils/subtitle-utils';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -27,7 +26,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const textsToAnalyze = segments.map(s => s.text);
 
         if (textsToAnalyze.length > 0) {
-            const analysis = await aiGateway.analyzeBatch(textsToAnalyze, language);
+            const analysis = await locals.aiGateway.analyzeBatch(textsToAnalyze, language);
 
             segments.forEach((seg, i) => {
                 const lemmas = analysis.results[i].map(t => t.lemma).join(' ');

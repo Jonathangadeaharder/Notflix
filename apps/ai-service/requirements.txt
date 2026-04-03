@@ -10,6 +10,10 @@ python-multipart
 pydantic
 structlog
 protobuf==7.34.1
+vcrpy
+pytest
+pytest-asyncio
+httpx
 # spaCy language models are installed as direct wheel dependencies so uv/uvx
 # can resolve the full runtime environment without an extra download step.
 https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
