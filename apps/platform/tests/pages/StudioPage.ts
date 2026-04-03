@@ -9,7 +9,7 @@ export class StudioPage {
 
     constructor(page: Page) {
         this.page = page;
-        this.uploadButton = page.getByTestId('upload-link');
+        this.uploadButton = page.locator('a[href$="/studio/upload"]');
     }
 
     async goto() {
