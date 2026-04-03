@@ -9,4 +9,7 @@ export default defineConfig({
   theme: {
     title: 'Notflix Component Workshop',
   },
+  vite: {
+    base: process.env.HISTOIRE_BASE || '/',
+  }
 });
