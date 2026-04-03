@@ -13,17 +13,19 @@
 
     const POLLING_INTERVAL_MS = 3000;
 
-    onMount(() => {
-        const interval = setInterval(async () => {
-            if (document.visibilityState !== "visible") return;
+    $effect(() => {
+        const hasPending = data.videos.some(
+            (v) => v.status === "PENDING" || !v.status,
+        );
+        
+        if (!hasPending) return;
 
-            // Only poll if there are pending videos
-            const hasPending = data.videos.some(
-                (v) => v.status === "PENDING" || !v.status,
-            );
-            if (hasPending) {
-                await invalidate("app:videos");
-            }
+        const interval = setInterval(() => {
+            // E2E tests often run headless and could evaluate visibility improperly
+            // so we skip the visibility check when in E2E
+            if (document.visibilityState !== "visible" && !(window as any).__e2e) return;
+            
+            invalidate("app:videos");
         }, POLLING_INTERVAL_MS);
 
         return () => clearInterval(interval);
