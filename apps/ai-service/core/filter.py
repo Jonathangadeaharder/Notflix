@@ -23,7 +23,9 @@ class SpacyFilter(IFilter):
                 self._models[lang] = spacy.blank(blank_lang)
                 return self._models[lang]
             model_candidates = (
-                ["es_core_news_sm"] if lang == "es" else ["en_core_web_sm"]
+                ["es_core_news_sm", "es_core_news_lg"]
+                if lang == "es"
+                else ["en_core_web_sm", "en_core_web_lg"]
             )
             loaded = False
             last_error = None
