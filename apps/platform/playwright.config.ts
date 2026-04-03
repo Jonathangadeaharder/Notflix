@@ -3,8 +3,8 @@ import { type PlaywrightTestConfig } from "@playwright/test";
 const CI_RETRIES = 2;
 
 const config: PlaywrightTestConfig = {
-  timeout: 120000, // 2 min for video processing
-  retries: process.env.CI ? CI_RETRIES : 0,
+  timeout: 15000, // Reduced for rapid DOM debugging
+  retries: 0,
   workers: 1,
 
   webServer: {

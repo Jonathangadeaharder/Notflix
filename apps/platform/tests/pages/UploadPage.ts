@@ -14,6 +14,7 @@ export class UploadPage {
     }
 
     async uploadVideo(title: string, filePath: string) {
+        console.log("WAITING FOR UPLOAD DOM:", await this.page.content());
         await this.titleInput.fill(title);
         await this.fileInput.setInputFiles(filePath);
         await this.submitButton.click();
