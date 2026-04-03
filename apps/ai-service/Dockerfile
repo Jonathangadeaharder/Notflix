@@ -9,7 +9,7 @@ ENV UV_LINK_MODE=copy
 COPY apps/ai-service/requirements.lock ./
 RUN uv venv /opt/venv && uv pip install --python /opt/venv -r requirements.lock
 
-FROM python:3.12-slim AS runner
+FROM python:3.13-slim AS runner
 
 WORKDIR /app
 
