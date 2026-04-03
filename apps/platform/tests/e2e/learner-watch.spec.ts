@@ -59,6 +59,16 @@ test.describe('Learner Journey: Interactive Video Player', () => {
 
         await playerPage.waitForPlayback();
 
+        // Programmatically seek past the game interrupt point (TEST_GAME_INTERVAL=0.1min = 6s)
+        // Headless Chromium doesn't reliably fire timeupdate for audio-only <video> sources
+        await page.evaluate(() => {
+            const v = document.querySelector('video') as HTMLVideoElement;
+            if (v) {
+                v.currentTime = 7; // Past the 6s interrupt threshold
+                v.dispatchEvent(new Event('timeupdate'));
+            }
+        });
+
         // 3. Verify structural component logic fires without polling the full system
         // The game should trigger immediately based on seeded test boundaries
         await playerPage.playRound(1);
