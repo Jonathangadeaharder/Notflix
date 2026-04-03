@@ -169,15 +169,15 @@ jobs:
 
       - name: Pylint
         working-directory: apps/ai-service
-        run: uvx --with-requirements requirements.lock --from pylint pylint core main.py
+        run: uvx --with-requirements requirements.txt --from pylint pylint core main.py
 
       - name: Bandit
         working-directory: apps/ai-service
-        run: uvx --with-requirements requirements.lock --from bandit bandit -r core main.py
+        run: uvx --with-requirements requirements.txt --from bandit bandit -r core main.py
 
       - name: Pytest (with coverage gate)
         working-directory: apps/ai-service
-        run: uvx --with-requirements requirements.lock --from pytest pytest
+        run: uvx --with-requirements requirements.txt --from pytest pytest
 
   database-quality:
     name: Database Quality

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '../../src/routes/api/process/[id]/+server';
-import { startVideoProcessingWithDefaults } from '$lib/server/services/process-video-request.service';
+import { triggerPipeline } from '$lib/server/services/pipeline-trigger';
 import { HTTP_STATUS } from '$lib/constants';
 
 const VIDEO_ID = 'video-1';
 const LOCAL_URL = 'http://localhost';
 const POST_METHOD = 'POST';
 
-vi.mock('$lib/server/services/process-video-request.service', () => ({
-	startVideoProcessingWithDefaults: vi.fn()
+vi.mock('$lib/server/services/pipeline-trigger', () => ({
+	triggerPipeline: vi.fn()
 }));
 
 describe('POST /api/process/[id]', () => {
@@ -48,7 +48,7 @@ describe('POST /api/process/[id]', () => {
 		} as never);
 
 		expect(response.status).toBe(HTTP_STATUS.OK);
-		expect(startVideoProcessingWithDefaults).toHaveBeenCalledWith(
+		expect(triggerPipeline).toHaveBeenCalledWith(
 			expect.objectContaining({
 				videoId: VIDEO_ID,
 				userId: 'u1',

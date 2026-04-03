@@ -57,7 +57,7 @@ export function registerPipelineListeners(db: typeof drizzleDb, aiGateway: IAiGa
         try {
             globalEvents.emit(EVENTS.PROCESSING_UPDATE, { videoId: payload.videoId, status: 'ANALYZING', percent: 50 });
 
-            const segmentTexts = payload.transcription.segments.map(s => s.text);
+            const segmentTexts = payload.transcription.segments.map((s: any) => s.text);
             const batchAnalysis = await aiGateway.analyzeBatch(segmentTexts, payload.targetLang);
             const mappedSegments = mapAnalysisToSegments(payload.transcription, batchAnalysis.results);
 
@@ -81,7 +81,7 @@ export function registerPipelineListeners(db: typeof drizzleDb, aiGateway: IAiGa
             globalEvents.emit(EVENTS.PROCESSING_UPDATE, { videoId: payload.videoId, status: 'TRANSLATING', percent: 80 });
 
             let finalSegments = payload.segments;
-            const sentenceTexts = finalSegments.map(s => s.text);
+            const sentenceTexts = finalSegments.map((s: any) => s.text);
 
             if (!payload.userId) {
                 // Guest mode
@@ -93,7 +93,7 @@ export function registerPipelineListeners(db: typeof drizzleDb, aiGateway: IAiGa
                 finalSegments = mapTranslationsToSegments(finalSegments, lemmaList, lemmaRes.translations, sentenceRes.translations);
             } else {
                 // User mode with Linguistic Filter
-                const segmentsTokens = finalSegments.map(s => s.tokens);
+                const segmentsTokens = finalSegments.map((s: any) => s.tokens);
                 const filteredSegments = await filter.filterBatch(segmentsTokens, payload.userId, payload.targetLang);
                 
                 finalSegments.forEach((seg, i) => {
