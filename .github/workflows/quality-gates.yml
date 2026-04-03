@@ -163,21 +163,28 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      - name: Install dependencies (CPU-only)
+        working-directory: apps/ai-service
+        run: |
+          uv pip install --system torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          uv pip install --system -r requirements.txt
+          uv pip install --system ruff pylint bandit pytest pytest-asyncio httpx vcrpy
+
       - name: Ruff
         working-directory: apps/ai-service
-        run: uvx --from ruff ruff check .
+        run: python3 -m ruff check .
 
       - name: Pylint
         working-directory: apps/ai-service
-        run: uvx --with-requirements requirements.txt --from pylint pylint core main.py
+        run: python3 -m pylint core main.py
 
       - name: Bandit
         working-directory: apps/ai-service
-        run: uvx --with-requirements requirements.txt --from bandit bandit -r core main.py
+        run: python3 -m bandit -r core main.py
 
       - name: Pytest (with coverage gate)
         working-directory: apps/ai-service
-        run: uvx --with-requirements requirements.txt --from pytest pytest
+        run: python3 -m pytest
 
   database-quality:
     name: Database Quality
