@@ -8,7 +8,7 @@ const LOCAL_URL = 'http://localhost';
 const POST_METHOD = 'POST';
 
 vi.mock('$lib/server/services/pipeline-trigger', () => ({
-	triggerPipeline: vi.fn()
+	triggerPipeline: vi.fn().mockResolvedValue(undefined)
 }));
 
 describe('POST /api/process/[id]', () => {

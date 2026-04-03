@@ -9,7 +9,7 @@ torchaudio
 python-multipart
 pydantic
 structlog
-protobuf==7.34.1
+protobuf
 vcrpy
 pytest
 pytest-asyncio

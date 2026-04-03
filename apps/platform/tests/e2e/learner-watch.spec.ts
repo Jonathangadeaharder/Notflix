@@ -62,5 +62,37 @@ test.describe('Learner Journey: Interactive Video Player', () => {
         await playerPage.playRound(1);
         
         await expect(playerPage.gameOverlay).not.toBeVisible();
+
+        // 4. Verify interactive subtitles (Hovering, pop-ups, marking words)
+        // Since we mocked the game round, the video should resume.
+        // We interact with the subtitle elements dynamically.
+        const firstWord = page.getByTestId('subtitle-word').first();
+        await expect(firstWord).toBeVisible({ timeout: 10000 });
+
+        // Hover over word to open popup
+        await firstWord.hover();
+        
+        const popup = page.getByTestId('word-popup');
+        await expect(popup).toBeVisible();
+
+        // Click to pin
+        await firstWord.click();
+
+        // Click mark known
+        const markKnownBtn = page.getByRole('button', { name: "Mark Known" });
+        await expect(markKnownBtn).toBeVisible();
+
+        // Verify API intercept fired correctly
+        const [request] = await Promise.all([
+            page.waitForRequest(req => req.url().includes('/api/words/known') && req.method() === 'POST'),
+            markKnownBtn.click()
+        ]);
+
+        expect(request.postDataJSON()).toMatchObject({
+             lang: expect.any(String)
+        });
+
+        // Popup should disappear after marking
+        await expect(popup).not.toBeVisible();
     });
 });

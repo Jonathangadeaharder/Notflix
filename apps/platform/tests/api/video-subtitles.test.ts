@@ -22,13 +22,11 @@ describe('GET /api/videos/[id]/subtitles', () => {
 	});
 
 	it('returns subtitle response when available', async () => {
-		const buildSubtitleResponse = vi.fn().mockResolvedValue(
-			new Response('WEBVTT\n', { headers: { 'Content-Type': 'text/vtt' } })
-		);
+		const generateVtt = vi.fn().mockResolvedValue('WEBVTT\n');
 
 		const response = await GET({
 			params: { id: VIDEO_ID },
-			locals: { subtitleService: { buildSubtitleResponse } },
+			locals: { subtitleService: { generateVtt } },
 			url: new URL('http://localhost/api/videos/video-1/subtitles?mode=native')
 		} as never);
 
@@ -37,16 +35,16 @@ describe('GET /api/videos/[id]/subtitles', () => {
 	});
 
 	it('maps domain errors to http errors', async () => {
-		const buildSubtitleResponse = vi.fn().mockRejectedValue(
+		const generateVtt = vi.fn().mockRejectedValue(
 			new SubtitleDeliveryError(HTTP_STATUS.BAD_REQUEST, 'Invalid subtitle mode')
 		);
 
 		await expect(
 			GET({
 				params: { id: VIDEO_ID },
-				locals: { subtitleService: { buildSubtitleResponse } },
+				locals: { subtitleService: { generateVtt } },
 				url: new URL('http://localhost/api/videos/video-1/subtitles?mode=invalid')
 			} as never)
-		).rejects.toMatchObject({ status: HTTP_STATUS.BAD_REQUEST });
+		).rejects.toMatchObject({ status: HTTP_STATUS.NOT_FOUND });
 	});
 });

@@ -1,23 +1,29 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/svelte";
+import { render, fireEvent, waitFor } from "@testing-library/svelte";
 import GameOverlay from "./GameOverlay.svelte";
 
 describe("GameOverlay.svelte", () => {
   it("should be perfectly isolated and delegate answer submissions to the parent via onAnswerSubmitted", async () => {
     const mockCards = [
       {
-        lemma: "murciélago",
+        lemma: "uno",
         lang: "es",
-        original: "murciélago",
-        contextSentence: "El murciélago vuela por la noche.",
+        original: "uno",
+        contextSentence: "uno",
+      },
+      {
+        lemma: "dos",
+        lang: "es",
+        original: "dos",
+        contextSentence: "dos",
       },
     ];
 
     const mockComplete = vi.fn();
     const mockSubmit = vi.fn();
 
-    const { getByTestId } = render(GameOverlay, {
+    const { getByTestId, debug } = render(GameOverlay, {
       props: {
         cards: mockCards,
         onComplete: mockComplete,
@@ -26,7 +32,7 @@ describe("GameOverlay.svelte", () => {
     });
 
     // Verify the dumb component successfully rendered the mock data
-    expect(getByTestId("card-original").textContent).toContain("murciélago");
+    expect(getByTestId("card-original").textContent).toContain("uno");
 
     const knownButton = getByTestId("swipe-right");
     await fireEvent.click(knownButton);
@@ -34,42 +40,27 @@ describe("GameOverlay.svelte", () => {
     // Assert strictly that no network request occurred inside the component, but the prop was invoked
     expect(mockSubmit).toHaveBeenCalledTimes(1);
     expect(mockSubmit).toHaveBeenCalledWith({
-      lemma: "murciélago",
+      lemma: "uno",
       lang: "es",
       isKnown: true,
     });
 
-    // As there is only 1 card, completing the card should immediately trigger onComplete optimistic UI
-    expect(mockComplete).toHaveBeenCalledTimes(1);
-  });
-
-  it("should delegate unknown answers to the parent as well", async () => {
-    const mockCards = [
-      {
-        lemma: "murciélago",
-        lang: "es",
-        original: "murciélago",
-        contextSentence: "El murciélago vuela por la noche.",
-      },
-    ];
-
-    const mockSubmit = vi.fn();
-
-    const { getByTestId } = render(GameOverlay, {
-      props: {
-        cards: mockCards,
-        onComplete: vi.fn(),
-        onAnswerSubmitted: mockSubmit,
-      },
+    // Test second card (swipe left)
+    await waitFor(() => {
+      expect(getByTestId("swipe-left")).toBeDefined();
     });
-
+    expect(getByTestId("card-original").textContent).toContain("dos");
+    
     const unknownButton = getByTestId("swipe-left");
     await fireEvent.click(unknownButton);
-
+    
     expect(mockSubmit).toHaveBeenCalledWith({
-      lemma: "murciélago",
+      lemma: "dos",
       lang: "es",
       isKnown: false,
     });
+
+    // Completing all cards should trigger onComplete optimistic UI
+    expect(mockComplete).toHaveBeenCalledTimes(1);
   });
 });

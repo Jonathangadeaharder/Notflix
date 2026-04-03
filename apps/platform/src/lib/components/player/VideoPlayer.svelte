@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import GameOverlay from "$lib/components/GameOverlay.svelte";
   import SubtitleDisplay from "./SubtitleDisplay.svelte";
   import type {
@@ -97,13 +97,16 @@
     }
   });
 
-  // Watch for gameCards update to show overlay
+  // Watch for gameCards update to show overlay safely without infinite loops
   $effect(() => {
-    if (gameCards.length > 0 && gameCards !== lastOpenedGameBatch) {
-      lastOpenedGameBatch = gameCards;
-      showOverlay = true;
-      videoElement?.pause();
-    }
+    const currentCards = gameCards;
+    untrack(() => {
+      if (currentCards.length > 0 && currentCards !== lastOpenedGameBatch) {
+        lastOpenedGameBatch = currentCards;
+        showOverlay = true;
+        videoElement?.pause();
+      }
+    });
   });
 
   function initNextInterrupt() {
