@@ -14,8 +14,8 @@ export class UploadPage {
     }
 
     async uploadVideo(title: string, filePath: string) {
-        // Wait for full SvelteKit hydration before interacting
-        await this.page.waitForLoadState('networkidle');
+        // Wait for DOM to be parsed, then wait for the input to hydrate
+        await this.page.waitForLoadState('domcontentloaded');
         await this.titleInput.waitFor({ state: 'visible' });
         await this.titleInput.fill(title);
         await this.fileInput.setInputFiles(filePath);

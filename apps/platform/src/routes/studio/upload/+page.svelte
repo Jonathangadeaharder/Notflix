@@ -1,7 +1,6 @@
 <script lang="ts">
     import { base } from '$app/paths';
     import { Input } from "$lib/components/ui/input";
-    import * as Select from "$lib/components/ui/select";
     import { Button } from "$lib/components/ui/button";
     import { ChevronLeft, UploadCloud } from 'lucide-svelte';
     import { enhance } from '$app/forms';
@@ -76,17 +75,16 @@
 
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-300" for="targetLang">Target Language</label>
-                <input type="hidden" name="targetLang" value={targetLang} />
-                <Select.Root type="single" bind:value={targetLang}>
-                    <Select.Trigger class="bg-black/50 border-zinc-700 w-full">
-                        {getLanguageLabel(targetLang)}
-                    </Select.Trigger>
-                    <Select.Content class="bg-zinc-900 border-zinc-700 text-white">
-                        <Select.Item value="es">Spanish (ES)</Select.Item>
-                        <Select.Item value="de">German (DE)</Select.Item>
-                        <Select.Item value="fr">French (FR)</Select.Item>
-                    </Select.Content>
-                </Select.Root>
+                <select
+                    name="targetLang"
+                    id="targetLang"
+                    bind:value={targetLang}
+                    class="w-full bg-black/50 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                >
+                    <option value="es">Spanish (ES)</option>
+                    <option value="de">German (DE)</option>
+                    <option value="fr">French (FR)</option>
+                </select>
                 {#if form?.errors?.targetLang}<p class="text-sm text-red-500">{form.errors.targetLang[0]}</p>{/if}
             </div>
 

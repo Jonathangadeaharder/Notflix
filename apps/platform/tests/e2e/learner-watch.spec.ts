@@ -50,7 +50,7 @@ test.describe('Learner Journey: Interactive Video Player', () => {
         // For this test, we navigate to a known seeded test video or mock 
         // Assuming test_video exists from global setup script in Playwright project
         await page.goto('/studio');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('load');
         
         // Find FIRST valid video
         const watchLink = page.locator('a[href^="/watch/"]').first();
