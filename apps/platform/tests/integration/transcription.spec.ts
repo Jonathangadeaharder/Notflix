@@ -8,7 +8,7 @@ import { HTTP_STATUS } from "../../src/lib/constants";
 // Constraint: Do not overmock (Use real API, real file)
 // Constraint: Mock other services (Tests isolation of this endpoint)
 
-const BRAIN_URL = process.env.BRAIN_URL || "http://127.0.0.1:8001";
+const BRAIN_URL = process.env.AI_SERVICE_URL || process.env.BRAIN_URL || "http://127.0.0.1:8000";
 
 interface TranscriptionResponse {
   segments: { text: string }[];

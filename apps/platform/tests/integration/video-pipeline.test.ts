@@ -3,7 +3,7 @@ import { globalEvents, EVENTS, type VideoUploadedPayload } from '../../src/lib/s
 import { registerPipelineListeners } from '../../src/lib/server/services/video-pipeline';
 
 describe('Video Pipeline Choreography Handlers', () => {
-    it('should successfully trigger the transcribe and filter sequence purely via event delegation', () => {
+    it('should successfully trigger the transcribe and filter sequence purely via event delegation', async () => {
         const mockDb = {
             insert: vi.fn().mockReturnThis(),
             values: vi.fn().mockReturnThis(),
@@ -40,10 +40,10 @@ describe('Video Pipeline Choreography Handlers', () => {
         } as VideoUploadedPayload);
 
         // We expect the pipeline to have intercepted this and orchestrated the first step
+        // Wait for the async listener to run by yielding to the event loop
+        await new Promise(resolve => setTimeout(resolve, 0));
+
         expect(mockDb.insert).toHaveBeenCalled();
         expect(mockAiGateway.transcribe).toHaveBeenCalled();
-        
-        // Ensure strictly synchronous components trigger (or use wait for async promises)
-        // Since event-bus listeners are async, they don't block the emit, so we just mock its internal resolution!
     });
 });

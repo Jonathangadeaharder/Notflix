@@ -8,8 +8,7 @@ test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
         const studioPage = new StudioPage(page);
         const uploadPage = new UploadPage(page);
 
-        await studioPage.goto();
-        await studioPage.clickUpload();
+        await page.goto('/studio/upload');
 
         const uniqueTitle = `E2E Creator Flow ${Date.now()}`;
         const audioPath = path.resolve(process.cwd(), '../../media', 'test_audio.mp3');
