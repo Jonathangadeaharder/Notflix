@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { orchestrator } from '$lib/server/infrastructure/container';
 import { taskRegistry } from '$lib/server/services/task-registry.service';
+import { triggerPipeline } from '$lib/server/services/pipeline-trigger';
 
 const HTTP_STATUS_UNAUTHORIZED = 401;
 const HTTP_STATUS_BAD_REQUEST = 400;
@@ -29,12 +29,12 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
         // Register background task for observability
         taskRegistry.register(
             `processVideo:${videoId}`,
-            orchestrator.processVideo(
+            triggerPipeline({
                 videoId,
-                body.targetLang || 'es',
-                body.nativeLang || 'en',
-                session.user.id
-            )
+                targetLang: body.targetLang || 'es',
+                nativeLang: body.nativeLang || 'en',
+                userId: session.user.id
+            })
         );
 
         return json({ success: true, message: 'Processing started in background' });

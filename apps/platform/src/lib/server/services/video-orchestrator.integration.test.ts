@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
 import { video, videoProcessing } from "@notflix/database";
 import { eq } from "drizzle-orm";
-import { Orchestrator } from "./video-orchestrator.service";
+import { registerPipelineListeners } from "./video-pipeline";
+import { globalEvents, EVENTS } from "../infrastructure/event-bus";
 import { SmartFilter } from "./linguistic-filter.service";
 import type { IAiGateway } from "../domain/interfaces";
 
@@ -20,27 +21,51 @@ const mockAiGateway: IAiGateway = {
   translate: vi.fn().mockResolvedValue({ translations: ["Hello world"] }),
 };
 
-describe("VideoOrchestratorService Integration", () => {
-  let orchestrator: Orchestrator;
+describe("Video Pipeline Integration", () => {
   const testVideoId = crypto.randomUUID();
-  const testFilePath = "/app/media/test_vid.mp4"; // Dummy path
+  const testFilePath = "/app/media/test_vid.mp4";
 
   beforeAll(async () => {
-    // Ensure clean state or setup if needed
-    // Assuming DB is running and schema applied via migration or push
-    orchestrator = new Orchestrator(mockAiGateway, db, new SmartFilter(db));
+    // Register pipeline listeners with mocked dependencies
+    registerPipelineListeners(db, mockAiGateway, new SmartFilter(db));
   });
 
-  it("should persist processing results to the real database", async () => {
+  afterAll(async () => {
+    // Cleanup
+    await db
+      .delete(videoProcessing)
+      .where(eq(videoProcessing.videoId, testVideoId));
+    await db.delete(video).where(eq(video.id, testVideoId));
+    // Remove all listeners to avoid leaks between test runs
+    globalEvents.removeAllListeners();
+  });
+
+  it("should process a video through the full pipeline and persist results", async () => {
     // 1. Arrange: Insert a video record
     await db.insert(video).values({
       id: testVideoId,
-      title: "Integration Test Video",
+      title: "Pipeline Integration Test Video",
       filePath: testFilePath,
     });
 
-    // 2. Act: Process the video
-    await orchestrator.processVideo(testVideoId, "es", "en");
+    // 2. Act: Emit VIDEO_UPLOADED and wait for COMPLETED
+    const completed = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Pipeline timed out")), 10000);
+      globalEvents.on(EVENTS.PROCESSING_UPDATE, (data: { videoId: string; status: string }) => {
+        if (data.videoId === testVideoId && data.status === "COMPLETED") {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    });
+
+    globalEvents.emit(EVENTS.VIDEO_UPLOADED, {
+      videoId: testVideoId,
+      targetLang: "es",
+      nativeLang: "en",
+    });
+
+    await completed;
 
     // 3. Assert: Check DB for results
     const processingRecord = await db
@@ -52,16 +77,7 @@ describe("VideoOrchestratorService Integration", () => {
     expect(processingRecord[0].status).toBe("COMPLETED");
     expect(processingRecord[0].vttJson).toBeDefined();
 
-    // precise check on json content if possible
     const segments = processingRecord[0].vttJson as Array<{ text: string }>;
     expect(segments[0].text).toBe("Hola mundo");
-  });
-
-  afterAll(async () => {
-    // Cleanup
-    await db
-      .delete(videoProcessing)
-      .where(eq(videoProcessing.videoId, testVideoId));
-    await db.delete(video).where(eq(video.id, testVideoId));
   });
 });
