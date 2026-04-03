@@ -28,12 +28,7 @@
         }
     });
 
-    function getLanguageLabel(lang: string) {
-        if (lang === 'es') return 'Spanish (ES)';
-        if (lang === 'de') return 'German (DE)';
-        if (lang === 'fr') return 'French (FR)';
-        return 'Select Language';
-    }
+
 
     let fileInput: HTMLInputElement;
 </script>
