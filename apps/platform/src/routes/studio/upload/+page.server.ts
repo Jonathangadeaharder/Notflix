@@ -4,10 +4,10 @@ import { video } from '@notflix/database';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import crypto from 'crypto';
+import { orchestrator } from '$lib/server/infrastructure/container';
 import { CONFIG } from '$lib/server/infrastructure/config';
 import { z } from 'zod';
 import { taskRegistry } from '$lib/server/services/task-registry.service';
-import { triggerPipeline } from '$lib/server/services/pipeline-trigger';
 import type { User } from '$lib/server/infrastructure/auth';
 
 import { HTTP_STATUS, LIMITS } from '$lib/constants';
@@ -90,11 +90,11 @@ async function saveUploadedFile(file: File, videoId: string): Promise<string> {
 function queueProcessing(videoId: string, targetLang: string, user: User | undefined) {
     taskRegistry.register(
         `processVideo:${videoId}`,
-        triggerPipeline({
+        orchestrator.processVideo(
             videoId,
             targetLang,
-            nativeLang: user?.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
-            userId: user?.id
-        })
+            user?.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
+            user?.id
+        )
     );
 }

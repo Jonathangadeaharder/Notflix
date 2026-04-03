@@ -1,3 +1,4 @@
+import { aiGateway } from '$lib/server/infrastructure/container';
 import { parseSrt, generateSrt } from '$lib/server/utils/subtitle-utils';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -26,7 +27,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const segments = parseSrt(text);
         const textsToTranslate = segments.map(s => s.text);
 
-        const translationRes = await locals.aiGateway.translate(textsToTranslate, sourceLang, targetLang);
+        const translationRes = await aiGateway.translate(textsToTranslate, sourceLang, targetLang);
 
         if (translationRes.translations.length !== segments.length) {
             throw new Error('Translation count mismatch');

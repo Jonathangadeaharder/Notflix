@@ -71,7 +71,6 @@ services:
     build:
       context: .
       dockerfile: apps/platform/Dockerfile
-      target: builder
     command: ["pnpm", "run", "--filter", "@notflix/database", "db:push"]
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/postgres
@@ -89,8 +88,6 @@ services:
     build:
       context: .
       dockerfile: apps/platform/Dockerfile
-      target: builder
-    command: sh -c "cd apps/platform && pnpm run dev --host"
     ports: ["5173:5173"]
     volumes:
       # Source mounts (hot-reload)

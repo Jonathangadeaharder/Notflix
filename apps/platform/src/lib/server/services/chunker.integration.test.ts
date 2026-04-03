@@ -4,7 +4,7 @@ import { db } from "../infrastructure/database";
 import { video, videoProcessing, user, knownWords } from "@notflix/database";
 import { eq } from "drizzle-orm";
 import { generateDeck } from "./chunker.service";
-import type { VttSegment } from "../domain/translation-core";
+import type { VttSegment } from "./video-orchestrator.service";
 
 describe("ChunkerService Integration (Real DB)", () => {
   const testUserId = crypto.randomUUID();

@@ -8,10 +8,6 @@ declare global {
 		}
 		interface Locals {
 			auth: () => Promise<BaseSession | null>;
-			aiGateway: import('$lib/server/domain/interfaces').IAiGateway;
-			smartFilter: import('$lib/server/services/linguistic-filter.service').SmartFilter;
-			subtitleService: import('$lib/server/services/subtitle.service').SubtitleService;
-			db: typeof import('$lib/server/infrastructure/database').db;
 		}
 		interface PageData {
 			user: BaseUser | null;
