@@ -1,6 +1,5 @@
 <script lang="ts">
     /* eslint-disable svelte/no-navigation-without-resolve */
-    import { onMount } from "svelte";
     import { base } from "$app/paths";
     import { Button } from "$lib/components/ui/button";
     import { Plus, Play, RotateCw, Video } from "lucide-svelte";
