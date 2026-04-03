@@ -1,9 +1,9 @@
 import { db } from '$lib/server/infrastructure/database';
 import { video, videoProcessing } from '@notflix/database';
 import { eq, desc } from 'drizzle-orm';
-import { orchestrator } from '$lib/server/infrastructure/container';
 import { CONFIG } from '$lib/server/infrastructure/config';
 import { taskRegistry } from '$lib/server/services/task-registry.service';
+import { triggerPipeline } from '$lib/server/services/pipeline-trigger';
 import { toMediaUrl } from '$lib/server/utils/media-utils';
 
 export const load = async ({ depends }) => {
@@ -37,12 +37,12 @@ export const actions = {
 
         taskRegistry.register(
             `reprocessVideo:${id}`,
-            orchestrator.processVideo(
-                id,
-                'es', // Default for now
-                session?.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
-                session?.user.id
-            )
+            triggerPipeline({
+                videoId: id,
+                targetLang: 'es', // Default for now
+                nativeLang: session?.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
+                userId: session?.user.id
+            })
         );
 
         return { success: true };
