@@ -59,14 +59,20 @@ test.describe('Learner Journey: Interactive Video Player', () => {
 
         await playerPage.waitForPlayback();
 
-        // Trigger the game interrupt directly via the E2E test hook exposed by the watch page.
-        // Svelte 5's compiled event system doesn't respond to synthetic dispatchEvent calls,
-        // so we call the component's handleTimeUpdate() directly after seeking past the threshold.
-        await page.evaluate(async () => {
-            // Wait for the hook to be registered by onMount
+        // Trigger the game interrupt directly by injecting card data into the component state.
+        // This bypasses Svelte 5's event system AND the fetch/route-interception chain entirely.
+        await page.evaluate(() => {
             const hook = (window as any).__e2eTriggerGameInterrupt;
             if (hook) {
-                await hook(7); // Seek to 7s, past the 6s interrupt threshold
+                hook([{
+                    lemma: 'murciélago',
+                    lang: 'es',
+                    original: 'murciélago',
+                    contextSentence: 'El murciélago vuela por la noche.',
+                    cefr: 'B2',
+                    translation: 'bat',
+                    isKnown: false
+                }]);
             }
         });
         // Allow Svelte to process the state update and render the overlay
