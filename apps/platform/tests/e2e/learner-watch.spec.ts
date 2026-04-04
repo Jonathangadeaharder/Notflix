@@ -59,26 +59,18 @@ test.describe('Learner Journey: Interactive Video Player', () => {
 
         await playerPage.waitForPlayback();
 
-        // Force the game interrupt by seeking past the threshold and dispatching timeupdate.
-        // In headless Chromium, audio files don't fire timeupdate natively on seek,
-        // so we repeatedly dispatch until the Svelte handler catches it and shows the overlay.
-        const POLL_INTERVAL_MS = 200;
-        const MAX_POLLS = 75; // 15 seconds total
-        for (let i = 0; i < MAX_POLLS; i++) {
-            const appeared = await page.getByTestId('game-overlay').isVisible().catch(() => false);
-            if (appeared) break;
-
-            await page.evaluate(() => {
-                const v = document.querySelector('video') as HTMLVideoElement;
-                if (v && !v.paused) {
-                    v.currentTime = 7;
-                }
-                if (v) {
-                    v.dispatchEvent(new Event('timeupdate'));
-                }
-            });
-            await page.waitForTimeout(POLL_INTERVAL_MS);
-        }
+        // Trigger the game interrupt directly via the E2E test hook exposed by the watch page.
+        // Svelte 5's compiled event system doesn't respond to synthetic dispatchEvent calls,
+        // so we call the component's handleTimeUpdate() directly after seeking past the threshold.
+        await page.evaluate(async () => {
+            // Wait for the hook to be registered by onMount
+            const hook = (window as any).__e2eTriggerGameInterrupt;
+            if (hook) {
+                await hook(7); // Seek to 7s, past the 6s interrupt threshold
+            }
+        });
+        // Allow Svelte to process the state update and render the overlay
+        await page.waitForTimeout(500);
 
         // 3. Verify structural component logic fires
         await playerPage.playRound(1);

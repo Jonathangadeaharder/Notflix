@@ -79,6 +79,16 @@
         console.log(
             `[Client] Inited. Interval: ${intervalSeconds}s, Next: ${nextInterruptTime}s`,
         );
+
+        // E2E test hook: expose interrupt trigger so Playwright can bypass
+        // Svelte 5's compiled event system (synthetic dispatchEvent doesn't reach it)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__e2eTriggerGameInterrupt = async (seekTo: number) => {
+            if (videoElement) {
+                videoElement.currentTime = seekTo;
+                await handleTimeUpdate();
+            }
+        };
     });
 
     async function handleTimeUpdate() {
