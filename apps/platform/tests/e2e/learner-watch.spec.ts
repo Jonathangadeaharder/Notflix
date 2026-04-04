@@ -4,7 +4,7 @@ import { PlayerPage } from '../pages/PlayerPage';
 test.describe('Learner Journey: Interactive Video Player', () => {
     // Skip: The watch page's Svelte 5 client hydration doesn't complete in headless Chromium CI
     // (onMount never fires), so the game overlay can't be tested. Works locally.
-    // TODO: Re-enable when Svelte 5 hydration + Vite dev server + headless Chromium is stable.
+    // Re-enable when Svelte 5 hydration + Vite dev server + headless Chromium is stable.
     test.skip('Should seamlessly interrupt video and resume upon knowledge check completion', async ({ page }) => {
         const playerPage = new PlayerPage(page);
 
