@@ -59,24 +59,27 @@ test.describe('Learner Journey: Interactive Video Player', () => {
 
         await playerPage.waitForPlayback();
 
+        // Wait for the E2E test hook to be registered by onMount (hydration must complete)
+        await page.waitForFunction(
+            () => typeof (window as any).__e2eTriggerGameInterrupt === 'function',
+            { timeout: 10000 }
+        );
+
         // Trigger the game interrupt directly by injecting card data into the component state.
         // This bypasses Svelte 5's event system AND the fetch/route-interception chain entirely.
         await page.evaluate(() => {
-            const hook = (window as any).__e2eTriggerGameInterrupt;
-            if (hook) {
-                hook([{
-                    lemma: 'murciélago',
-                    lang: 'es',
-                    original: 'murciélago',
-                    contextSentence: 'El murciélago vuela por la noche.',
-                    cefr: 'B2',
-                    translation: 'bat',
-                    isKnown: false
-                }]);
-            }
+            (window as any).__e2eTriggerGameInterrupt([{
+                lemma: 'murciélago',
+                lang: 'es',
+                original: 'murciélago',
+                contextSentence: 'El murciélago vuela por la noche.',
+                cefr: 'B2',
+                translation: 'bat',
+                isKnown: false
+            }]);
         });
         // Allow Svelte to process the state update and render the overlay
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         // 3. Verify structural component logic fires
         await playerPage.playRound(1);
