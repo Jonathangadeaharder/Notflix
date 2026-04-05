@@ -1,0 +1,146 @@
+Platform Quality	Type check platform	﻿2026-04-03T13:35:32.0882204Z ##[group]Run pnpm --filter @notflix/platform check
+Platform Quality	Type check platform	2026-04-03T13:35:32.0882992Z [36;1mpnpm --filter @notflix/platform check[0m
+Platform Quality	Type check platform	2026-04-03T13:35:32.0916006Z shell: /usr/bin/bash -e {0}
+Platform Quality	Type check platform	2026-04-03T13:35:32.0916271Z env:
+Platform Quality	Type check platform	2026-04-03T13:35:32.0916731Z   DATABASE_URL: ***127.0.0.1:5432/main_db
+Platform Quality	Type check platform	2026-04-03T13:35:32.0917167Z   INTEGRATION_DATABASE_URL: ***127.0.0.1:5432/main_db
+Platform Quality	Type check platform	2026-04-03T13:35:32.0917493Z   RUNNING_IN_DOCKER: false
+Platform Quality	Type check platform	2026-04-03T13:35:32.0917740Z   AI_SERVICE_URL: http://127.0.0.1:8000
+Platform Quality	Type check platform	2026-04-03T13:35:32.0918004Z   AI_SERVICE_API_KEY: dev_secret_key
+Platform Quality	Type check platform	2026-04-03T13:35:32.0918303Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+Platform Quality	Type check platform	2026-04-03T13:35:32.0918589Z ##[endgroup]
+Platform Quality	Type check platform	2026-04-03T13:35:32.4029965Z 
+Platform Quality	Type check platform	2026-04-03T13:35:32.4031314Z > @notflix/platform@0.0.1 check /home/runner/work/Notflix/Notflix/apps/platform
+Platform Quality	Type check platform	2026-04-03T13:35:32.4032184Z > svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+Platform Quality	Type check platform	2026-04-03T13:35:32.4032515Z 
+Platform Quality	Type check platform	2026-04-03T13:35:33.7323781Z Loading svelte-check in workspace: /home/runner/work/Notflix/Notflix/apps/platform
+Platform Quality	Type check platform	2026-04-03T13:35:33.7324942Z Getting Svelte diagnostics...
+Platform Quality	Type check platform	2026-04-03T13:35:33.7325269Z 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1134038Z /home/runner/work/Notflix/Notflix/apps/platform/[32msrc/lib/server/services/video-pipeline.ts[39m:60:69
+Platform Quality	Type check platform	2026-04-03T13:35:43.1136310Z [31mError[39m: Parameter 's' implicitly has an 'any' type. 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1157970Z [36m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1160472Z             const segmentTexts = payload.transcription.segments.map([35ms[36m => s.text);
+Platform Quality	Type check platform	2026-04-03T13:35:43.1163659Z             const batchAnalysis = await aiGateway.analyzeBatch(segmentTexts, payload.targetLang);[39m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1166105Z 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1332851Z /home/runner/work/Notflix/Notflix/apps/platform/[32msrc/lib/components/GameOverlay.svelte[39m:152:9
+Platform Quality	Type check platform	2026-04-03T13:35:43.1334797Z [33mWarn[39m: `<div>` with a pointerdown handler must have an ARIA role
+Platform Quality	Type check platform	2026-04-03T13:35:43.1336985Z https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+Platform Quality	Type check platform	2026-04-03T13:35:43.1343508Z [36m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1345873Z         [35m<div
+Platform Quality	Type check platform	2026-04-03T13:35:43.1346363Z           class="mt-auto pt-10 flex justify-between gap-4"
+Platform Quality	Type check platform	2026-04-03T13:35:43.1346979Z           onpointerdown={(e) => e.stopPropagation()}
+Platform Quality	Type check platform	2026-04-03T13:35:43.1347583Z         >
+Platform Quality	Type check platform	2026-04-03T13:35:43.1347868Z           <Button
+Platform Quality	Type check platform	2026-04-03T13:35:43.1348690Z             variant="outline"
+Platform Quality	Type check platform	2026-04-03T13:35:43.1349805Z             class="flex-1 rounded-2xl h-14 border-zinc-200 text-zinc-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all"
+Platform Quality	Type check platform	2026-04-03T13:35:43.1351189Z             onclick={() => handleSwipe("left")}
+Platform Quality	Type check platform	2026-04-03T13:35:43.1351804Z             data-testid="swipe-left"
+Platform Quality	Type check platform	2026-04-03T13:35:43.1352244Z           >
+Platform Quality	Type check platform	2026-04-03T13:35:43.1352618Z             <X class="mr-2 h-5 w-5" />
+Platform Quality	Type check platform	2026-04-03T13:35:43.1353053Z             Unknown
+Platform Quality	Type check platform	2026-04-03T13:35:43.1353395Z           </Button>
+Platform Quality	Type check platform	2026-04-03T13:35:43.1353729Z           <Button
+Platform Quality	Type check platform	2026-04-03T13:35:43.1354687Z             class="flex-1 rounded-2xl h-14 bg-zinc-900 hover:bg-green-600 text-white transition-all shadow-xl shadow-zinc-200"
+Platform Quality	Type check platform	2026-04-03T13:35:43.1355690Z             onclick={() => handleSwipe("right")}
+Platform Quality	Type check platform	2026-04-03T13:35:43.1356294Z             data-testid="swipe-right"
+Platform Quality	Type check platform	2026-04-03T13:35:43.1356766Z           >
+Platform Quality	Type check platform	2026-04-03T13:35:43.1357165Z             <Check class="mr-2 h-5 w-5" />
+Platform Quality	Type check platform	2026-04-03T13:35:43.1357658Z             Known
+Platform Quality	Type check platform	2026-04-03T13:35:43.1357994Z           </Button>
+Platform Quality	Type check platform	2026-04-03T13:35:43.1358451Z         </div>[36m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1358852Z       </div>[39m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1359073Z 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1360209Z /home/runner/work/Notflix/Notflix/apps/platform/[32msrc/lib/components/player/SubtitleDisplay.story.svelte[39m:6:14
+Platform Quality	Type check platform	2026-04-03T13:35:43.1361822Z [31mError[39m: Identifier 'Hst' has already been declared
+Platform Quality	Type check platform	2026-04-03T13:35:43.1362590Z https://svelte.dev/e/js_parse_error (svelte)
+Platform Quality	Type check platform	2026-04-03T13:35:43.1363176Z [36m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1363576Z   export let [35m[36mHst: Hst;[39m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1363838Z 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1365017Z /home/runner/work/Notflix/Notflix/apps/platform/[32msrc/routes/profile/+page.svelte[39m:17:29
+Platform Quality	Type check platform	2026-04-03T13:35:43.1368717Z [33mWarn[39m: This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+Platform Quality	Type check platform	2026-04-03T13:35:43.1369908Z https://svelte.dev/e/state_referenced_locally (svelte)
+Platform Quality	Type check platform	2026-04-03T13:35:43.1371249Z [36m  // Initialize properly; component recreation on nav handles reset
+Platform Quality	Type check platform	2026-04-03T13:35:43.1372406Z   let gameInterval = $state([35mdata[36m.initialData.gameInterval);
+Platform Quality	Type check platform	2026-04-03T13:35:43.1373270Z   let isSubmitting = $state(false);[39m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1373650Z 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1374402Z /home/runner/work/Notflix/Notflix/apps/platform/[32mtests/api/process-video.test.ts[39m:3:50
+Platform Quality	Type check platform	2026-04-03T13:35:43.1375964Z [31mError[39m: Cannot find module '$lib/server/services/process-video-request.service' or its corresponding type declarations. 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1377209Z [36mimport { POST } from '../../src/routes/api/process/[id]/+server';
+Platform Quality	Type check platform	2026-04-03T13:35:43.1378513Z import { startVideoProcessingWithDefaults } from [35m'$lib/server/services/process-video-request.service'[36m;
+Platform Quality	Type check platform	2026-04-03T13:35:43.1379533Z import { HTTP_STATUS } from '$lib/constants';[39m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1379862Z 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1380612Z /home/runner/work/Notflix/Notflix/apps/platform/[32mtests/api/video-subtitles.test.ts[39m:3:10
+Platform Quality	Type check platform	2026-04-03T13:35:43.1382535Z [31mError[39m: Module '"$lib/server/services/subtitle-delivery.service"' has no exported member 'buildSubtitleResponseWithDefaults'. 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1383933Z [36mimport { GET } from '../../src/routes/api/videos/[id]/subtitles/+server';
+Platform Quality	Type check platform	2026-04-03T13:35:43.1385420Z import { [35mbuildSubtitleResponseWithDefaults[36m, SubtitleDeliveryError } from '$lib/server/services/subtitle-delivery.service';
+Platform Quality	Type check platform	2026-04-03T13:35:43.1386639Z import { HTTP_STATUS } from '$lib/constants';[39m
+Platform Quality	Type check platform	2026-04-03T13:35:43.1386979Z 
+Platform Quality	Type check platform	2026-04-03T13:35:43.1387175Z ====================================
+Platform Quality	Type check platform	2026-04-03T13:35:43.1387880Z [31msvelte-check found 4 errors and 2 warnings in 6 files
+Platform Quality	Type check platform	2026-04-03T13:35:43.2321389Z [39m/home/runner/work/Notflix/Notflix/apps/platform:
+Platform Quality	Type check platform	2026-04-03T13:35:43.2323160Z  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @notflix/platform@0.0.1 check: `svelte-kit sync && svelte-check --tsconfig ./tsconfig.json`
+Platform Quality	Type check platform	2026-04-03T13:35:43.2324201Z Exit status 1
+Platform Quality	Type check platform	2026-04-03T13:35:43.2552056Z ##[error]Process completed with exit code 1.
+AI Service Quality	Pytest (with coverage gate)	﻿2026-04-03T13:36:49.8624704Z ##[group]Run uvx --with-requirements requirements.lock --from pytest pytest
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8625235Z [36;1muvx --with-requirements requirements.lock --from pytest pytest[0m
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8652839Z shell: /usr/bin/bash -e {0}
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8653070Z env:
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8653315Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8653726Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8654147Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8654517Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8654886Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8655244Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:49.8655544Z ##[endgroup]
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:36:50.3730393Z Installed 96 packages in 310ms
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2475000Z ============================= test session starts ==============================
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2475821Z platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2476456Z rootdir: /home/runner/work/Notflix/Notflix/apps/ai-service
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2477014Z configfile: pyproject.toml
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2477389Z plugins: anyio-4.12.1
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2477756Z collected 16 items / 1 error
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2478007Z 
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2478203Z ==================================== ERRORS ====================================
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2478907Z _________________ ERROR collecting tests/test_vcr_endpoints.py _________________
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2480065Z ImportError while importing test module '/home/runner/work/Notflix/Notflix/apps/ai-service/tests/test_vcr_endpoints.py'.
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2481096Z Hint: make sure your test modules/packages have valid Python names.
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2481975Z Traceback:
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2482694Z /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/importlib/__init__.py:90: in import_module
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2483727Z     return _bootstrap._gcd_import(name[level:], package, level)
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2484251Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2484695Z tests/test_vcr_endpoints.py:4: in <module>
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2485120Z     import vcr
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2485447Z E   ModuleNotFoundError: No module named 'vcr'
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2485920Z =============================== warnings summary ===============================
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2486753Z ../../../../../.cache/uv/archive-v0/QRbYlpJbJiSydU3ZS2Djw/lib/python3.12/site-packages/_pytest/config/__init__.py:1428
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2488369Z   /home/runner/.cache/uv/archive-v0/QRbYlpJbJiSydU3ZS2Djw/lib/python3.12/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: asyncio_default_fixture_loop_scope
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2489564Z   
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2489918Z     self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2490307Z 
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2490613Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2491429Z =========================== short test summary info ============================
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2491937Z ERROR tests/test_vcr_endpoints.py
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2492410Z !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:03.2492978Z ========================= 1 warning, 1 error in 11.30s =========================
+AI Service Quality	Pytest (with coverage gate)	2026-04-03T13:37:04.0385102Z ##[error]Process completed with exit code 2.
+Required Checks	Verify all quality jobs passed	﻿2026-04-03T13:37:25.8768238Z ##[group]Run if [ "failure" != "success" ] || \
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8769046Z [36;1mif [ "failure" != "success" ] || \[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8769708Z [36;1m   [ "success" != "success" ] || \[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8770442Z [36;1m   [ "failure" != "success" ] || \[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8771637Z [36;1m   [ "success" != "success" ]; then[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8772437Z [36;1m  echo "One or more required quality jobs failed."[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8773281Z [36;1m  echo "platform-quality: failure"[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8773904Z [36;1m  echo "platform-e2e: success"[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8774572Z [36;1m  echo "ai-service-quality: failure"[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8775268Z [36;1m  echo "database-quality: success"[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8775876Z [36;1m  exit 1[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8776348Z [36;1mfi[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.8776916Z [36;1mecho "All required quality jobs passed."[0m
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9282590Z shell: /usr/bin/bash -e {0}
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9283572Z ##[endgroup]
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9493377Z One or more required quality jobs failed.
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9494840Z platform-quality: failure
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9495998Z platform-e2e: success
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9496936Z ai-service-quality: failure
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9498123Z database-quality: success
+Required Checks	Verify all quality jobs passed	2026-04-03T13:37:25.9518500Z ##[error]Process completed with exit code 1.

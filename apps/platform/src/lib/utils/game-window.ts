@@ -1,4 +1,4 @@
-export type GameWindow = {
+type GameWindow = {
   start: number;
   end: number;
 };

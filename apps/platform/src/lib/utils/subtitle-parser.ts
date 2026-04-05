@@ -20,7 +20,7 @@ export function parseVTT(vttText: string): Subtitle[] {
         i++;
 
         while (i < lines.length && lines[i].trim() !== "") {
-          text += lines[i] + " ";
+          text += lines[i] + "\n";
           i++;
         }
 

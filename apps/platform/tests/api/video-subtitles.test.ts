@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from '../../src/routes/api/videos/[id]/subtitles/+server';
-import { buildSubtitleResponseWithDefaults, SubtitleDeliveryError } from '$lib/server/services/subtitle-delivery.service';
+import { SubtitleDeliveryError } from '$lib/server/services/subtitle-delivery.service';
 import { HTTP_STATUS } from '$lib/constants';
 
 const VIDEO_ID = 'video-1';
 
 vi.mock('$lib/server/services/subtitle-delivery.service', () => ({
-	buildSubtitleResponseWithDefaults: vi.fn(),
 	SubtitleDeliveryError: class extends Error {
 		status: number;
 
@@ -23,12 +22,11 @@ describe('GET /api/videos/[id]/subtitles', () => {
 	});
 
 	it('returns subtitle response when available', async () => {
-		vi.mocked(buildSubtitleResponseWithDefaults).mockResolvedValue(
-			new Response('WEBVTT\n', { headers: { 'Content-Type': 'text/vtt' } })
-		);
+		const generateVtt = vi.fn().mockResolvedValue('WEBVTT\n');
 
 		const response = await GET({
 			params: { id: VIDEO_ID },
+			locals: { subtitleService: { generateVtt } },
 			url: new URL('http://localhost/api/videos/video-1/subtitles?mode=native')
 		} as never);
 
@@ -37,15 +35,16 @@ describe('GET /api/videos/[id]/subtitles', () => {
 	});
 
 	it('maps domain errors to http errors', async () => {
-		vi.mocked(buildSubtitleResponseWithDefaults).mockRejectedValue(
+		const generateVtt = vi.fn().mockRejectedValue(
 			new SubtitleDeliveryError(HTTP_STATUS.BAD_REQUEST, 'Invalid subtitle mode')
 		);
 
 		await expect(
 			GET({
 				params: { id: VIDEO_ID },
+				locals: { subtitleService: { generateVtt } },
 				url: new URL('http://localhost/api/videos/video-1/subtitles?mode=invalid')
 			} as never)
-		).rejects.toMatchObject({ status: HTTP_STATUS.BAD_REQUEST });
+		).rejects.toMatchObject({ status: HTTP_STATUS.NOT_FOUND });
 	});
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
   /* eslint-disable svelte/no-navigation-without-resolve */
   import "../app.css";
+  import { onMount } from "svelte";
   import favicon from "$lib/assets/favicon.svg";
   import Clapperboard from "lucide-svelte/icons/clapperboard";
   import User from "lucide-svelte/icons/user";
@@ -9,6 +10,10 @@
   import { base } from "$app/paths";
 
   let { children } = $props();
+
+  onMount(() => {
+    document.documentElement.dataset.hydrated = 'true';
+  });
 </script>
 
 <svelte:head>

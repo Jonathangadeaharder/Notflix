@@ -1,10 +1,9 @@
-/* eslint-disable max-lines-per-function */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
 import { video, videoProcessing, user, knownWords } from "@notflix/database";
 import { eq } from "drizzle-orm";
 import { generateDeck } from "./chunker.service";
-import type { VttSegment } from "./video-orchestrator.service";
+import type { VttSegment } from "../domain/translation-core";
 
 describe("ChunkerService Integration (Real DB)", () => {
   const testUserId = crypto.randomUUID();

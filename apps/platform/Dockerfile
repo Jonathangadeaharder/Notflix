@@ -1,10 +1,11 @@
-FROM node:25-slim
+# syntax=docker/dockerfile:1.7
+FROM node:22-alpine AS builder
 
 RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-# ── Dependency layer (cached unless manifests change) ────
+# ── Dependency layer
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/database/package.json packages/database/
 COPY apps/platform/package.json apps/platform/
@@ -13,20 +14,26 @@ RUN pnpm install --filter @notflix/platform --filter @notflix/database && \
     pnpm approve-builds esbuild && \
     pnpm install --filter @notflix/platform --filter @notflix/database
 
-# ── Config layer (cached unless build config changes) ────
-COPY apps/platform/svelte.config.js apps/platform/
-COPY apps/platform/vite.config.ts   apps/platform/
-COPY apps/platform/tsconfig.json    apps/platform/
-
-# ── Source layer ─────────────────────────────────────────
+# ── Source layer
 COPY packages/database packages/database
-COPY apps/platform     apps/platform
+COPY apps/platform apps/platform
+
+RUN pnpm run --filter @notflix/platform build
+
+# ── Runner layer
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# ── Security: drop to non-root
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 svelte
+COPY --from=builder --chown=svelte:nodejs /app /app
 
 WORKDIR /app/apps/platform
+USER svelte
 
-# ── Security: drop to non-root ──────────────────────────
-RUN useradd -m appuser && chown -R appuser /app
-USER appuser
+EXPOSE 3000
 
-EXPOSE 5173
-CMD ["pnpm", "run", "dev", "--", "--host"]
+CMD ["node", "build/index.js"]

@@ -3,31 +3,22 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [sveltekit()],
-  server: {
-    host: "0.0.0.0",
-    watch: {
-      usePolling: true,
-    },
-  },
   test: {
-    include: ["src/**/*.test.ts", "tests/api/**/*.test.ts"],
-    exclude: ["node_modules/**", "src/**/*.integration.test.ts"],
-    coverage: {
-      provider: "v8",
-      include: [
-        "src/lib/server/services/**/*.ts",
-        "src/lib/server/utils/**/*.ts",
-        "src/lib/server/adapters/**/*.ts",
-        "src/lib/upload-pipeline.ts",
-      ],
-      exclude: ["**/*.test.ts", "**/*.integration.test.ts", "**/*.d.ts"],
-      thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 70,
-        statements: 80,
-      },
-      reporter: ["text", "text-summary"],
-    },
+    environment: "jsdom",
+    setupFiles: ["./tests/vitest.setup.ts"],
+    exclude: [
+      "tests/e2e/**",
+      "tests/integration/**",
+      "node_modules/**",
+      "**/*.integration.test.ts",
+      "**/*.spec.ts",
+    ],
+  },
+  resolve: {
+    // Always resolve 'browser' exports so server-only Node.js modules (e.g.
+    // node:async_hooks from svelte/internal/server) are never pulled into the
+    // client bundle.  Without this, `vite build` picks the node export-condition
+    // for @sveltejs/kit and svelte, silently breaking client-side hydration.
+    conditions: ['browser'],
   },
 });

@@ -5,6 +5,7 @@ const CI_RETRIES = 2;
 const config: PlaywrightTestConfig = {
   timeout: 600000, // 10 min for large video processing
   retries: process.env.CI ? CI_RETRIES : 0,
+  workers: 1,
 
   testDir: "tests",
   testMatch: ["**/*.spec.ts", "**/*.spec.js"],

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { base } from "$app/paths";
   import { Input } from "$lib/components/ui/input";
-  import * as Select from "$lib/components/ui/select";
   import { Button } from "$lib/components/ui/button";
   import { ChevronLeft, UploadCloud } from "lucide-svelte";
   import { enhance } from "$app/forms";
@@ -44,6 +43,16 @@
   }
 
   let fileInput: HTMLInputElement;
+
+  // Sync local state when server data changes
+  $effect(() => {
+    if (data.initialData) {
+      const nextTitle = data.initialData.title;
+      const nextLang = data.initialData.targetLang;
+      title = nextTitle;
+      targetLang = nextLang;
+    }
+  });
 </script>
 
 <div class="max-w-3xl mx-auto p-8">
@@ -92,49 +101,33 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-2">
-          <label class="text-sm font-medium text-zinc-300" for="targetLang"
-            >Video Language</label
+          <label class="text-sm font-medium text-zinc-300" for="targetLang">Target Language</label>
+          <select
+            name="targetLang"
+            id="targetLang"
+            bind:value={targetLang}
+            class="w-full bg-black/50 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-magenta-500"
           >
-          <input type="hidden" name="targetLang" value={targetLang} />
-          <Select.Root type="single" bind:value={targetLang}>
-            <Select.Trigger
-              class="bg-black/50 border-zinc-700 w-full"
-              data-testid="target-lang-select"
-            >
-              {getTargetLanguageLabel(targetLang)}
-            </Select.Trigger>
-            <Select.Content class="bg-zinc-900 border-zinc-700 text-white">
-              <Select.Item value="es">Spanish (ES)</Select.Item>
-              <Select.Item value="de">German (DE)</Select.Item>
-              <Select.Item value="fr">French (FR)</Select.Item>
-            </Select.Content>
-          </Select.Root>
-          {#if form?.errors?.targetLang}<p class="text-sm text-magenta-500">
-              {form.errors.targetLang[0]}
-            </p>{/if}
+            <option value="es">Spanish (ES)</option>
+            <option value="de">German (DE)</option>
+            <option value="fr">French (FR)</option>
+          </select>
+          {#if form?.errors?.targetLang}<p class="text-sm text-magenta-500">{form.errors.targetLang[0]}</p>{/if}
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium text-zinc-300" for="nativeLang"
-            >Your Language</label
+          <label class="text-sm font-medium text-zinc-300" for="nativeLang">Your Language</label>
+          <select
+            name="nativeLang"
+            id="nativeLang"
+            bind:value={nativeLang}
+            class="w-full bg-black/50 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-magenta-500"
           >
-          <input type="hidden" name="nativeLang" value={nativeLang} />
-          <Select.Root type="single" bind:value={nativeLang}>
-            <Select.Trigger
-              class="bg-black/50 border-zinc-700 w-full"
-              data-testid="native-lang-select"
-            >
-              {getNativeLanguageLabel(nativeLang)}
-            </Select.Trigger>
-            <Select.Content class="bg-zinc-900 border-zinc-700 text-white">
-              <Select.Item value="en">English (EN)</Select.Item>
-              <Select.Item value="de">German (DE)</Select.Item>
-              <Select.Item value="fr">French (FR)</Select.Item>
-            </Select.Content>
-          </Select.Root>
-          {#if form?.errors?.nativeLang}<p class="text-sm text-magenta-500">
-              {form.errors.nativeLang[0]}
-            </p>{/if}
+            <option value="en">English (EN)</option>
+            <option value="de">German (DE)</option>
+            <option value="fr">French (FR)</option>
+          </select>
+          {#if form?.errors?.nativeLang}<p class="text-sm text-magenta-500">{form.errors.nativeLang[0]}</p>{/if}
         </div>
       </div>
 

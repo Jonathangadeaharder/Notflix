@@ -1,6 +1,5 @@
 <script lang="ts">
   /* eslint-disable svelte/no-navigation-without-resolve */
-  import { onMount } from "svelte";
   import { base } from "$app/paths";
   import { Button } from "$lib/components/ui/button";
   import { Plus, Play, RotateCw, Video } from "lucide-svelte";
@@ -8,23 +7,22 @@
   import * as Card from "$lib/components/ui/card";
   import { enhance } from "$app/forms";
   import { invalidate } from "$app/navigation";
-  import { PIPELINE_STEPS, getUploadStepState } from "$lib/upload-pipeline";
 
   let { data } = $props();
 
   const POLLING_INTERVAL_MS = 3000;
 
-  onMount(() => {
-    const interval = setInterval(async () => {
-      if (document.visibilityState !== "visible") return;
+  $effect(() => {
+    const hasPending = data.videos.some(
+      (v) => v.status === "PENDING" || !v.status,
+    );
+    
+    if (!hasPending) return;
 
-      // Only poll if there are pending videos
-      const hasPending = data.videos.some(
-        (v) => v.status === "PENDING" || !v.status,
-      );
-      if (hasPending) {
-        await invalidate("app:videos");
-      }
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "visible" && !(window as any).__e2e) return;
+      
+      invalidate("app:videos");
     }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
@@ -68,9 +66,7 @@
     </Button>
   </div>
 
-  <div
-    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-  >
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
     {#each data.videos as video (video.id)}
       <Card.Root
         class="group bg-zinc-900/50 border-white/5 hover:border-white/20 transition-all hover:-translate-y-1 overflow-hidden"
@@ -91,27 +87,21 @@
               class="w-full h-full flex flex-col items-center justify-center text-zinc-700 bg-zinc-900"
             >
               <Video class="w-12 h-12 mb-2 opacity-50" />
-              <span class="text-xs font-medium uppercase tracking-wider"
-                >No Thumbnail</span
-              >
+              <span class="text-xs font-medium uppercase tracking-wider">No Thumbnail</span>
             </div>
           {/if}
 
           <div class="absolute top-2 right-2">
             <Badge
               variant={getStatusVariant(video.status)}
-              data-testid="status-badge"
+              data-testid="status-{video.status || 'UNPROCESSED'}"
             >
               {video.status || "UNPROCESSED"}
             </Badge>
           </div>
 
-          <div
-            class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <div
-              class="bg-white text-black p-3 rounded-full transform scale-75 group-hover:scale-100 transition-transform"
-            >
+          <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="bg-white text-black p-3 rounded-full transform scale-75 group-hover:scale-100 transition-transform">
               <Play class="w-6 h-6 fill-current" />
             </div>
           </div>
@@ -121,48 +111,8 @@
           <Card.Description class="text-xs text-zinc-500">
             Uploaded on {new Date(video.createdAt).toLocaleDateString()}
           </Card.Description>
-
-          {#if video.status === "PENDING"}
-            <div class="mt-3 space-y-2" data-testid="processing-progress">
-              <div class="flex justify-between text-xs text-zinc-500">
-                <span class="capitalize"
-                  >{(video.progressStage ?? "Queued")
-                    .toLowerCase()
-                    .replace(/_/g, " ")}</span
-                >
-                <span data-testid="progress-percent"
-                  >{video.progressPercent ?? 0}%</span
-                >
-              </div>
-              <div class="h-1 bg-zinc-700 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-magenta-500 rounded-full transition-all duration-500"
-                  style="width: {video.progressPercent ?? 0}%"
-                  data-testid="progress-bar"
-                ></div>
-              </div>
-              <div class="flex gap-1">
-                {#each PIPELINE_STEPS as step (step.key)}
-                  {@const state = getUploadStepState(
-                    step.key,
-                    video.progressStage ?? "QUEUED",
-                    video.status ?? "PENDING",
-                    false,
-                  )}
-                  <div
-                    class="flex-1 h-0.5 rounded-full transition-colors {getStepClass(
-                      state,
-                    )}"
-                    title={step.label}
-                  ></div>
-                {/each}
-              </div>
-            </div>
-          {/if}
         </Card.Header>
-        <Card.Content
-          class="p-5 pt-4 mt-2 border-t border-white/5 flex items-center justify-between"
-        >
+        <Card.Content class="p-5 pt-4 mt-2 border-t border-white/5 flex items-center justify-between">
           <Button
             variant="link"
             href="{base}/watch/{video.id}"
@@ -188,12 +138,8 @@
     {/each}
 
     {#if data.videos.length === 0}
-      <div
-        class="col-span-full py-32 text-center border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20"
-      >
-        <div
-          class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800 mb-4 text-zinc-500"
-        >
+      <div class="col-span-full py-32 text-center border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800 mb-4 text-zinc-500">
           <Video class="w-8 h-8" />
         </div>
         <h3 class="text-xl font-bold text-white mb-2">No content yet</h3>

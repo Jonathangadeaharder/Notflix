@@ -1,0 +1,37 @@
+interactions:
+- request:
+    body: '{"texts": ["El gato corre rapido en la casa.", "Me encanta la musica!"],
+      "language": "es"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '90'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:8000/filter
+  response:
+    body:
+      string: '{"results":[[{"text":"El","lemma":"el","pos":"DET","is_stop":true,"whitespace":"","translation":null},{"text":"gato","lemma":"gato","pos":"NOUN","is_stop":false,"whitespace":"","translation":null},{"text":"corre","lemma":"correr","pos":"VERB","is_stop":false,"whitespace":"","translation":null},{"text":"rapido","lemma":"rapido","pos":"ADV","is_stop":false,"whitespace":"","translation":null},{"text":"en","lemma":"en","pos":"ADP","is_stop":true,"whitespace":"","translation":null},{"text":"la","lemma":"el","pos":"DET","is_stop":true,"whitespace":"","translation":null},{"text":"casa","lemma":"casa","pos":"NOUN","is_stop":false,"whitespace":"","translation":null},{"text":".","lemma":".","pos":"PUNCT","is_stop":false,"whitespace":"","translation":null}],[{"text":"Me","lemma":"yo","pos":"PRON","is_stop":true,"whitespace":"","translation":null},{"text":"encanta","lemma":"encantar","pos":"VERB","is_stop":false,"whitespace":"","translation":null},{"text":"la","lemma":"el","pos":"DET","is_stop":true,"whitespace":"","translation":null},{"text":"musica","lemma":"musica","pos":"PROPN","is_stop":false,"whitespace":"","translation":null},{"text":"!","lemma":"!","pos":"PUNCT","is_stop":false,"whitespace":"","translation":null}]]}'
+    headers:
+      content-length:
+      - '1231'
+      content-type:
+      - application/json
+      date:
+      - Fri, 03 Apr 2026 15:27:23 GMT
+      server:
+      - uvicorn
+      x-request-id:
+      - 160c91c1-8531-47c0-935b-6dc8364cdceb
+    status:
+      code: 200
+      message: OK
+version: 1

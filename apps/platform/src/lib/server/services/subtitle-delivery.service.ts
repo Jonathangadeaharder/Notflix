@@ -1,4 +1,3 @@
-import { subtitleService } from '$lib/server/infrastructure/container';
 import { HTTP_STATUS } from '$lib/constants';
 import type { SubtitleMode, SubtitleService } from './subtitle.service';
 
@@ -34,10 +33,6 @@ export async function buildSubtitleResponse(
 			'Cache-Control': 'public, max-age=3600'
 		}
 	});
-}
-
-export function buildSubtitleResponseWithDefaults(videoId: string, modeParam: string | null): Promise<Response> {
-	return buildSubtitleResponse(videoId, modeParam, subtitleService);
 }
 
 function normalizeMode(mode: string | null): SubtitleMode {

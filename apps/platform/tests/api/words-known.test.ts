@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "../../src/routes/api/words/known/+server";
 import { db } from "$lib/server/infrastructure/database";

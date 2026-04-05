@@ -5,7 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import { ChevronLeft } from "lucide-svelte";
   import { GAME } from "$lib/constants";
-  import { getUpcomingGameWindow } from "$lib/utils/game-window";
+
 
   type GameCard = {
     lemma: string;
@@ -31,6 +31,7 @@
   let gameCards = $state<GameCard[]>([]);
   let chunkIndex = $state(0);
   let nextInterruptTime = $state(Infinity);
+  let interruptInFlight = $state(false);
 
   const intervalSeconds = $derived(
     (data.gameInterval || GAME.DEFAULT_INTERVAL_MINUTES) * SECONDS_IN_MINUTE,
@@ -51,19 +52,19 @@
   }
 
   async function handleInterrupt() {
-    const window = getUpcomingGameWindow(
-      nextInterruptTime - intervalSeconds,
-      intervalSeconds,
-    );
     const query = new URLSearchParams({
       videoId: data.video?.id || "",
-      start: window.start.toString(),
-      end: window.end.toString(),
+      chunkIndex: chunkIndex.toString(),
+      start: (nextInterruptTime - intervalSeconds).toString(),
+      end: nextInterruptTime.toString(),
       targetLang: data.video?.targetLang || "es",
     });
 
     try {
       const res = await fetch(`${base}/api/game/generate?${query}`);
+      if (!res.ok) {
+        throw new Error(`Game generation failed with status ${res.status}`);
+      }
       const result = await res.json();
       if (result.cards && result.cards.length > 0) {
         gameCards = result.cards as GameCard[];
@@ -73,7 +74,7 @@
       }
     } catch (e) {
       console.error("Game generation failed", e);
-      videoElement?.play();
+      videoElement?.play().catch((err) => console.error("Play failed:", err));
     }
   }
 
@@ -82,17 +83,37 @@
     console.log(
       `[Client] Inited. Interval: ${intervalSeconds}s, Next: ${nextInterruptTime}s`,
     );
+
+    // E2E test hook: directly inject game overlay state to bypass
+    // Svelte 5's event system AND the fetch/route-interception chain
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__e2eTriggerGameInterrupt = (cards: GameCard[]) => {
+      gameCards = cards;
+      showOverlay = true;
+      videoElement?.pause();
+    };
   });
 
   async function handleTimeUpdate() {
-    if (!videoElement || showOverlay || intervalSeconds === 0) return;
+    if (
+      !videoElement ||
+      showOverlay ||
+      intervalSeconds === 0 ||
+      interruptInFlight
+    )
+      return;
     if (videoElement.currentTime < nextInterruptTime) return;
 
     console.log(
       `[Client] Interrupt Triggered! Time: ${videoElement.currentTime} >= ${nextInterruptTime}`,
     );
+    interruptInFlight = true;
     videoElement.pause();
-    await handleInterrupt();
+    try {
+      await handleInterrupt();
+    } finally {
+      interruptInFlight = false;
+    }
   }
 
   function handleGameComplete() {
@@ -100,6 +121,26 @@
     chunkIndex++;
     initNextInterrupt();
     videoElement?.play().catch((err) => console.error("Play failed:", err));
+  }
+
+  async function handleAnswerSubmitted(answer: {
+    lemma: string;
+    lang: string;
+    isKnown: boolean;
+  }) {
+    if (answer.isKnown) {
+      console.log(
+        "Marking word as known securely from root view layer:",
+        answer.lemma,
+      );
+      fetch(`${base}/api/words/known`, {
+        method: "POST",
+        body: JSON.stringify({
+          lemma: answer.lemma,
+          lang: answer.lang,
+        }),
+      }).catch((e) => console.error("Failed to mark known:", e));
+    }
   }
 
   function drawHeatmap(canvas: HTMLCanvasElement, heatmap: HeatmapSegment[]) {
@@ -197,7 +238,11 @@
             class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
             data-testid="game-overlay"
           >
-            <GameOverlay cards={gameCards} onComplete={handleGameComplete} />
+            <GameOverlay
+              cards={gameCards}
+              onComplete={handleGameComplete}
+              onAnswerSubmitted={handleAnswerSubmitted}
+            />
           </div>
         {/if}
       </div>
