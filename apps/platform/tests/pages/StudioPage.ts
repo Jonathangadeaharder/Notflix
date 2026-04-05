@@ -9,7 +9,7 @@ export class StudioPage {
 
     constructor(page: Page) {
         this.page = page;
-        this.uploadButton = page.getByTestId('upload-link');
+        this.uploadButton = page.locator('a[href$="/studio/upload"]');
     }
 
     async goto() {
@@ -18,6 +18,7 @@ export class StudioPage {
 
     async clickUpload() {
         await this.uploadButton.click();
+        await this.page.waitForURL('**/upload');
     }
 
     async waitForVideoStatus(title: string, status: string, timeout = DEFAULT_WAIT_TIMEOUT) {

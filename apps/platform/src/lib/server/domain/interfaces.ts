@@ -13,3 +13,17 @@ export interface IAiGateway {
     translate(texts: string[], sourceLang: string, targetLang: string): Promise<TranslationResponse>;
     generateThumbnail(filePath: string): Promise<ThumbnailResponse>;
 }
+
+export type DomainVideo = {
+    id: string;
+    title: string;
+    filePath: string;
+    duration: number | null;
+    published: boolean;
+};
+
+export interface IVideoRepository {
+    getVideoById(id: string): Promise<DomainVideo | null>;
+    saveVideo(video: Partial<DomainVideo>): Promise<DomainVideo>;
+    deleteVideo(id: string): Promise<void>;
+}

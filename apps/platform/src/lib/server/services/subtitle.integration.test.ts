@@ -1,4 +1,4 @@
-/* eslint-disable max-lines-per-function, sonarjs/no-duplicate-string */
+/* eslint-disable sonarjs/no-duplicate-string */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
 import { video, videoProcessing, type DbVttSegment } from "@notflix/database";

@@ -8,8 +8,8 @@ process.env.RUNNING_IN_DOCKER = process.env.RUNNING_IN_DOCKER || 'false';
 export default defineConfig({
 	plugins: [sveltekit()],
 	test: {
-		include: ['src/**/*.integration.test.ts'],
-		exclude: ['node_modules/**', '.svelte-kit/**', 'tests/**'],
+		include: ['src/**/*.integration.test.ts', 'tests/integration/**/*.test.ts'],
+		exclude: ['node_modules/**', '.svelte-kit/**', 'tests/e2e/**'],
 		setupFiles: ['tests/vitest.integration.setup.ts'],
 		coverage: {
 			enabled: false

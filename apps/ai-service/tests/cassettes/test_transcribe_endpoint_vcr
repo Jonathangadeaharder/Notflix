@@ -1,0 +1,37 @@
+interactions:
+- request:
+    body: '{"file_path": "test_audio.mp3", "language": "en"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '49'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:8000/transcribe
+  response:
+    body:
+      string: '{"segments":[{"start":0.0,"end":7.0,"text":" Hello world, this is a
+        test of transcription and analysis of vocabulary. The data runs."}],"language":"en","language_probability":1.0}'
+    headers:
+      content-length:
+      - '179'
+      content-type:
+      - application/json
+      date:
+      - Fri, 03 Apr 2026 15:27:37 GMT
+      server:
+      - uvicorn
+      x-request-id:
+      - d82499e1-b519-47f8-bee8-daeaac565d31
+    status:
+      code: 200
+      message: OK
+version: 1

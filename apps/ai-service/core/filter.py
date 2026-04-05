@@ -8,6 +8,7 @@ from .interfaces import IFilter, TokenAnalysis
 
 logger = structlog.get_logger()
 
+
 class SpacyFilter(IFilter):
     def __init__(self):
         self._models: Dict[str, spacy.language.Language] = {}
@@ -22,9 +23,9 @@ class SpacyFilter(IFilter):
                 self._models[lang] = spacy.blank(blank_lang)
                 return self._models[lang]
             model_candidates = (
-                ["es_core_news_lg", "es_core_news_sm"]
+                ["es_core_news_sm"]
                 if lang == "es"
-                else ["en_core_web_lg", "en_core_web_sm"]
+                else ["en_core_web_sm"]
             )
             loaded = False
             last_error = None
@@ -60,12 +61,14 @@ class SpacyFilter(IFilter):
                     lemma=token.lemma_,
                     pos=token.pos_,
                     is_stop=token.is_stop,
-                    whitespace=token.whitespace_
+                    whitespace=token.whitespace_,
                 )
             )
         return tokens
 
-    def analyze_batch(self, texts: List[str], language: str) -> List[List[TokenAnalysis]]:
+    def analyze_batch(
+        self, texts: List[str], language: str
+    ) -> List[List[TokenAnalysis]]:
         """
         Analyzes a batch of texts using Spacy.
         """
@@ -83,7 +86,7 @@ class SpacyFilter(IFilter):
                         text=token.text,
                         lemma=token.lemma_,
                         pos=token.pos_,
-                        is_stop=token.is_stop
+                        is_stop=token.is_stop,
                     )
                 )
             results.append(tokens)

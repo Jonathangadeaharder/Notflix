@@ -1,11 +1,6 @@
 <script lang="ts">
-  import type { Hst } from '@histoire/plugin-svelte';
   import SubtitleDisplay from './SubtitleDisplay.svelte';
-  import type { Subtitle } from './types';
-
-  export let Hst: Hst;
-
-  const sampleSubtitle: Subtitle = {
+  import type { Subtitle } from './types';  const sampleSubtitle: Subtitle = {
     start: 0,
     end: 5,
     text: "El atraco fue increíble, estábamos listos.",

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import GameOverlay from "$lib/components/GameOverlay.svelte";
   import SubtitleDisplay from "./SubtitleDisplay.svelte";
   import type {
@@ -18,6 +18,7 @@
     gameCards = [],
     onRequestGameCards,
     onProgressUpdate,
+    onAnswerSubmitted,
   } = $props<{
     video: PlayerVideo;
     subtitles: Subtitle[];
@@ -34,6 +35,7 @@
       duration: number;
       progressPercent: number;
     }) => void;
+    onAnswerSubmitted?: (answer: { lemma: string; lang: string; isKnown: boolean }) => void;
   }>();
 
   const SECONDS_IN_MINUTE = 60;
@@ -95,13 +97,16 @@
     }
   });
 
-  // Watch for gameCards update to show overlay
+  // Watch for gameCards update to show overlay safely without infinite loops
   $effect(() => {
-    if (gameCards.length > 0 && gameCards !== lastOpenedGameBatch) {
-      lastOpenedGameBatch = gameCards;
-      showOverlay = true;
-      videoElement?.pause();
-    }
+    const currentCards = gameCards;
+    untrack(() => {
+      if (currentCards.length > 0 && currentCards !== lastOpenedGameBatch) {
+        lastOpenedGameBatch = currentCards;
+        showOverlay = true;
+        videoElement?.pause();
+      }
+    });
   });
 
   function initNextInterrupt() {
@@ -633,7 +638,11 @@
       class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
       data-testid="game-overlay"
     >
-      <GameOverlay cards={gameCards} onComplete={handleGameComplete} />
+      <GameOverlay 
+        cards={gameCards} 
+        onComplete={handleGameComplete} 
+        onAnswerSubmitted={onAnswerSubmitted}
+      />
     </div>
   {/if}
 </div>

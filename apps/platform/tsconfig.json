@@ -12,5 +12,8 @@
     "strict": true,
     "moduleResolution": "bundler",
     "types": ["vitest/globals"]
-  }
+  },
+  "exclude": [
+    "**/*.story.svelte"
+  ]
 }
