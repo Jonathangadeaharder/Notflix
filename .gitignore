@@ -52,7 +52,8 @@ media/uploads/*
 
 # Repomix / AI Context
 codebase.txt
-repomix-output.xml
+repomix-output.*
+repomix_output.*
 repomix.config.json
 .repomixignore
 GEMINI.md
