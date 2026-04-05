@@ -30,6 +30,7 @@
   let gameCards = $state<GameCard[]>([]);
   let chunkIndex = $state(0);
   let nextInterruptTime = $state(Infinity);
+  let interruptInFlight = $state(false);
 
   const intervalSeconds = $derived(
     (data.gameInterval || GAME.DEFAULT_INTERVAL_MINUTES) * SECONDS_IN_MINUTE,
@@ -60,6 +61,9 @@
 
     try {
       const res = await fetch(`${base}/api/game/generate?${query}`);
+      if (!res.ok) {
+        throw new Error(`Game generation failed with status ${res.status}`);
+      }
       const result = await res.json();
       if (result.cards && result.cards.length > 0) {
         gameCards = result.cards as GameCard[];
@@ -69,7 +73,7 @@
       }
     } catch (e) {
       console.error("Game generation failed", e);
-      videoElement?.play();
+      videoElement?.play().catch((err) => console.error("Play failed:", err));
     }
   }
 
@@ -90,14 +94,25 @@
   });
 
   async function handleTimeUpdate() {
-    if (!videoElement || showOverlay || intervalSeconds === 0) return;
+    if (
+      !videoElement ||
+      showOverlay ||
+      intervalSeconds === 0 ||
+      interruptInFlight
+    )
+      return;
     if (videoElement.currentTime < nextInterruptTime) return;
 
     console.log(
       `[Client] Interrupt Triggered! Time: ${videoElement.currentTime} >= ${nextInterruptTime}`,
     );
+    interruptInFlight = true;
     videoElement.pause();
-    await handleInterrupt();
+    try {
+      await handleInterrupt();
+    } finally {
+      interruptInFlight = false;
+    }
   }
 
   function handleGameComplete() {

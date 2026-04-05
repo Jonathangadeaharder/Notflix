@@ -11,8 +11,8 @@
 
   let { data, form }: Props = $props();
 
-  // Derive from reactive data so navigation resets the field automatically
-  let gameInterval = $derived(data.initialData.gameInterval);
+  // Writable derived: stays in sync with server data while remaining bindable
+  let gameInterval = $derived.by(() => data.initialData.gameInterval);
   let isSubmitting = $state(false);
 </script>
 
@@ -48,6 +48,7 @@
             Game Interrupt Interval
           </label>
           <select
+            id="gameInterval"
             name="gameInterval"
             bind:value={gameInterval}
             class="w-full max-w-xs bg-black/50 border border-zinc-700 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 appearance-none"

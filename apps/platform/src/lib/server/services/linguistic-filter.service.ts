@@ -9,14 +9,22 @@ export enum SegmentClassification {
   HARD = "HARD", // Too many unknown words, likely confusing
 }
 
-type FilteredSegment = {
+export type FilteredSegment = {
   classification: SegmentClassification;
   unknownCount: number;
   tokens: (TokenAnalysis & { isKnown: boolean })[];
 };
 
 export class SmartFilter {
+  private static readonly LEMMA_BATCH_SIZE = 500;
+
   constructor(private db = defaultDb) {}
+
+  private isLearnerContentToken(t: TokenAnalysis): boolean {
+    return (
+      (!t.is_stop || t.pos === "PRON" || t.pos === "ADP") && t.pos !== "PUNCT"
+    );
+  }
 
   /**
    * Bulk version of filterSegment to reduce DB roundtrips.
@@ -26,21 +34,27 @@ export class SmartFilter {
     userId: string,
     targetLang: string,
   ): Promise<FilteredSegment[]> {
-    // 1. Extract ALL unique content lemmas from ALL segments
+    // 1. Extract ALL unique content lemmas from ALL segments using shared predicate
     const allLemmas = new Set<string>();
     for (const tokens of segmentsTokens) {
       tokens.forEach((t) => {
-        if (!t.is_stop && t.pos !== "PUNCT") allLemmas.add(t.lemma);
+        if (this.isLearnerContentToken(t)) allLemmas.add(t.lemma);
       });
     }
 
+    // 2. Fetch known lemmas in bounded batches to avoid unbounded IN(...) queries
     const lemmaArray = Array.from(allLemmas);
-    const knownSet = await getKnownLemmas(
-      userId,
-      targetLang,
-      lemmaArray,
-      this.db,
-    );
+    const knownSet = new Set<string>();
+    for (let i = 0; i < lemmaArray.length; i += SmartFilter.LEMMA_BATCH_SIZE) {
+      const batch = lemmaArray.slice(i, i + SmartFilter.LEMMA_BATCH_SIZE);
+      const batchKnown = await getKnownLemmas(
+        userId,
+        targetLang,
+        batch,
+        this.db,
+      );
+      batchKnown.forEach((lemma) => knownSet.add(lemma));
+    }
 
     // 3. Process each segment using the pre-fetched knownSet
     return segmentsTokens.map((tokens) =>
@@ -104,7 +118,8 @@ export class SmartFilter {
     userId: string,
     targetLang: string,
   ): Promise<FilteredSegment> {
-    const contentTokens = tokens.filter((t) => !t.is_stop && t.pos !== "PUNCT");
+    // Use the same predicate as classifyTokens so PRON/ADP are consistently included
+    const contentTokens = tokens.filter((t) => this.isLearnerContentToken(t));
     const lemmas = contentTokens.map((t) => t.lemma);
 
     const knownSet = await getKnownLemmas(userId, targetLang, lemmas, this.db);

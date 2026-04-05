@@ -25,7 +25,7 @@ export function toMediaUrl(absolutePath: string | null | undefined): string {
   return absolutePath;
 }
 
-type ITimeSpan = { start: number; end: number };
+export type ITimeSpan = { start: number; end: number };
 
 export function calculateChunks(
   durationSeconds: number,
