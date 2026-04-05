@@ -63,6 +63,7 @@ plan.txt
 test-results/
 playwright-report/
 blob-report/
+coverage/
 node_modules
 
 # AI agent planning artifacts
