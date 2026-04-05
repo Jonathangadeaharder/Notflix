@@ -18,26 +18,30 @@ export interface Session {
   expires: string;
 }
 
-export function createSupabaseServerClient(event: RequestEvent) {
+function createSupabaseServerClient(event: RequestEvent) {
   const supabaseUrl = env.SUPABASE_URL || publicEnv.PUBLIC_SUPABASE_URL || "";
-  return createServerClient(supabaseUrl, publicEnv.PUBLIC_SUPABASE_ANON_KEY || "", {
-    cookies: {
-      getAll() {
-        return event.cookies.getAll();
-      },
-      setAll(
-        cookiesToSet: Array<{
-          name: string;
-          value: string;
-          options: CookieOptions;
-        }>,
-      ) {
-        cookiesToSet.forEach(({ name, value, options }) =>
-          event.cookies.set(name, value, { ...options, path: "/" }),
-        );
+  return createServerClient(
+    supabaseUrl,
+    publicEnv.PUBLIC_SUPABASE_ANON_KEY || "",
+    {
+      cookies: {
+        getAll() {
+          return event.cookies.getAll();
+        },
+        setAll(
+          cookiesToSet: Array<{
+            name: string;
+            value: string;
+            options: CookieOptions;
+          }>,
+        ) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            event.cookies.set(name, value, { ...options, path: "/" }),
+          );
+        },
       },
     },
-  });
+  );
 }
 
 type SupabaseAuthUser = {

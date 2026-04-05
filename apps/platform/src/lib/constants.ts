@@ -5,13 +5,6 @@ export const UI = {
   INDENT_SPACES: 4,
 } as const;
 
-export const LANGUAGES = {
-  DEFAULT_TARGET: "es",
-  DEFAULT_NATIVE: "en",
-  SUPPORTED_TARGETS: ["es"],
-  SUPPORTED_NATIVES: ["en"],
-} as const;
-
 export const HTTP_STATUS = {
   OK: 200,
   SEE_OTHER: 303,
@@ -39,12 +32,6 @@ export const GAME = {
   DEFAULT_INTERVAL_MINUTES: 10,
   MAX_INTERVAL_MINUTES: 60,
   DEFAULT_DECK_LIMIT: 15,
-} as const;
-
-export const LINT = {
-  MAX_COGNITIVE_COMPLEXITY: 15,
-  MAX_CYCLOMATIC_COMPLEXITY: 10,
-  MAX_LINES_PER_FUNCTION: 50,
 } as const;
 
 export const LIMITS = {

@@ -1,6 +1,5 @@
 import { env as publicEnv } from "$env/dynamic/public";
 import { goto } from "$app/navigation";
-import { page } from "$app/stores";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _supabase: any = null;
@@ -21,7 +20,9 @@ export async function signInEmail(
   password: string,
   callbackUrl = "/",
 ): Promise<{ error?: string }> {
-  const { error } = await (await getSupabaseClient()).auth.signInWithPassword({ email, password });
+  const { error } = await (
+    await getSupabaseClient()
+  ).auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
   // eslint-disable-next-line svelte/no-navigation-without-resolve
   await goto(callbackUrl);
@@ -34,14 +35,18 @@ export async function signUpEmail(
   name: string,
   callbackUrl = "/",
 ): Promise<{ error?: string; success?: boolean }> {
-  const { error } = await (await getSupabaseClient()).auth.signUp({
+  const { error } = await (
+    await getSupabaseClient()
+  ).auth.signUp({
     email,
     password,
     options: { data: { name } },
   });
   if (error) return { error: error.message };
 
-  const { error: signInError } = await (await getSupabaseClient()).auth.signInWithPassword({
+  const { error: signInError } = await (
+    await getSupabaseClient()
+  ).auth.signInWithPassword({
     email,
     password,
   });
@@ -51,11 +56,3 @@ export async function signUpEmail(
   await goto(callbackUrl);
   return { success: true };
 }
-
-export async function signOut(callbackUrl = "/login"): Promise<void> {
-  await (await getSupabaseClient()).auth.signOut();
-  // eslint-disable-next-line svelte/no-navigation-without-resolve
-  await goto(callbackUrl);
-}
-
-export { page };

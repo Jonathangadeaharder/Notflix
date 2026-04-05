@@ -52,7 +52,8 @@ media/uploads/*
 
 # Repomix / AI Context
 codebase.txt
-repomix-output.xml
+repomix-output.*
+repomix_output.*
 repomix.config.json
 .repomixignore
 GEMINI.md
@@ -62,6 +63,7 @@ plan.txt
 test-results/
 playwright-report/
 blob-report/
+coverage/
 node_modules
 
 # AI agent planning artifacts
