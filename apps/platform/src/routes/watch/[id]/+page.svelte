@@ -80,6 +80,10 @@
             `[Client] Inited. Interval: ${intervalSeconds}s, Next: ${nextInterruptTime}s`,
         );
 
+        // Hydration diagnostic marker (used by hydration-check.spec.ts)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__e2eHydrated = true;
+
         // E2E test hook: directly inject game overlay state to bypass
         // Svelte 5's event system AND the fetch/route-interception chain
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

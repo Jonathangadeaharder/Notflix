@@ -15,6 +15,10 @@ export default defineConfig({
     ],
   },
   resolve: {
-    conditions: process.env.VITEST ? ['browser'] : [],
+    // Always resolve 'browser' exports so server-only Node.js modules (e.g.
+    // node:async_hooks from svelte/internal/server) are never pulled into the
+    // client bundle.  Without this, `vite build` picks the node export-condition
+    // for @sveltejs/kit and svelte, silently breaking client-side hydration.
+    conditions: ['browser'],
   },
 });

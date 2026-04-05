@@ -2,15 +2,7 @@ import { test, expect } from '@playwright/test';
 import { PlayerPage } from '../pages/PlayerPage';
 
 test.describe('Learner Journey: Interactive Video Player', () => {
-    // Skipped: onMount never fires on /watch/[id] — confirmed with diagnostics:
-    //   - Page errors: [] (no JS errors caught)
-    //   - Console errors: [] (no console.error messages)
-    //   - The page SSR-renders correctly, but kit.start() never completes hydration
-    //   - Affects both headless + headed Chrome, local + CI, dev + production builds
-    //   - Root cause: silent SvelteKit hydration failure specific to this page's
-    //     component tree (<video> + bind:this + use:action + <canvas> + <track>)
-    // Re-enable when the watch page hydration issue is resolved.
-    test.skip('Should seamlessly interrupt video and resume upon knowledge check completion', async ({ page }) => {
+    test('Should seamlessly interrupt video and resume upon knowledge check completion', async ({ page }) => {
         const playerPage = new PlayerPage(page);
 
         // Capture browser-side errors for diagnostics
@@ -54,12 +46,16 @@ test.describe('Learner Journey: Interactive Video Player', () => {
         expect(watchHref).toBeTruthy();
 
         // 3. Navigate DIRECTLY to the watch page via page.goto()
+        //    Full page load → SSR + hydration (more reliable than client-side nav)
         await page.goto(watchHref!);
         await page.waitForLoadState('load');
 
         await playerPage.waitForPlayback();
 
         // 4. Wait for the watch page's onMount to register the E2E hook
+        //    Root cause of prior failures: vite.config.ts resolve.conditions was []
+        //    for builds, causing node:async_hooks (server-only) to leak into the client
+        //    bundle and silently break kit.start(). Fixed by always setting ['browser'].
         const HOOK_TIMEOUT = 30000;
         try {
             await page.waitForFunction(
@@ -67,6 +63,7 @@ test.describe('Learner Journey: Interactive Video Player', () => {
                 { timeout: HOOK_TIMEOUT }
             );
         } catch {
+            // Log diagnostic info before failing
             console.error('E2E hook never registered. Page errors:', pageErrors);
             console.error('Console errors:', consoleErrors);
             throw new Error(
@@ -93,7 +90,31 @@ test.describe('Learner Journey: Interactive Video Player', () => {
 
         // 6. Verify game overlay appears and can be dismissed
         await playerPage.playRound(1);
-
         await expect(playerPage.gameOverlay).not.toBeVisible();
+
+        // 7. Verify interactive subtitles (optional — depends on pipeline having generated VTT)
+        const firstWord = page.getByTestId('subtitle-word').first();
+        const hasSubtitles = await firstWord.isVisible().catch(() => false);
+
+        if (hasSubtitles) {
+            await firstWord.hover();
+            const popup = page.getByTestId('word-popup');
+            await expect(popup).toBeVisible();
+            await firstWord.click();
+
+            const markKnownBtn = page.getByRole('button', { name: "Mark Known" });
+            await expect(markKnownBtn).toBeVisible();
+
+            const [request] = await Promise.all([
+                page.waitForRequest(req => req.url().includes('/api/words/known') && req.method() === 'POST'),
+                markKnownBtn.click()
+            ]);
+
+            expect(request.postDataJSON()).toMatchObject({
+                lang: expect.any(String)
+            });
+
+            await expect(popup).not.toBeVisible();
+        }
     });
 });
