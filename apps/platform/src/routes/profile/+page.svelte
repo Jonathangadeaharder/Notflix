@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import * as Select from "$lib/components/ui/select";
   import * as Card from "$lib/components/ui/card";
   import { CheckCircle2 } from "lucide-svelte";
   import { enhance } from "$app/forms";
@@ -12,17 +11,9 @@
 
   let { data, form }: Props = $props();
 
-  // Manual form state using Svelte 5 runes
-  // Initialize properly; component recreation on nav handles reset
-  let gameInterval = $state(data.initialData.gameInterval);
+  // Derive from reactive data so navigation resets the field automatically
+  let gameInterval = $derived(data.initialData.gameInterval);
   let isSubmitting = $state(false);
-
-  function getIntervalLabel(value: string | undefined) {
-    if (value === undefined) return "Select Interval";
-    const num = Number(value);
-    if (num === 0) return "Off (Netflix Mode)";
-    return `Every ${num} Minutes`;
-  }
 </script>
 
 <div class="max-w-4xl mx-auto p-8">
@@ -56,20 +47,16 @@
           <label class="text-sm font-medium text-zinc-300" for="gameInterval">
             Game Interrupt Interval
           </label>
-          <input type="hidden" name="gameInterval" value={gameInterval} />
-          <Select.Root type="single" bind:value={gameInterval}>
-            <Select.Trigger
-              class="w-full max-w-xs bg-black/50 border-zinc-700 text-white"
-            >
-              {getIntervalLabel(gameInterval)}
-            </Select.Trigger>
-            <Select.Content class="bg-zinc-900 border-zinc-700 text-white">
-              <Select.Item value="0">Off (Netflix Mode)</Select.Item>
-              <Select.Item value="5">Every 5 Minutes</Select.Item>
-              <Select.Item value="10">Every 10 Minutes</Select.Item>
-              <Select.Item value="20">Every 20 Minutes</Select.Item>
-            </Select.Content>
-          </Select.Root>
+          <select
+            name="gameInterval"
+            bind:value={gameInterval}
+            class="w-full max-w-xs bg-black/50 border border-zinc-700 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 appearance-none"
+          >
+            <option value="0">Off (Netflix Mode)</option>
+            <option value="5">Every 5 Minutes</option>
+            <option value="10">Every 10 Minutes</option>
+            <option value="20">Every 20 Minutes</option>
+          </select>
           {#if form?.errors?.gameInterval}
             <p class="text-sm text-red-500">
               {form.errors.gameInterval[0]}
