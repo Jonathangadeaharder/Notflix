@@ -1,0 +1,30 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #0c0a09; /* Matches Tailwind dark bg in Notflix project */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.animation-container {
+    width: 100%;
+    max-width: 1000px;
+    background: transparent;
+}
+
+.brand-text {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 150px;
+    letter-spacing: -2px;
+}
+
+/* Ensure nice smooth rendering for SVGs */
+svg {
+    display: block;
+    margin: 0 auto;
+    overflow: visible;
+}

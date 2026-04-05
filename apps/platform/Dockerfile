@@ -9,7 +9,9 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/database/package.json packages/database/
 COPY apps/platform/package.json apps/platform/
 
-RUN pnpm install --filter @notflix/platform --filter @notflix/database
+RUN pnpm install --filter @notflix/platform --filter @notflix/database && \
+    pnpm approve-builds esbuild && \
+    pnpm install --filter @notflix/platform --filter @notflix/database
 
 # ── Config layer (cached unless build config changes) ────
 COPY apps/platform/svelte.config.js apps/platform/

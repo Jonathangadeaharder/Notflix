@@ -41,8 +41,8 @@
 
   const STEP_CLASS_MAP: Record<string, string> = {
     complete: "bg-green-500",
-    active: "bg-red-500",
-    error: "bg-red-700",
+    active: "bg-magenta-500",
+    error: "bg-magenta-700",
   };
 
   function getStepClass(state: string): string {
@@ -136,7 +136,7 @@
               </div>
               <div class="h-1 bg-zinc-700 rounded-full overflow-hidden">
                 <div
-                  class="h-full bg-red-500 rounded-full transition-all duration-500"
+                  class="h-full bg-magenta-500 rounded-full transition-all duration-500"
                   style="width: {video.progressPercent ?? 0}%"
                   data-testid="progress-bar"
                 ></div>
@@ -166,7 +166,7 @@
           <Button
             variant="link"
             href="{base}/watch/{video.id}"
-            class="p-0 h-auto text-xs font-bold text-white hover:text-red-500 uppercase tracking-wider"
+            class="p-0 h-auto text-xs font-bold text-white hover:text-magenta-500 uppercase tracking-wider"
           >
             Watch Now
           </Button>
@@ -176,7 +176,7 @@
               <Button
                 type="submit"
                 variant="ghost"
-                class="h-auto p-0 text-xs font-bold text-red-500 hover:text-red-400 uppercase tracking-wider hover:bg-transparent"
+                class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
               >
                 <RotateCw class="mr-1 h-3 w-3" />
                 Retry
@@ -202,7 +202,7 @@
         </p>
         <Button
           href="{base}/studio/upload"
-          class="bg-red-600 hover:bg-red-700 text-white rounded-full font-bold"
+          class="bg-magenta-600 hover:bg-magenta-700 text-white rounded-full font-bold"
         >
           Upload Video
         </Button>

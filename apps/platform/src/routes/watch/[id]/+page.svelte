@@ -21,7 +21,7 @@
 
   const HEATMAP_COLOR_EASY = "rgba(34, 197, 94, 0.5)";
   const HEATMAP_COLOR_LEARNING = "rgba(234, 179, 8, 0.8)";
-  const HEATMAP_COLOR_HARD = "rgba(239, 68, 68, 0.5)";
+  const HEATMAP_COLOR_HARD = "rgba(192, 38, 211, 0.5)"; // Magenta 600-ish
   const SECONDS_IN_MINUTE = 60;
 
   let { data } = $props();
@@ -226,7 +226,7 @@
             Learning (Target)
           </div>
           <div class="flex items-center gap-2">
-            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+            <div class="w-2 h-2 bg-magenta-500 rounded-full"></div>
             Hard (Too many unknowns)
           </div>
         </div>
@@ -249,7 +249,7 @@
         <div
           class="bg-zinc-900/50 border border-white/5 p-4 rounded-xl flex items-center gap-4"
         >
-          <div class="h-10 w-1 bg-red-600 rounded-full"></div>
+          <div class="h-10 w-1 bg-magenta-600 rounded-full"></div>
           <div>
             <p
               class="text-xs font-bold text-zinc-500 uppercase tracking-widest"

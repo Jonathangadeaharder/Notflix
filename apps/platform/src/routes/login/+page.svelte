@@ -64,7 +64,7 @@
       <form onsubmit={handleLogin} class="space-y-4">
         {#if errorMessage}
           <div
-            class="p-3 text-sm bg-red-900/30 border border-red-900/50 text-red-500 rounded-md"
+            class="p-3 text-sm bg-magenta-900/30 border border-magenta-900/50 text-magenta-500 rounded-md"
           >
             {errorMessage}
           </div>
@@ -80,7 +80,7 @@
             name="email"
             bind:value={email}
             placeholder="name@example.com"
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all"
             required
           />
         </div>
@@ -93,13 +93,13 @@
             id="password"
             name="password"
             bind:value={password}
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
+            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all"
             required
           />
         </div>
         <Button
           type="submit"
-          class="w-full bg-red-600 hover:bg-red-700 text-white font-bold"
+          class="w-full bg-magenta-600 hover:bg-magenta-700 text-white font-bold"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -135,7 +135,9 @@
         <p class="text-zinc-500">
           Don't have an account?
           <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-          <a href="/register" class="text-red-500 hover:underline">Sign up</a>
+          <a href="/register" class="text-magenta-500 hover:underline"
+            >Sign up</a
+          >
         </p>
       </div>
     </Card.Content>

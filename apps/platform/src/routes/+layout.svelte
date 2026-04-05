@@ -16,7 +16,7 @@
 </svelte:head>
 
 <div
-  class="min-h-screen bg-neutral-950 text-white font-sans selection:bg-red-900 selection:text-white"
+  class="min-h-screen bg-neutral-950 text-white font-sans selection:bg-magenta-900 selection:text-white"
 >
   <nav
     class="border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300"
@@ -26,12 +26,12 @@
         <div class="flex items-center gap-8">
           <a href="{base}/" class="flex items-center gap-2 group">
             <div
-              class="bg-red-600 p-1 rounded transform group-hover:rotate-12 transition-transform duration-300"
+              class="bg-magenta-600 p-1 rounded transform group-hover:rotate-12 transition-transform duration-300"
             >
               <Clapperboard class="h-6 w-6 text-white fill-current" />
             </div>
             <span
-              class="text-white font-bold text-xl tracking-tight group-hover:text-red-500 transition-colors"
+              class="text-white font-bold text-xl tracking-tight group-hover:text-magenta-500 transition-colors"
               >NOTFLIX</span
             >
           </a>

@@ -90,11 +90,11 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
+  --color-destructive: var(--magenta-600);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
+  --color-chart-1: var(--magenta-500);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
@@ -107,6 +107,18 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-magenta-50: #fcf0f5;
+  --color-magenta-100: #f9e2ed;
+  --color-magenta-200: #f3c5dc;
+  --color-magenta-300: #eaa3c8;
+  --color-magenta-400: #de7db1;
+  --color-magenta-500: #d6519c;
+  --color-magenta-600: #cc1966;
+  --color-magenta-700: #b31055;
+  --color-magenta-800: #941147;
+  --color-magenta-900: #7b123d;
+  --color-magenta-950: #4b0521;
 }
 
 @layer base {

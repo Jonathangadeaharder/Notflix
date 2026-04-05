@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notflix GSAP Reveal Concept</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="animation-container">
+        <svg id="notflix-svg" width="800" height="300" viewBox="0 0 800 300">
+            <defs>
+                <!-- Clapperboard stripes pattern: High contrast Magenta & White -->
+                <pattern id="clapper-pattern" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(25)">
+                    <rect width="20" height="40" fill="#cc1966" />
+                    <rect x="20" width="20" height="40" fill="#ffffff" />
+                </pattern>
+                
+                <!-- Clip path window. Starts exactly after the final N positioning (X=220) to hide text -->
+                <clipPath id="reveal-mask">
+                    <rect id="mask-rect" x="235" y="0" width="600" height="300" fill="transparent" />
+                </clipPath>
+            </defs>
+
+            <!-- Group for 'otflix'. Masked so it can only be seen when sliding right of N -->
+            <!-- Placed before N in DOM so it logically sits underneath -->
+            <g id="otflix-group" clip-path="url(#reveal-mask)">
+                <!-- Adjusted y to visually match the 140px full height vector N -->
+                <text class="brand-text" x="250" y="195">
+                    <tspan fill="#cc1966">ot</tspan><tspan fill="#ffffff">fli</tspan><tspan fill="#cc1966">X</tspan>
+                </text>
+            </g>
+
+            <!-- Vector Clapperboard Container -->
+            <!-- Translated so the entire structure lands beautifully aligned with text -->
+            <g id="n-fall-container" transform="translate(100, 55)">
+                <g id="clapper-group">
+                    
+                    <!-- Left half of the solid clapper board -->
+                    <rect id="c-left" x="0" y="30" width="60" height="110" fill="#cc1966" />
+                    
+                    <!-- Right half of the solid clapper board -->
+                    <rect id="c-right" x="60" y="30" width="60" height="110" fill="#cc1966" />
+                    
+                    <!-- A decorative small white text on the clapperboard base to unconditionally establish its identity -->
+                    <!-- This will dissolve upon impact -->
+                    <g id="clapper-details">
+                        <rect x="5" y="45" width="110" height="2" fill="white" opacity="0.4"/>
+                        <text x="10" y="65" font-family="'Courier New', monospace" font-size="16" font-weight="bold" fill="white" opacity="0.8">PROD.</text>
+                        <text x="10" y="85" font-family="'Courier New', monospace" font-size="12" fill="white" opacity="0.8">SCENE  TAKE</text>
+                        <text x="10" y="105" font-family="'Courier New', monospace" font-size="10" fill="white" opacity="0.8">DATE: 2026</text>
+                        <rect x="5" y="120" width="110" height="2" fill="white" opacity="0.4"/>
+                    </g>
+
+                    <!-- The striped clapper stick! 
+                         Top left at 0,0. Default is horizontal closed: 135 wide, 30 tall. -->
+                    <polygon id="c-stick" points="0,0 135,0 135,30 0,30" fill="url(#clapper-pattern)" stroke="#0c0a09" stroke-width="2" />
+                    
+                    <!-- Hinge pin detail -->
+                    <circle id="hinge-pin" cx="15" cy="15" r="4" fill="#0c0a09" />
+                </g>
+            </g>
+        </svg>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="animation.js"></script>
+</body>
+</html>

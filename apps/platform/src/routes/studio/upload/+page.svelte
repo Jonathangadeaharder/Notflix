@@ -85,7 +85,7 @@
           class="bg-black/50 border-zinc-700"
           data-testid="title-input"
         />
-        {#if form?.errors?.title}<p class="text-sm text-red-500">
+        {#if form?.errors?.title}<p class="text-sm text-magenta-500">
             {form.errors.title[0]}
           </p>{/if}
       </div>
@@ -109,7 +109,7 @@
               <Select.Item value="fr">French (FR)</Select.Item>
             </Select.Content>
           </Select.Root>
-          {#if form?.errors?.targetLang}<p class="text-sm text-red-500">
+          {#if form?.errors?.targetLang}<p class="text-sm text-magenta-500">
               {form.errors.targetLang[0]}
             </p>{/if}
         </div>
@@ -132,7 +132,7 @@
               <Select.Item value="fr">French (FR)</Select.Item>
             </Select.Content>
           </Select.Root>
-          {#if form?.errors?.nativeLang}<p class="text-sm text-red-500">
+          {#if form?.errors?.nativeLang}<p class="text-sm text-magenta-500">
               {form.errors.nativeLang[0]}
             </p>{/if}
         </div>
@@ -143,7 +143,7 @@
           >Video/Audio File</label
         >
         <div
-          class="group border-2 border-dashed border-zinc-700 rounded-xl p-10 text-center hover:border-red-500 hover:bg-red-900/5 transition-all cursor-pointer relative"
+          class="group border-2 border-dashed border-zinc-700 rounded-xl p-10 text-center hover:border-magenta-500 hover:bg-magenta-900/5 transition-all cursor-pointer relative"
           onclick={() => fileInput.click()}
           onkeydown={(e) => e.key === "Enter" && fileInput.click()}
           role="button"
@@ -163,7 +163,7 @@
             class="pointer-events-none flex flex-col items-center justify-center gap-3 group-hover:scale-105 transition-transform"
           >
             <div
-              class="p-3 bg-zinc-800 rounded-full group-hover:bg-red-600/20 text-zinc-400 group-hover:text-red-500 transition-colors"
+              class="p-3 bg-zinc-800 rounded-full group-hover:bg-magenta-600/20 text-zinc-400 group-hover:text-magenta-500 transition-colors"
             >
               <UploadCloud class="w-8 h-8" />
             </div>
@@ -177,7 +177,7 @@
             </div>
           </div>
         </div>
-        {#if form?.errors?.file}<p class="text-sm text-red-500">
+        {#if form?.errors?.file}<p class="text-sm text-magenta-500">
             {form.errors.file[0]}
           </p>{/if}
       </div>
@@ -187,7 +187,7 @@
         <Button
           type="submit"
           disabled={isSubmitting}
-          class="bg-red-600 hover:bg-red-700 text-white px-8 font-bold"
+          class="bg-magenta-600 hover:bg-magenta-700 text-white px-8 font-bold"
           data-testid="submit-button"
         >
           {isSubmitting ? "Uploading..." : "Upload Video"}
