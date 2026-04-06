@@ -95,6 +95,8 @@ jobs:
       AI_SERVICE_API_KEY: dev_secret_key
       PLAYWRIGHT_TEST: "true"
       MEDIA_ROOT_INTERNAL: ${{ github.workspace }}/media/uploads
+      PUBLIC_SUPABASE_URL: "http://localhost:54321"
+      PUBLIC_SUPABASE_ANON_KEY: "dummy-anon-key-for-ci"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

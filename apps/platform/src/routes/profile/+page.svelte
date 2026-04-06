@@ -22,7 +22,7 @@
   <Card.Root class="bg-zinc-900 border-zinc-800 shadow-xl">
     <Card.Header>
       <Card.Title class="text-xl text-zinc-100 flex items-center gap-2">
-        <span class="w-1 h-6 bg-red-600 rounded-full"></span>
+        <span class="w-1 h-6 bg-magenta-600 rounded-full"></span>
         Game Settings
       </Card.Title>
       <Card.Description>
@@ -59,7 +59,7 @@
             <option value="20">Every 20 Minutes</option>
           </select>
           {#if form?.errors?.gameInterval}
-            <p class="text-sm text-red-500">
+            <p class="text-sm text-magenta-500">
               {form.errors.gameInterval[0]}
             </p>
           {/if}
@@ -68,7 +68,7 @@
         <Button
           type="submit"
           disabled={isSubmitting}
-          class="bg-red-600 hover:bg-red-700 text-white font-bold px-8"
+          class="bg-magenta-600 hover:bg-magenta-700 text-white font-bold px-8"
         >
           {isSubmitting ? "Saving..." : "Save Settings"}
         </Button>

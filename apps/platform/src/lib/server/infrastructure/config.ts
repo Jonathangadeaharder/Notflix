@@ -53,6 +53,9 @@ export enum ProcessingStatus {
  * Relies on MEDIA_ROOT_INTERNAL env var to be consistent across services.
  */
 export function toAiServicePath(localPath: string): string {
+  if (!isDocker) {
+    return localPath;
+  }
   const filename = path.basename(localPath);
   // Default to the standard Docker internal path if env var not set
   const mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH;

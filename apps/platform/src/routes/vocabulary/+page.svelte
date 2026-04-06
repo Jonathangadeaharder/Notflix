@@ -27,7 +27,7 @@
     B1: "bg-yellow-600",
     B2: "bg-yellow-500",
     C1: "bg-orange-600",
-    C2: "bg-red-600",
+    C2: "bg-magenta-600",
     untracked: "bg-zinc-600",
   };
 
@@ -99,7 +99,7 @@
 
 <div class="max-w-6xl mx-auto p-4 sm:p-8">
   <div class="flex items-center gap-3 mb-8">
-    <div class="bg-red-600 p-2 rounded-lg">
+    <div class="bg-magenta-600 p-2 rounded-lg">
       <BookOpen class="h-6 w-6 text-white" />
     </div>
     <h1 class="text-3xl font-bold text-white">Vocabulary Library</h1>
@@ -117,7 +117,7 @@
             onclick={() => setFilter("level", null)}
             class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all {!data
               .filters.level
-              ? 'bg-red-600 text-white'
+              ? 'bg-magenta-600 text-white'
               : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}"
           >
             <span>All Words</span>
@@ -130,7 +130,7 @@
               onclick={() => setFilter("level", level)}
               class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all {data
                 .filters.level === level
-                ? 'bg-red-600 text-white'
+                ? 'bg-magenta-600 text-white'
                 : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}"
             >
               <div class="flex items-center gap-2">
@@ -165,7 +165,10 @@
                 class="pl-10 bg-black/50 border-zinc-700 text-white placeholder:text-zinc-500"
               />
             </div>
-            <Button onclick={handleSearch} class="bg-red-600 hover:bg-red-700">
+            <Button
+              onclick={handleSearch}
+              class="bg-magenta-600 hover:bg-magenta-700"
+            >
               Search
             </Button>
             {#if data.filters.search}
@@ -240,7 +243,7 @@
                       size="sm"
                       disabled={isDeleting === word.lemma}
                       onclick={() => deleteWord(word.lemma, word.lang)}
-                      class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-500 hover:bg-red-950/50 transition-all"
+                      class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-magenta-500 hover:bg-magenta-950/50 transition-all"
                       title="Remove from known words"
                     >
                       <Trash2 class="h-4 w-4" />

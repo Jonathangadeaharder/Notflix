@@ -56,12 +56,13 @@ if (!building) {
       const filter = new SmartFilter(db);
       registerPipelineListeners(db, gateway, filter);
       console.log("[System] Choreography Listeners registered.");
-      
+
       // Cleanup stale tasks
-      const { videoProcessing } = await import('@notflix/database');
-      await db.update(videoProcessing)
-        .set({ status: 'ERROR' } as any)
-        .where(eq(videoProcessing.status, 'PENDING' as any));
+      const { videoProcessing } = await import("@notflix/database");
+      await db
+        .update(videoProcessing)
+        .set({ status: "ERROR" } as any)
+        .where(eq(videoProcessing.status, "PENDING" as any));
     } catch (err) {
       console.error("[System] Startup Failed:", err);
     }
@@ -72,7 +73,8 @@ export const handle: Handle = async ({ event, resolve }) => {
   const requestId = event.request.headers.get("x-request-id") || randomUUID();
 
   // Instantiate lightweight services once per request (Request-isolated DI)
-  const useMock = process.env.NODE_ENV === 'test' || process.env.USE_MOCK_AI === 'true';
+  const useMock =
+    process.env.NODE_ENV === "test" || process.env.USE_MOCK_AI === "true";
   event.locals.db = db;
   event.locals.aiGateway = useMock ? new MockAiGateway() : new RealAiGateway();
   event.locals.smartFilter = new SmartFilter(db);
@@ -93,7 +95,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     filterSerializedResponseHeaders: (name) =>
       name === "content-range" || name === "x-supabase-api-version",
   });
-  
+
   response.headers.set("x-request-id", requestId);
   return response;
 };

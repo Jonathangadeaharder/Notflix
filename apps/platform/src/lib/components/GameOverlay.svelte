@@ -142,7 +142,7 @@
         <Check class="h-12 w-12" />
       </div>
       <div
-        class="absolute -left-12 top-1/2 -translate-y-1/2 text-red-500/50 pointer-events-none transition-opacity duration-300"
+        class="absolute -left-12 top-1/2 -translate-y-1/2 text-magenta-500/50 pointer-events-none transition-opacity duration-300"
         style="opacity: {$x < -SWIPE_HINT_THRESHOLD
           ? Math.min(Math.abs($x) / SWIPE_THRESHOLD, 1)
           : 0}"
@@ -181,7 +181,7 @@
         >
           <Button
             variant="outline"
-            class="flex-1 rounded-2xl h-14 border-zinc-200 text-zinc-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all"
+            class="flex-1 rounded-2xl h-14 border-zinc-200 text-zinc-400 hover:bg-magenta-50 hover:text-magenta-500 hover:border-magenta-200 transition-all"
             onclick={() => handleSwipe("left")}
             data-testid="swipe-left"
           >

@@ -98,9 +98,10 @@ The canonical watch route uses the shared `VideoPlayer` experience.
 ## 7. Studio Upload Behavior
 
 - The upload screen supports drag-and-drop and direct file selection
-- Successful upload returns a `videoId` and keeps the user on the upload flow
-- The page shows a stepwise pipeline view driven by local upload state plus persisted processing progress
-- When processing completes, the page offers direct actions to start watching or return to Studio
+- The upload form captures both the **video language** (`targetLang`) and the **user's native language** (`nativeLang`); both are passed to the processing pipeline
+- Successful upload redirects to Studio; processing begins immediately in the background
+- The Studio list shows an inline progress bar for every `PENDING` video, surfacing `progressStage`, `progressPercent`, and the pipeline step strip from `PIPELINE_STEPS` / `getUploadStepState` (`$lib/upload-pipeline`)
+- Studio polls `invalidate('app:videos')` every 3 seconds while any visible video is `PENDING`
 
 ## 8. Game & Watch Loop
 
@@ -114,29 +115,36 @@ The player integrates spaced repetition into playback.
 
 Deck-generation and overlay-state semantics are further defined in `docs/specs/learning-session-state.md`.
 
-## 9. Non-Goals
+## 9. Vocabulary Management
+
+- The main navigation includes a **Vocabulary** link (`/vocabulary`) accessible from all authenticated pages
+- The vocabulary section surfaces the user's known-word state per language
+- Known-word state is persisted in `known_words`, keyed by `(user_id, lemma, lang)`
+- Words can be marked known from the watch player (see §6) or managed directly in the vocabulary view
+
+## 10. Non-Goals
 
 The following remain intentionally out of scope to preserve the local-first KISS model:
 
-### 9.1 Infrastructure & Real-Time
+### 10.1 Infrastructure & Real-Time
 
 - Rate limiting for public multi-tenant traffic
 - WebSocket/SSE client progress streaming
 - Distributed queue infrastructure
 
-### 9.2 Media & Playback
+### 10.2 Media & Playback
 
 - Real-time transcoding
 - DRM support
 - 10-foot TV remote interface design
 
-### 9.3 AI & Language Scope
+### 10.3 AI & Language Scope
 
 - Pronunciation scoring
 - Live-stream processing
 - OCR/on-screen text extraction
 
-### 9.4 External Integrations
+### 10.4 External Integrations
 
 - Metadata scraping from TMDB/IMDB
 - Bi-directional Anki sync

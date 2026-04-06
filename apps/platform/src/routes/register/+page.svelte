@@ -12,23 +12,39 @@
   let password = $state("");
   let confirmPassword = $state("");
   let errorMessage = $state("");
+  let fieldErrors = $state<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
 
   async function handleRegister(e: Event) {
     e.preventDefault();
-    isLoading = true;
+    fieldErrors = {};
     errorMessage = "";
 
-    if (password !== confirmPassword) {
-      errorMessage = "Passwords do not match";
-      isLoading = false;
+    const errors: typeof fieldErrors = {};
+    /* eslint-disable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
+    if (!name.trim()) errors.name = "Name is required.";
+    if (!email.trim()) errors.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      errors.email = "Please enter a valid email address.";
+    if (!password) errors.password = "Password is required.";
+    else if (password.length < MIN_PASSWORD_LENGTH)
+      errors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+    if (!confirmPassword)
+      errors.confirmPassword = "Please confirm your password.";
+    else if (password !== confirmPassword)
+      errors.confirmPassword = "Passwords do not match.";
+    /* eslint-enable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
+
+    if (Object.keys(errors).length > 0) {
+      fieldErrors = errors;
       return;
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      errorMessage = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
-      isLoading = false;
-      return;
-    }
+    isLoading = true;
 
     const { error } = await signUpEmail(email, password, name, "/");
 
@@ -50,10 +66,10 @@
       </Card.Description>
     </Card.Header>
     <Card.Content>
-      <form onsubmit={handleRegister} class="space-y-4">
+      <form onsubmit={handleRegister} novalidate class="space-y-4">
         {#if errorMessage}
           <div
-            class="p-3 text-sm bg-red-900/30 border border-red-900/50 text-red-500 rounded-md"
+            class="p-3 text-sm bg-magenta-900/30 border border-magenta-900/50 text-magenta-500 rounded-md"
           >
             {errorMessage}
           </div>
@@ -69,9 +85,13 @@
             name="name"
             bind:value={name}
             placeholder="Your name"
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
-            required
+            class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.name
+              ? 'border-magenta-500'
+              : 'border-zinc-700'}"
           />
+          {#if fieldErrors.name}<p class="text-xs text-magenta-500 mt-1">
+              {fieldErrors.name}
+            </p>{/if}
         </div>
         <div class="space-y-2">
           <label for="email" class="text-sm font-medium text-zinc-300"
@@ -83,9 +103,13 @@
             name="email"
             bind:value={email}
             placeholder="name@example.com"
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
-            required
+            class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.email
+              ? 'border-magenta-500'
+              : 'border-zinc-700'}"
           />
+          {#if fieldErrors.email}<p class="text-xs text-magenta-500 mt-1">
+              {fieldErrors.email}
+            </p>{/if}
         </div>
         <div class="space-y-2">
           <label for="password" class="text-sm font-medium text-zinc-300"
@@ -97,9 +121,13 @@
             name="password"
             bind:value={password}
             placeholder="At least 8 characters"
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
-            required
+            class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.password
+              ? 'border-magenta-500'
+              : 'border-zinc-700'}"
           />
+          {#if fieldErrors.password}<p class="text-xs text-magenta-500 mt-1">
+              {fieldErrors.password}
+            </p>{/if}
         </div>
         <div class="space-y-2">
           <label for="confirmPassword" class="text-sm font-medium text-zinc-300"
@@ -110,13 +138,19 @@
             id="confirmPassword"
             name="confirmPassword"
             bind:value={confirmPassword}
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
-            required
+            class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.confirmPassword
+              ? 'border-magenta-500'
+              : 'border-zinc-700'}"
           />
+          {#if fieldErrors.confirmPassword}<p
+              class="text-xs text-magenta-500 mt-1"
+            >
+              {fieldErrors.confirmPassword}
+            </p>{/if}
         </div>
         <Button
           type="submit"
-          class="w-full bg-red-600 hover:bg-red-700 text-white font-bold"
+          class="w-full bg-magenta-600 hover:bg-magenta-700 text-white font-bold"
           disabled={isLoading}
         >
           {#if isLoading}
@@ -131,7 +165,7 @@
         <p class="text-zinc-500">
           Already have an account?
           <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-          <a href="/login" class="text-red-500 hover:underline">Sign in</a>
+          <a href="/login" class="text-magenta-500 hover:underline">Sign in</a>
         </p>
       </div>
     </Card.Content>

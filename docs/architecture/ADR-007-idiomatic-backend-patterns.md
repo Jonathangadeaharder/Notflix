@@ -48,6 +48,7 @@ The frontend consumes this state via polling; there is no SSE/WebSocket client c
 
 - Shared instances are composed in `src/lib/server/container.ts`
 - Routes and startup hooks should use container exports rather than instantiating fresh service graphs
+- **All API routes and form actions delegate to named service functions** (`startVideoProcessingWithDefaults`, `deleteVideoAndAssets`, `buildSubtitleResponseWithDefaults`). Routes hold no business logic and tests mock the service function directly (see ADR-005 §2a).
 
 ### Brain (FastAPI)
 

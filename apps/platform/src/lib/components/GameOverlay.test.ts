@@ -50,10 +50,10 @@ describe("GameOverlay.svelte", () => {
       expect(getByTestId("swipe-left")).toBeDefined();
     });
     expect(getByTestId("card-original").textContent).toContain("dos");
-    
+
     const unknownButton = getByTestId("swipe-left");
     await fireEvent.click(unknownButton);
-    
+
     expect(mockSubmit).toHaveBeenCalledWith({
       lemma: "dos",
       lang: "es",

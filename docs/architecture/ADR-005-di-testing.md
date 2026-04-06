@@ -24,6 +24,31 @@ Application services depend on ports/interfaces rather than concrete adapters.
 
 This keeps orchestration, subtitle processing, and other domain services testable without changing the calling code.
 
+### 2a. Route→Service Delegation (canonical pattern)
+
+Every API route delegates to a named service function that encapsulates all infrastructure access:
+
+- `startVideoProcessingWithDefaults` — trigger media processing from any route or action
+- `deleteVideoAndAssets` — remove a video record and its files
+- `buildSubtitleResponseWithDefaults` — build a subtitle VTT HTTP response
+
+Routes hold no business logic. Tests mock the service function, not the DB, container, or filesystem directly. This is the gold-standard test seam for all SvelteKit API routes.
+
+### 2b. Test Runner Configuration
+
+Unit tests are configured in `vite.config.ts` with explicit `include` patterns:
+
+```ts
+test: {
+  include: ['src/**/*.test.ts', 'tests/api/**/*.test.ts'],
+  exclude: ['node_modules/**', 'src/**/*.integration.test.ts'],
+}
+```
+
+- `tests/api/**/*.test.ts` — route-level unit tests (mock service functions)
+- `src/**/*.integration.test.ts` — run separately via `vitest.integration.config.ts` (requires live DB)
+- `tests/e2e/**/*.spec.ts` — run via Playwright
+
 ## 3. AI Service Boundary
 
 FastAPI route handlers obtain heavy services through dependency functions.

@@ -72,7 +72,7 @@ describe("SubtitleDisplay.svelte", () => {
     });
 
     const words = screen.getAllByTestId("subtitle-word");
-    
+
     // Hover the second word
     await fireEvent.mouseEnter(words[1]);
 
@@ -95,11 +95,11 @@ describe("SubtitleDisplay.svelte", () => {
     });
 
     const words = screen.getAllByTestId("subtitle-word");
-    
+
     // Click the word to pin and open
     await fireEvent.click(words[1]);
     expect(screen.getByTestId("word-popup")).toBeVisible();
-    
+
     const markKnownButton = screen.getByRole("button", { name: "Mark Known" });
     await fireEvent.click(markKnownButton);
 
@@ -108,7 +108,7 @@ describe("SubtitleDisplay.svelte", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ lemma: "murciélago", lang: "Target" }),
-      })
+      }),
     );
 
     await waitFor(() => {
