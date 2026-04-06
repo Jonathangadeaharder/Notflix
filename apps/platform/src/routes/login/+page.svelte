@@ -8,11 +8,29 @@
   let email = $state("");
   let password = $state("");
   let errorMessage = $state("");
+  let fieldErrors = $state<{ email?: string; password?: string }>({});
 
   async function handleLogin(e: Event) {
     e.preventDefault();
-    isLoading = true;
+    fieldErrors = {};
     errorMessage = "";
+
+    const errors: { email?: string; password?: string } = {};
+    /* eslint-disable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
+    if (!email.trim()) errors.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      errors.email = "Please enter a valid email address.";
+    if (!password) errors.password = "Password is required.";
+    else if (password.length < 6)
+      errors.password = "Password must be at least 6 characters.";
+    /* eslint-enable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
+
+    if (Object.keys(errors).length > 0) {
+      fieldErrors = errors;
+      return;
+    }
+
+    isLoading = true;
 
     const { error } = await signInEmail(email, password, "/");
 
@@ -61,7 +79,7 @@
       </Card.Description>
     </Card.Header>
     <Card.Content>
-      <form onsubmit={handleLogin} class="space-y-4">
+      <form onsubmit={handleLogin} novalidate class="space-y-4">
         {#if errorMessage}
           <div
             class="p-3 text-sm bg-magenta-900/30 border border-magenta-900/50 text-magenta-500 rounded-md"
@@ -80,9 +98,13 @@
             name="email"
             bind:value={email}
             placeholder="name@example.com"
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all"
-            required
+            class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.email
+              ? 'border-magenta-500'
+              : 'border-zinc-700'}"
           />
+          {#if fieldErrors.email}<p class="text-xs text-magenta-500 mt-1">
+              {fieldErrors.email}
+            </p>{/if}
         </div>
         <div class="space-y-2">
           <label for="password" class="text-sm font-medium text-zinc-300"
@@ -93,9 +115,13 @@
             id="password"
             name="password"
             bind:value={password}
-            class="w-full px-3 py-2 bg-black/50 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all"
-            required
+            class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.password
+              ? 'border-magenta-500'
+              : 'border-zinc-700'}"
           />
+          {#if fieldErrors.password}<p class="text-xs text-magenta-500 mt-1">
+              {fieldErrors.password}
+            </p>{/if}
         </div>
         <Button
           type="submit"

@@ -1,4 +1,4 @@
-_format_version: "1.1"
+_format_version: "3.0"
 
 services:
   - name: auth-v1
@@ -30,6 +30,8 @@ services:
             - Date
             - apikey
             - Authorization
+            - x-supabase-api-version
+            - x-client-info
           credentials: true
           max_age: 3600
 

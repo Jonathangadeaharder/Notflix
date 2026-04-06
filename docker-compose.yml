@@ -12,6 +12,9 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB:       postgres
+    command: ["postgres", "-c", "listen_addresses=*", "-c", "log_statement=none", "-c", "log_min_messages=warning"]
+    stop_signal: SIGINT
+    stop_grace_period: 2m
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,7 +26,7 @@ services:
 
   # ── GoTrue (Auth) ─────────────────────────────────────
   auth:
-    image: supabase/gotrue:v2.170.0
+    image: supabase/gotrue:v2.188.1
     container_name: notflix-auth
     depends_on:
       db: { condition: service_healthy }
@@ -44,12 +47,12 @@ services:
       GOTRUE_SMTP_ADMIN_EMAIL:  admin@example.com
       GOTRUE_SMTP_HOST:         inbucket
       GOTRUE_SMTP_PORT:         "2500"
-      GOTRUE_LOG_LEVEL:         DEBUG
+      GOTRUE_LOG_LEVEL:         warn
       GOTRUE_OPERATOR_TOKEN:    ${OPERATOR_TOKEN:-super-secret-operator-token}
 
   # ── Kong (API Gateway) ────────────────────────────────
   kong:
-    image: kong:2.8.1
+    image: kong:3.9.1
     container_name: notflix-kong
     depends_on: [auth]
     ports:

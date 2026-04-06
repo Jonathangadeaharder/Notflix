@@ -19,6 +19,7 @@
   let targetLang = $state("es");
   let nativeLang = $state("en");
   let isSubmitting = $state(false);
+  let fileError = $state("");
 
   $effect(() => {
     if (data.initialData) {
@@ -28,31 +29,7 @@
     }
   });
 
-  function getTargetLanguageLabel(lang: string) {
-    if (lang === "es") return "Spanish (ES)";
-    if (lang === "de") return "German (DE)";
-    if (lang === "fr") return "French (FR)";
-    return "Select Language";
-  }
-
-  function getNativeLanguageLabel(lang: string) {
-    if (lang === "en") return "English (EN)";
-    if (lang === "de") return "German (DE)";
-    if (lang === "fr") return "French (FR)";
-    return "Select Language";
-  }
-
   let fileInput: HTMLInputElement;
-
-  // Sync local state when server data changes
-  $effect(() => {
-    if (data.initialData) {
-      const nextTitle = data.initialData.title;
-      const nextLang = data.initialData.targetLang;
-      title = nextTitle;
-      targetLang = nextLang;
-    }
-  });
 </script>
 
 <div class="max-w-3xl mx-auto p-8">
@@ -74,6 +51,11 @@
       action="?/upload"
       enctype="multipart/form-data"
       use:enhance={() => {
+        fileError = "";
+        if (!fileInput?.files?.length) {
+          fileError = "Please select a video or audio file to upload.";
+          return ({ cancel }) => cancel();
+        }
         isSubmitting = true;
         return async ({ update }) => {
           await update();
@@ -101,22 +83,29 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-2">
-          <label class="text-sm font-medium text-zinc-300" for="targetLang">Target Language</label>
+          <label class="text-sm font-medium text-zinc-300" for="targetLang"
+            >Target Language</label
+          >
           <select
             name="targetLang"
             id="targetLang"
             bind:value={targetLang}
             class="w-full bg-black/50 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-magenta-500"
           >
+            <option value="en">English (EN)</option>
             <option value="es">Spanish (ES)</option>
             <option value="de">German (DE)</option>
             <option value="fr">French (FR)</option>
           </select>
-          {#if form?.errors?.targetLang}<p class="text-sm text-magenta-500">{form.errors.targetLang[0]}</p>{/if}
+          {#if form?.errors?.targetLang}<p class="text-sm text-magenta-500">
+              {form.errors.targetLang[0]}
+            </p>{/if}
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium text-zinc-300" for="nativeLang">Your Language</label>
+          <label class="text-sm font-medium text-zinc-300" for="nativeLang"
+            >Your Language</label
+          >
           <select
             name="nativeLang"
             id="nativeLang"
@@ -124,10 +113,13 @@
             class="w-full bg-black/50 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-magenta-500"
           >
             <option value="en">English (EN)</option>
+            <option value="es">Spanish (ES)</option>
             <option value="de">German (DE)</option>
             <option value="fr">French (FR)</option>
           </select>
-          {#if form?.errors?.nativeLang}<p class="text-sm text-magenta-500">{form.errors.nativeLang[0]}</p>{/if}
+          {#if form?.errors?.nativeLang}<p class="text-sm text-magenta-500">
+              {form.errors.nativeLang[0]}
+            </p>{/if}
         </div>
       </div>
 
@@ -147,7 +139,6 @@
             id="file"
             name="file"
             accept="video/*,audio/*"
-            required
             class="hidden"
             bind:this={fileInput}
             data-testid="file-input"
@@ -173,6 +164,7 @@
         {#if form?.errors?.file}<p class="text-sm text-magenta-500">
             {form.errors.file[0]}
           </p>{/if}
+        {#if fileError}<p class="text-sm text-magenta-500">{fileError}</p>{/if}
       </div>
 
       <div class="flex justify-end gap-4 pt-4 border-t border-white/5">

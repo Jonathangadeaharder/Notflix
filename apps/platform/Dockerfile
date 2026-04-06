@@ -3,6 +3,8 @@ FROM node:22-alpine AS builder
 
 RUN npm install -g pnpm@10
 
+ENV HUSKY=0
+
 WORKDIR /app
 
 # ── Dependency layer
@@ -10,15 +12,15 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/database/package.json packages/database/
 COPY apps/platform/package.json apps/platform/
 
-RUN pnpm install --filter @notflix/platform --filter @notflix/database && \
-    pnpm approve-builds esbuild && \
-    pnpm install --filter @notflix/platform --filter @notflix/database
+RUN pnpm install --filter @notflix/platform --filter @notflix/database --ignore-scripts && \
+    pnpm rebuild esbuild
 
 # ── Source layer
 COPY packages/database packages/database
 COPY apps/platform apps/platform
 
-RUN pnpm run --filter @notflix/platform build
+RUN pnpm run --filter @notflix/platform prepare && \
+    pnpm run --filter @notflix/platform build
 
 # ── Runner layer
 FROM node:22-alpine AS runner
