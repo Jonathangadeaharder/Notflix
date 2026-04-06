@@ -19,11 +19,25 @@ export interface Session {
 }
 
 function createSupabaseServerClient(event: RequestEvent) {
-  const supabaseUrl = env.SUPABASE_URL || publicEnv.PUBLIC_SUPABASE_URL || "";
+  // Always use PUBLIC_SUPABASE_URL as the client URL so the cookie key
+  // (e.g. "sb-localhost-auth-token") matches what the browser sets.
+  // When running inside Docker, rewrite outgoing fetch requests to the
+  // internal SUPABASE_URL (e.g. http://kong:8000) so they resolve correctly.
+  const publicUrl = publicEnv.PUBLIC_SUPABASE_URL || "";
+  const internalUrl = env.SUPABASE_URL || publicUrl;
+
+  const customFetch: typeof fetch = (input, init) => {
+    if (typeof input === "string" && internalUrl && internalUrl !== publicUrl) {
+      input = input.replace(publicUrl, internalUrl);
+    }
+    return fetch(input, init);
+  };
+
   return createServerClient(
-    supabaseUrl,
+    publicUrl,
     publicEnv.PUBLIC_SUPABASE_ANON_KEY || "",
     {
+      global: { fetch: customFetch },
       cookies: {
         getAll() {
           return event.cookies.getAll();

@@ -2,20 +2,19 @@
   /* eslint-disable svelte/no-navigation-without-resolve */
   import { base } from "$app/paths";
   import { Button } from "$lib/components/ui/button";
-  import { Plus, Play, RotateCw, Video } from "lucide-svelte";
+  import { Plus, Play, RotateCw, Video, Mic, Languages } from "lucide-svelte";
   import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
   import { enhance } from "$app/forms";
   import { invalidate } from "$app/navigation";
 
   let { data } = $props();
+  let submittingId = $state<string | null>(null);
 
   const POLLING_INTERVAL_MS = 3000;
 
   $effect(() => {
-    const hasPending = data.videos.some(
-      (v) => v.status === "PENDING" || !v.status,
-    );
+    const hasPending = data.videos.some((v) => v.status === "PENDING");
 
     if (!hasPending) return;
 
@@ -69,21 +68,23 @@
           href="{base}/watch/{video.id}"
           class="block aspect-video bg-black relative overflow-hidden"
         >
+          <!-- Fallback always present underneath -->
+          <div
+            class="absolute inset-0 flex flex-col items-center justify-center text-zinc-700 bg-zinc-900"
+          >
+            <Video class="w-12 h-12 mb-2 opacity-50" />
+            <span class="text-xs font-medium uppercase tracking-wider"
+              >No Thumbnail</span
+            >
+          </div>
           {#if video.thumbnailPath}
             <!-- svelte-ignore a11y_missing_attribute -->
             <img
               src={video.thumbnailPath}
-              class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+              onerror={(e) =>
+                ((e.currentTarget as HTMLImageElement).style.display = "none")}
+              class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
             />
-          {:else}
-            <div
-              class="w-full h-full flex flex-col items-center justify-center text-zinc-700 bg-zinc-900"
-            >
-              <Video class="w-12 h-12 mb-2 opacity-50" />
-              <span class="text-xs font-medium uppercase tracking-wider"
-                >No Thumbnail</span
-              >
-            </div>
           {/if}
 
           <div class="absolute top-2 right-2">
@@ -94,6 +95,24 @@
               {video.status || "UNPROCESSED"}
             </Badge>
           </div>
+
+          {#if video.status === "PENDING"}
+            <div class="absolute bottom-0 left-0 right-0">
+              <div class="h-1 bg-zinc-800">
+                <div
+                  class="h-full bg-magenta-500 transition-all duration-1000"
+                  style="width: {video.progressPercent ?? 0}%"
+                ></div>
+              </div>
+              {#if video.progressStage}
+                <div
+                  class="bg-black/70 text-zinc-300 text-[10px] px-2 py-0.5 uppercase tracking-wider"
+                >
+                  {video.progressStage}…
+                </div>
+              {/if}
+            </div>
+          {/if}
 
           <div
             class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -121,16 +140,88 @@
           >
             Watch Now
           </Button>
-          {#if !video.status || video.status === "ERROR"}
-            <form method="POST" action="{base}/studio?/reprocess" use:enhance>
+          {#if video.status === "ERROR"}
+            <form
+              method="POST"
+              action="{base}/studio?/reprocess"
+              use:enhance={() => {
+                submittingId = video.id;
+                return async ({ update }) => {
+                  await update();
+                  submittingId = null;
+                };
+              }}
+            >
               <input type="hidden" name="id" value={video.id} />
+              <input
+                type="hidden"
+                name="targetLang"
+                value={data.userTargetLang}
+              />
               <Button
                 type="submit"
                 variant="ghost"
+                disabled={submittingId === video.id}
                 class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
               >
                 <RotateCw class="mr-1 h-3 w-3" />
                 Retry
+              </Button>
+            </form>
+          {:else if !video.status && !video.hasAnyTranscription}
+            <form
+              method="POST"
+              action="{base}/studio?/reprocess"
+              use:enhance={() => {
+                submittingId = video.id;
+                return async ({ update }) => {
+                  await update();
+                  submittingId = null;
+                };
+              }}
+            >
+              <input type="hidden" name="id" value={video.id} />
+              <input
+                type="hidden"
+                name="targetLang"
+                value={data.userTargetLang}
+              />
+              <Button
+                type="submit"
+                variant="ghost"
+                disabled={submittingId === video.id}
+                class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
+              >
+                <Mic class="mr-1 h-3 w-3" />
+                Transcribe
+              </Button>
+            </form>
+          {:else if !video.status && video.hasAnyTranscription}
+            <form
+              method="POST"
+              action="{base}/studio?/reprocess"
+              use:enhance={() => {
+                submittingId = video.id;
+                return async ({ update }) => {
+                  await update();
+                  submittingId = null;
+                };
+              }}
+            >
+              <input type="hidden" name="id" value={video.id} />
+              <input
+                type="hidden"
+                name="targetLang"
+                value={data.userTargetLang}
+              />
+              <Button
+                type="submit"
+                variant="ghost"
+                disabled={submittingId === video.id}
+                class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
+              >
+                <Languages class="mr-1 h-3 w-3" />
+                Translate to {data.userTargetLang}
               </Button>
             </form>
           {/if}

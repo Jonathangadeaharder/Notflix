@@ -31,6 +31,8 @@ export const CONFIG = {
   AI_SERVICE_URL: env.AI_SERVICE_URL || "http://127.0.0.1:8000",
   AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || "dev_secret_key",
   AI_SERVICE_TIMEOUT_MS: Number(env.AI_SERVICE_TIMEOUT_MS) || 15000,
+  AI_SERVICE_TRANSCRIBE_TIMEOUT_MS:
+    Number(env.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS) || 300_000,
   UPLOAD_DIR: uploadDir,
   RESOLVED_UPLOAD_DIR: resolvedUploadDir,
   MEDIA_ROOT: resolvedUploadDir,
@@ -56,10 +58,9 @@ export function toAiServicePath(localPath: string): string {
   if (!isDocker) {
     return localPath;
   }
-  const filename = path.basename(localPath);
-  // Default to the standard Docker internal path if env var not set
+  // Split on both / and \ so Windows paths (stored from local uploads)
+  // work correctly when the pipeline runs inside the Linux Docker container.
+  const filename = localPath.split(/[/\\]/).pop() || path.basename(localPath);
   const mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH;
-
-  // Simple, robust concatenation. No magic OS detection.
   return `${mediaRootInternal}/${filename}`;
 }

@@ -1,5 +1,5 @@
 import { db } from "$lib/server/infrastructure/database";
-import { knownWords, user } from "@notflix/database";
+import { vocabReference, user } from "@notflix/database";
 import { eq, and, sql, ilike } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { redirect } from "@sveltejs/kit";
@@ -9,7 +9,7 @@ import { HTTP_STATUS } from "$lib/constants";
 export const load: PageServerLoad = async ({ locals, url }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(HTTP_STATUS.SEE_OTHER, "/login");
+    throw redirect(HTTP_STATUS.SEE_OTHER, "/login?next=/vocabulary");
   }
 
   const userId = session.user.id;
@@ -28,56 +28,55 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const limit = 50;
   const offset = (page - 1) * limit;
 
-  // Build conditions
-  const conditions = [eq(knownWords.userId, userId), eq(knownWords.lang, lang)];
+  // Build conditions against the global vocab reference
+  const conditions = [eq(vocabReference.lang, lang)];
 
   if (level) {
     if (level === "untracked") {
-      conditions.push(sql`${knownWords.level} IS NULL`);
+      conditions.push(sql`${vocabReference.level} IS NULL`);
     } else {
       conditions.push(
-        eq(knownWords.level, level as "A1" | "A2" | "B1" | "B2" | "C1" | "C2"),
+        eq(
+          vocabReference.level,
+          level as "A1" | "A2" | "B1" | "B2" | "C1" | "C2",
+        ),
       );
     }
   }
 
   if (search) {
-    conditions.push(ilike(knownWords.lemma, `%${search}%`));
+    conditions.push(ilike(vocabReference.lemma, `%${search}%`));
   }
 
-  // Fetch words
   const words = await db
     .select({
-      lemma: knownWords.lemma,
-      lang: knownWords.lang,
-      level: knownWords.level,
-      isProperNoun: knownWords.isProperNoun,
+      lemma: vocabReference.lemma,
+      lang: vocabReference.lang,
+      level: vocabReference.level,
+      isProperNoun: vocabReference.isProperNoun,
     })
-    .from(knownWords)
+    .from(vocabReference)
     .where(and(...conditions))
-    .orderBy(knownWords.lemma)
+    .orderBy(vocabReference.lemma)
     .limit(limit)
     .offset(offset);
 
-  // Get total count
   const countResult = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(knownWords)
+    .from(vocabReference)
     .where(and(...conditions));
 
   const total = countResult[0]?.count ?? 0;
 
-  // Get counts per level for the sidebar
   const levelCounts = await db
     .select({
-      level: knownWords.level,
+      level: vocabReference.level,
       count: sql<number>`count(*)::int`,
     })
-    .from(knownWords)
-    .where(and(eq(knownWords.userId, userId), eq(knownWords.lang, lang)))
-    .groupBy(knownWords.level);
+    .from(vocabReference)
+    .where(eq(vocabReference.lang, lang))
+    .groupBy(vocabReference.level);
 
-  // Transform to a map
   const countsMap: Record<string, number> = {
     A1: 0,
     A2: 0,

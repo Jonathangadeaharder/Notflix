@@ -43,6 +43,7 @@ services:
         strip_path: false
         paths:
           - /transcribe
+          - /transcribe/stream
           - /translate
           - /filter
           - /generate_thumbnail

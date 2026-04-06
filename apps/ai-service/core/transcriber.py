@@ -9,6 +9,7 @@ from .interfaces import ITranscriber, TranscriptionResult, Segment
 
 logger = structlog.get_logger()
 
+
 class WhisperTranscriber(ITranscriber):
     def __init__(self, model_size="tiny", device=None, compute_type="float32"):
         self._test_mode = os.getenv("AI_SERVICE_TEST_MODE") == "1"
@@ -17,10 +18,14 @@ class WhisperTranscriber(ITranscriber):
         else:
             if device is None:
                 device = "cuda" if torch.cuda.is_available() else "cpu"
-            self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
+            self.model = WhisperModel(
+                model_size, device=device, compute_type=compute_type
+            )
         self._lock = threading.Lock()
 
-    def transcribe(self, file_path: str, language: Optional[str] = None) -> TranscriptionResult:
+    def transcribe(
+        self, file_path: str, language: Optional[str] = None
+    ) -> TranscriptionResult:
         with self._lock:
             if self._test_mode:
                 return TranscriptionResult(
@@ -29,54 +34,60 @@ class WhisperTranscriber(ITranscriber):
                     language_probability=1.0,
                 )
             segments, info = self.model.transcribe(
-                file_path,
-                language=language,
-                beam_size=5
+                file_path, language=language, beam_size=5
             )
 
             result_segments = []
             for s in segments:
-                result_segments.append(
-                    Segment(start=s.start, end=s.end, text=s.text)
-                )
+                result_segments.append(Segment(start=s.start, end=s.end, text=s.text))
 
         logger.info(
             "whisper_detected_language",
             language=info.language,
-            probability=info.language_probability
+            probability=info.language_probability,
         )
 
         return TranscriptionResult(
             segments=result_segments,
             language=info.language,
-            language_probability=info.language_probability
+            language_probability=info.language_probability,
         )
 
     def transcribe_stream(self, file_path: str, language: Optional[str] = None):
-        # Streaming might need careful locking
-        # For now, we lock the initialization of the stream
+        if self._test_mode:
+            yield {
+                "type": "info",
+                "language": language or "en",
+                "probability": 1.0,
+                "duration": 10.0,
+            }
+            yield {"type": "segment", "start": 0.0, "end": 5.0, "text": "test"}
+            yield {"type": "segment", "start": 5.0, "end": 10.0, "text": "stream"}
+            return
+
         with self._lock:
             segments, info = self.model.transcribe(
-                file_path,
-                language=language,
-                beam_size=5
+                file_path, language=language, beam_size=5
             )
 
             logger.info(
                 "whisper_stream_detected_language",
                 language=info.language,
                 probability=info.language_probability,
+                duration=info.duration,
             )
 
-            # Yield initial info
             yield {
+                "type": "info",
                 "language": info.language,
-                "probability": info.language_probability
+                "probability": info.language_probability,
+                "duration": info.duration,
             }
 
             for segment in segments:
                 yield {
+                    "type": "segment",
                     "start": segment.start,
                     "end": segment.end,
-                    "text": segment.text
+                    "text": segment.text,
                 }

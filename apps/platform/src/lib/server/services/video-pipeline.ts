@@ -39,11 +39,18 @@ export function registerPipelineListeners(
             videoId: payload.videoId,
             targetLang: payload.targetLang,
             status: ProcessingStatus.PENDING,
+            progressStage: "QUEUED",
+            progressPercent: 0,
             vttJson: null,
           })
           .onConflictDoUpdate({
             target: [videoProcessing.videoId, videoProcessing.targetLang],
-            set: { status: ProcessingStatus.PENDING, vttJson: null },
+            set: {
+              status: ProcessingStatus.PENDING,
+              progressStage: "QUEUED",
+              progressPercent: 0,
+              vttJson: null,
+            },
           });
 
         globalEvents.emit(EVENTS.PROCESSING_UPDATE, {
@@ -51,6 +58,10 @@ export function registerPipelineListeners(
           status: "TRANSCRIBING",
           percent: 10,
         });
+        await db
+          .update(videoProcessing)
+          .set({ progressStage: "TRANSCRIBING", progressPercent: 5 })
+          .where(eq(videoProcessing.videoId, payload.videoId));
 
         const [record] = await db
           .select()
@@ -60,9 +71,15 @@ export function registerPipelineListeners(
         if (!record) throw new Error("Video not found");
 
         const aiPath = toAiServicePath(record.filePath);
-        const transcription = await aiGateway.transcribe(
+        const transcription = await aiGateway.transcribeWithProgress(
           aiPath,
           payload.targetLang,
+          async (percent) => {
+            await db
+              .update(videoProcessing)
+              .set({ progressStage: "TRANSCRIBING", progressPercent: percent })
+              .where(eq(videoProcessing.videoId, payload.videoId));
+          },
         );
 
         globalEvents.emit(EVENTS.TRANSCRIPTION_COMPLETED, {
@@ -83,10 +100,15 @@ export function registerPipelineListeners(
             .catch((e) => console.warn("Thumbnail failed", e));
         }
       } catch (err) {
-        console.error(`[Pipeline Error] TRANSCRIBE:`, err);
+        const message = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        console.error(
+          `[Pipeline Error] TRANSCRIBE videoId=${payload.videoId}: ${message}`,
+          stack ?? "",
+        );
         await db
           .update(videoProcessing)
-          .set({ status: ProcessingStatus.ERROR })
+          .set({ status: ProcessingStatus.ERROR, progressStage: "FAILED" })
           .where(eq(videoProcessing.videoId, payload.videoId));
       }
     },
@@ -105,6 +127,10 @@ export function registerPipelineListeners(
           status: "ANALYZING",
           percent: 50,
         });
+        await db
+          .update(videoProcessing)
+          .set({ progressStage: "ANALYZING", progressPercent: 50 })
+          .where(eq(videoProcessing.videoId, payload.videoId));
 
         const segmentTexts = payload.transcription.segments.map(
           (s: any) => s.text,
@@ -148,6 +174,10 @@ export function registerPipelineListeners(
           status: "TRANSLATING",
           percent: 80,
         });
+        await db
+          .update(videoProcessing)
+          .set({ progressStage: "TRANSLATING", progressPercent: 80 })
+          .where(eq(videoProcessing.videoId, payload.videoId));
 
         let finalSegments = payload.segments;
         const sentenceTexts = finalSegments.map((s: any) => s.text);
@@ -216,7 +246,12 @@ export function registerPipelineListeners(
         // Save COMPLETED
         await db
           .update(videoProcessing)
-          .set({ status: ProcessingStatus.COMPLETED, vttJson: finalSegments })
+          .set({
+            status: ProcessingStatus.COMPLETED,
+            progressStage: "READY",
+            progressPercent: 100,
+            vttJson: finalSegments,
+          })
           .where(eq(videoProcessing.videoId, payload.videoId));
 
         globalEvents.emit(EVENTS.PROCESSING_UPDATE, {
