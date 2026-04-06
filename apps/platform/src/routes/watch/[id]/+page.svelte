@@ -6,7 +6,6 @@
   import { ChevronLeft } from "lucide-svelte";
   import { GAME } from "$lib/constants";
 
-
   type GameCard = {
     lemma: string;
     lang: string;

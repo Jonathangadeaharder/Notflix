@@ -16,12 +16,13 @@
     const hasPending = data.videos.some(
       (v) => v.status === "PENDING" || !v.status,
     );
-    
+
     if (!hasPending) return;
 
     const interval = setInterval(() => {
-      if (document.visibilityState !== "visible" && !(window as any).__e2e) return;
-      
+      if (document.visibilityState !== "visible" && !(window as any).__e2e)
+        return;
+
       invalidate("app:videos");
     }, POLLING_INTERVAL_MS);
 
@@ -35,16 +36,6 @@
     if (status === "ERROR") return "destructive";
     if (status === "PENDING") return "secondary";
     return "outline";
-  }
-
-  const STEP_CLASS_MAP: Record<string, string> = {
-    complete: "bg-green-500",
-    active: "bg-magenta-500",
-    error: "bg-magenta-700",
-  };
-
-  function getStepClass(state: string): string {
-    return STEP_CLASS_MAP[state] ?? "bg-zinc-700";
   }
 </script>
 
@@ -66,7 +57,9 @@
     </Button>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+  <div
+    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+  >
     {#each data.videos as video (video.id)}
       <Card.Root
         class="group bg-zinc-900/50 border-white/5 hover:border-white/20 transition-all hover:-translate-y-1 overflow-hidden"
@@ -87,7 +80,9 @@
               class="w-full h-full flex flex-col items-center justify-center text-zinc-700 bg-zinc-900"
             >
               <Video class="w-12 h-12 mb-2 opacity-50" />
-              <span class="text-xs font-medium uppercase tracking-wider">No Thumbnail</span>
+              <span class="text-xs font-medium uppercase tracking-wider"
+                >No Thumbnail</span
+              >
             </div>
           {/if}
 
@@ -100,8 +95,12 @@
             </Badge>
           </div>
 
-          <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div class="bg-white text-black p-3 rounded-full transform scale-75 group-hover:scale-100 transition-transform">
+          <div
+            class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <div
+              class="bg-white text-black p-3 rounded-full transform scale-75 group-hover:scale-100 transition-transform"
+            >
               <Play class="w-6 h-6 fill-current" />
             </div>
           </div>
@@ -112,7 +111,9 @@
             Uploaded on {new Date(video.createdAt).toLocaleDateString()}
           </Card.Description>
         </Card.Header>
-        <Card.Content class="p-5 pt-4 mt-2 border-t border-white/5 flex items-center justify-between">
+        <Card.Content
+          class="p-5 pt-4 mt-2 border-t border-white/5 flex items-center justify-between"
+        >
           <Button
             variant="link"
             href="{base}/watch/{video.id}"
@@ -138,8 +139,12 @@
     {/each}
 
     {#if data.videos.length === 0}
-      <div class="col-span-full py-32 text-center border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800 mb-4 text-zinc-500">
+      <div
+        class="col-span-full py-32 text-center border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20"
+      >
+        <div
+          class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800 mb-4 text-zinc-500"
+        >
           <Video class="w-8 h-8" />
         </div>
         <h3 class="text-xl font-bold text-white mb-2">No content yet</h3>
