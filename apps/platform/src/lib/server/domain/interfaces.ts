@@ -9,6 +9,11 @@ export type ThumbnailResponse = components["schemas"]["ThumbnailResponse"];
 
 export interface IAiGateway {
   transcribe(filePath: string, lang?: string): Promise<TranscriptionResponse>;
+  transcribeWithProgress(
+    filePath: string,
+    lang: string,
+    onProgress: (percent: number) => void | Promise<void>,
+  ): Promise<TranscriptionResponse>;
   analyzeBatch(texts: string[], lang?: string): Promise<FilterResponse>;
   translate(
     texts: string[],

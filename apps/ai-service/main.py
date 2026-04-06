@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, List
 
+import json
 import structlog
 import torch
 import uvicorn
@@ -14,6 +15,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Security
 from fastapi.responses import JSONResponse
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, field_validator
+from sse_starlette.sse import EventSourceResponse
 from core.filter import SpacyFilter
 from core.interfaces import Segment, TokenAnalysis
 from core.transcriber import WhisperTranscriber
@@ -339,6 +341,55 @@ def transcribe(req: TranscriptionRequest, transcriber: TranscriberDep):
         language=result.language,
         language_probability=result.language_probability,
     )
+
+
+@app.post(
+    "/transcribe/stream",
+    tags=["AI"],
+    description="Streams transcription progress via SSE. Yields info then segment events.",
+)
+async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberDep):
+    logger.info(
+        "request_received", endpoint="/transcribe/stream", file_path=req.file_path
+    )
+
+    try:
+        candidate_path = resolve_candidate_audio_path(
+            req.file_path, get_audio_base_dir()
+        )
+    except ValueError as e:
+        reason = classify_path_error(e)
+        logger.error(
+            "invalid_file_path", path=req.file_path, reason=reason, error=str(e)
+        )
+        raise HTTPException(status_code=400, detail="Invalid file path.") from e
+    except (TypeError, OSError) as e:
+        logger.error(
+            "invalid_file_path",
+            path=req.file_path,
+            reason="filesystem_error",
+            error=str(e),
+        )
+        raise HTTPException(status_code=400, detail="Invalid file path.") from e
+
+    if not os.path.exists(candidate_path):
+        logger.error("file_not_found_system_error", path=str(candidate_path))
+        raise HTTPException(
+            status_code=500, detail=f"File not found on disk: {candidate_path}"
+        )
+
+    async def event_generator():
+        loop = asyncio.get_event_loop()
+        gen = transcriber.transcribe_stream(str(candidate_path), req.language)
+        while True:
+            try:
+                item = await loop.run_in_executor(None, next, gen)
+                event_type = item.get("type", "segment")
+                yield {"event": event_type, "data": json.dumps(item)}
+            except StopIteration:
+                break
+
+    return EventSourceResponse(event_generator())
 
 
 @app.post(

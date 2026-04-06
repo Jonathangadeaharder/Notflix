@@ -96,6 +96,24 @@
             </Badge>
           </div>
 
+          {#if video.status === "PENDING"}
+            <div class="absolute bottom-0 left-0 right-0">
+              <div class="h-1 bg-zinc-800">
+                <div
+                  class="h-full bg-magenta-500 transition-all duration-1000"
+                  style="width: {video.progressPercent ?? 0}%"
+                ></div>
+              </div>
+              {#if video.progressStage}
+                <div
+                  class="bg-black/70 text-zinc-300 text-[10px] px-2 py-0.5 uppercase tracking-wider"
+                >
+                  {video.progressStage}…
+                </div>
+              {/if}
+            </div>
+          {/if}
+
           <div
             class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           >

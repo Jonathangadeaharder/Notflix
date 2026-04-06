@@ -31,6 +31,8 @@ export const CONFIG = {
   AI_SERVICE_URL: env.AI_SERVICE_URL || "http://127.0.0.1:8000",
   AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || "dev_secret_key",
   AI_SERVICE_TIMEOUT_MS: Number(env.AI_SERVICE_TIMEOUT_MS) || 15000,
+  AI_SERVICE_TRANSCRIBE_TIMEOUT_MS:
+    Number(env.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS) || 300_000,
   UPLOAD_DIR: uploadDir,
   RESOLVED_UPLOAD_DIR: resolvedUploadDir,
   MEDIA_ROOT: resolvedUploadDir,

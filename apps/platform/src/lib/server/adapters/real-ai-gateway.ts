@@ -20,6 +20,8 @@ export class AiServiceError extends Error {
 
 export class RealAiGateway implements IAiGateway {
   private readonly timeoutMs = CONFIG.AI_SERVICE_TIMEOUT_MS;
+  private readonly transcribeTimeoutMs =
+    CONFIG.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS;
 
   private getHeaders() {
     const headers: Record<string, string> = {
@@ -70,6 +72,97 @@ export class RealAiGateway implements IAiGateway {
       },
     );
     return this.handleResponse(res, "Transcribe");
+  }
+
+  async transcribeWithProgress(
+    filePath: string,
+    lang: string,
+    onProgress: (percent: number) => void | Promise<void>,
+  ): Promise<TranscriptionResponse> {
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      this.transcribeTimeoutMs,
+    );
+
+    let res: Response;
+    try {
+      res = await fetch(`${CONFIG.AI_SERVICE_URL}/transcribe/stream`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ file_path: filePath, language: lang }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+
+    if (!res.ok) {
+      clearTimeout(timer);
+      const errorText = await res.text().catch(() => res.statusText);
+      throw new AiServiceError(
+        res.status,
+        `AI Service TranscribeStream Error (${res.status}): ${errorText}`,
+      );
+    }
+
+    const segments: Array<{ start: number; end: number; text: string }> = [];
+    let language = lang;
+    let languageProbability = 1.0;
+    let duration = 0;
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        let currentEvent = "";
+        for (const line of lines) {
+          if (line.startsWith("event:")) {
+            currentEvent = line.slice(6).trim();
+          } else if (line.startsWith("data:")) {
+            const raw = line.slice(5).trim();
+            if (!raw || raw === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(raw);
+              if (currentEvent === "info" || parsed.type === "info") {
+                language = parsed.language ?? language;
+                languageProbability = parsed.probability ?? languageProbability;
+                duration = parsed.duration ?? duration;
+              } else {
+                segments.push({
+                  start: parsed.start,
+                  end: parsed.end,
+                  text: parsed.text,
+                });
+                if (duration > 0) {
+                  const lastEnd = parsed.end as number;
+                  const rawPercent = Math.round((lastEnd / duration) * 40);
+                  await onProgress(Math.min(rawPercent, 40));
+                }
+              }
+            } catch {
+              // malformed SSE data — skip
+            }
+            currentEvent = "";
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+      clearTimeout(timer);
+    }
+
+    return { segments, language, language_probability: languageProbability };
   }
 
   async analyzeBatch(
