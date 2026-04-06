@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { base } from "$app/paths";
+  import { resolve } from "$app/paths";
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
   import { ChevronLeft, UploadCloud } from "lucide-svelte";
@@ -37,7 +37,7 @@
     <Button
       variant="ghost"
       size="icon"
-      href="{base}/studio"
+      href={resolve("/studio")}
       aria-label="Back to Studio"
     >
       <ChevronLeft class="h-6 w-6" />
@@ -169,7 +169,7 @@
       </div>
 
       <div class="flex justify-end gap-4 pt-4 border-t border-white/5">
-        <Button variant="ghost" href="{base}/studio">Cancel</Button>
+        <Button variant="ghost" href={resolve("/studio")}>Cancel</Button>
         <Button
           type="submit"
           disabled={isSubmitting}

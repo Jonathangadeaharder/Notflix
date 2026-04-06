@@ -1,6 +1,5 @@
 <script lang="ts">
-  /* eslint-disable svelte/no-navigation-without-resolve */
-  import { base } from "$app/paths";
+  import { resolve } from "$app/paths";
   import { Button } from "$lib/components/ui/button";
   import { Plus, Play, RotateCw, Video, Mic, Languages } from "lucide-svelte";
   import { Badge } from "$lib/components/ui/badge";
@@ -47,7 +46,7 @@
       <p class="text-zinc-400">Manage and upload your AI-generated content.</p>
     </div>
     <Button
-      href="{base}/studio/upload"
+      href={resolve("/studio/upload")}
       class="bg-white text-black hover:bg-zinc-200 rounded-full font-bold"
       data-testid="upload-link"
     >
@@ -65,7 +64,7 @@
         data-testid="video-item"
       >
         <a
-          href="{base}/watch/{video.id}"
+          href={resolve("/watch/[id]", { id: video.id })}
           class="block aspect-video bg-black relative overflow-hidden"
         >
           <!-- Fallback always present underneath -->
@@ -135,7 +134,7 @@
         >
           <Button
             variant="link"
-            href="{base}/watch/{video.id}"
+            href={resolve("/watch/[id]", { id: video.id })}
             class="p-0 h-auto text-xs font-bold text-white hover:text-magenta-500 uppercase tracking-wider"
           >
             Watch Now
@@ -143,7 +142,7 @@
           {#if video.status === "ERROR"}
             <form
               method="POST"
-              action="{base}/studio?/reprocess"
+              action="{resolve('/studio')}?/reprocess"
               use:enhance={() => {
                 submittingId = video.id;
                 return async ({ update }) => {
@@ -171,7 +170,7 @@
           {:else if !video.status && !video.hasAnyTranscription}
             <form
               method="POST"
-              action="{base}/studio?/reprocess"
+              action="{resolve('/studio')}?/reprocess"
               use:enhance={() => {
                 submittingId = video.id;
                 return async ({ update }) => {
@@ -199,7 +198,7 @@
           {:else if !video.status && video.hasAnyTranscription}
             <form
               method="POST"
-              action="{base}/studio?/reprocess"
+              action="{resolve('/studio')}?/reprocess"
               use:enhance={() => {
                 submittingId = video.id;
                 return async ({ update }) => {
@@ -243,7 +242,7 @@
           Upload your first video to start building your AI-generated library.
         </p>
         <Button
-          href="{base}/studio/upload"
+          href={resolve("/studio/upload")}
           class="bg-magenta-600 hover:bg-magenta-700 text-white rounded-full font-bold"
         >
           Upload Video
