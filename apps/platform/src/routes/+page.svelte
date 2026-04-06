@@ -53,7 +53,7 @@
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+        <!-- eslint-disable svelte/no-navigation-without-resolve -->
         <a
           href="{base}/studio"
           class="flex items-center gap-2 bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-zinc-200 transition-colors w-full sm:w-auto justify-center"
@@ -61,6 +61,7 @@
           <Play class="h-5 w-5 fill-current" />
           Start Watching
         </a>
+        <!-- eslint-enable svelte/no-navigation-without-resolve -->
         <button
           onclick={() =>
             document
@@ -110,13 +111,14 @@
             </p>
 
             <div class="flex items-center gap-2 mt-3">
-              <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+              <!-- eslint-disable svelte/no-navigation-without-resolve -->
               <a
                 href="{base}/studio"
                 class="p-2 rounded-full bg-white text-black hover:bg-zinc-200 transition-colors inline-flex"
               >
                 <Play class="h-3 w-3 fill-current" />
               </a>
+              <!-- eslint-enable svelte/no-navigation-without-resolve -->
               <button
                 class="p-2 rounded-full border border-zinc-500 text-white hover:bg-white/10 transition-colors"
               >
