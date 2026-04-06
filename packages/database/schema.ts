@@ -95,12 +95,12 @@ export type DbTokenAnalysis = {
 };
 
 export type DbVttSegment = {
-    start: number;
-    end: number;
-    text: string;
-    tokens: DbTokenAnalysis[];
-    classification?: string;
-    translation?: string;
+  start: number;
+  end: number;
+  text: string;
+  tokens: DbTokenAnalysis[];
+  classification?: string;
+  translation?: string;
 };
 
 export const videoProcessing = pgTable(
@@ -199,3 +199,19 @@ export const knownWords = pgTable(
 
 export type KnownWord = InferSelectModel<typeof knownWords>;
 export type NewKnownWord = InferInsertModel<typeof knownWords>;
+
+export const vocabReference = pgTable(
+  "vocab_reference",
+  {
+    lemma: text("lemma").notNull(),
+    lang: text("lang").notNull(),
+    level: vocabLevels("level"),
+    isProperNoun: boolean("is_proper").default(false),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.lemma, table.lang] }),
+  }),
+);
+
+export type VocabReference = InferSelectModel<typeof vocabReference>;
+export type NewVocabReference = InferInsertModel<typeof vocabReference>;
