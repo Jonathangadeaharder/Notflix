@@ -29,9 +29,9 @@ export class MockAiGateway implements IAiGateway {
     onProgress: (percent: number) => void | Promise<void>,
   ): Promise<TranscriptionResponse> {
     console.log(`[MockAiGateway] transcribeWithProgress ${filePath}...`);
-    onProgress(20);
-    onProgress(40);
-    return this.transcribe(filePath);
+    await onProgress(20);
+    await onProgress(40);
+    return await this.transcribe(filePath);
   }
 
   async analyzeBatch(texts: string[]): Promise<FilterResponse> {

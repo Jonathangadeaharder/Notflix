@@ -379,15 +379,22 @@ async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberD
         )
 
     async def event_generator():
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         gen = transcriber.transcribe_stream(str(candidate_path), req.language)
-        while True:
-            try:
-                item = await loop.run_in_executor(None, next, gen)
-                event_type = item.get("type", "segment")
-                yield {"event": event_type, "data": json.dumps(item)}
-            except StopIteration:
-                break
+        try:
+            while True:
+                try:
+                    item = await loop.run_in_executor(None, next, gen)
+                    event_type = item.get("type", "segment")
+                    yield {"event": event_type, "data": json.dumps(item)}
+                except StopIteration:
+                    break
+        except asyncio.CancelledError:
+            raise
+        finally:
+            close = getattr(gen, "close", None)
+            if callable(close):
+                close()
 
     return EventSourceResponse(event_generator())
 
@@ -431,6 +438,11 @@ def resolve_candidate_path(raw_path: str, allowed_root: Path) -> Path:
         candidate_path = input_path.resolve()
     else:
         candidate_path = (allowed_root / input_path).resolve()
+
+    if os.path.commonpath([str(allowed_root), str(candidate_path)]) != str(
+        allowed_root
+    ):
+        raise ValueError("Path traversal detected")
 
     candidate_path.relative_to(allowed_root)
     return candidate_path

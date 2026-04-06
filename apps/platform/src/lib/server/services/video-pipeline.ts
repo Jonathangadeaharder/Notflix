@@ -15,7 +15,7 @@ import type { IAiGateway } from "../domain/interfaces";
 import { db as drizzleDb } from "../infrastructure/database";
 import type { SmartFilter } from "./linguistic-filter.service";
 import { video, videoProcessing } from "@notflix/database";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { ProcessingStatus, toAiServicePath } from "../infrastructure/config";
 
 // The pipeline sets up event listeners to chain the heavy workload completely decoupled.
@@ -71,16 +71,59 @@ export function registerPipelineListeners(
         if (!record) throw new Error("Video not found");
 
         const aiPath = toAiServicePath(record.filePath);
+        const PROGRESS_DB_PERCENT_STEP = 5;
+        const PROGRESS_DB_MIN_INTERVAL_MS = 1000;
+        let lastPersistedPercent = 5;
+        let lastPersistedAt = Date.now();
+
         const transcription = await aiGateway.transcribeWithProgress(
           aiPath,
           payload.targetLang,
           async (percent) => {
+            const normalizedPercent = Math.max(
+              lastPersistedPercent,
+              Math.min(100, Math.round(percent)),
+            );
+            const now = Date.now();
+            const percentAdvanced =
+              normalizedPercent - lastPersistedPercent >=
+              PROGRESS_DB_PERCENT_STEP;
+            const intervalElapsed =
+              now - lastPersistedAt >= PROGRESS_DB_MIN_INTERVAL_MS;
+            const shouldPersist =
+              normalizedPercent === 100 || percentAdvanced || intervalElapsed;
+
+            if (!shouldPersist) {
+              return;
+            }
+
+            lastPersistedPercent = normalizedPercent;
+            lastPersistedAt = now;
+
             await db
               .update(videoProcessing)
-              .set({ progressStage: "TRANSCRIBING", progressPercent: percent })
-              .where(eq(videoProcessing.videoId, payload.videoId));
+              .set({
+                progressStage: "TRANSCRIBING",
+                progressPercent: normalizedPercent,
+              })
+              .where(
+                and(
+                  eq(videoProcessing.videoId, payload.videoId),
+                  eq(videoProcessing.targetLang, payload.targetLang),
+                ),
+              );
           },
         );
+
+        await db
+          .update(videoProcessing)
+          .set({ progressStage: "TRANSCRIBING", progressPercent: 100 })
+          .where(
+            and(
+              eq(videoProcessing.videoId, payload.videoId),
+              eq(videoProcessing.targetLang, payload.targetLang),
+            ),
+          );
 
         globalEvents.emit(EVENTS.TRANSCRIPTION_COMPLETED, {
           ...payload,
@@ -182,13 +225,14 @@ export function registerPipelineListeners(
         let finalSegments = payload.segments;
         const sentenceTexts = finalSegments.map((s: any) => s.text);
 
-        if (!payload.userId) {
-          // Guest mode
-          const lemmaList = extractUniqueLemmas(finalSegments, 50); // limit 50
+        async function translateAndMapSegments(
+          segmentsToMap: any[],
+          lemmasToTranslate: string[],
+        ) {
           const [lemmaRes, sentenceRes] = await Promise.all([
-            lemmaList.length > 0
+            lemmasToTranslate.length > 0
               ? aiGateway.translate(
-                  lemmaList,
+                  lemmasToTranslate,
                   payload.targetLang,
                   payload.nativeLang,
                 )
@@ -199,11 +243,21 @@ export function registerPipelineListeners(
               payload.nativeLang,
             ),
           ]);
-          finalSegments = mapTranslationsToSegments(
-            finalSegments,
-            lemmaList,
+
+          return mapTranslationsToSegments(
+            segmentsToMap,
+            lemmasToTranslate,
             lemmaRes.translations,
             sentenceRes.translations,
+          );
+        }
+
+        if (!payload.userId) {
+          // Guest mode
+          const lemmaList = extractUniqueLemmas(finalSegments, 50); // limit 50
+          finalSegments = await translateAndMapSegments(
+            finalSegments,
+            lemmaList,
           );
         } else {
           // User mode with Linguistic Filter
@@ -220,26 +274,9 @@ export function registerPipelineListeners(
           });
 
           const lemmaList = extractUnknownLemmas(finalSegments);
-          const [lemmaRes, sentenceRes] = await Promise.all([
-            lemmaList.length > 0
-              ? aiGateway.translate(
-                  lemmaList,
-                  payload.targetLang,
-                  payload.nativeLang,
-                )
-              : { translations: [] },
-            aiGateway.translate(
-              sentenceTexts,
-              payload.targetLang,
-              payload.nativeLang,
-            ),
-          ]);
-
-          finalSegments = mapTranslationsToSegments(
+          finalSegments = await translateAndMapSegments(
             finalSegments,
             lemmaList,
-            lemmaRes.translations,
-            sentenceRes.translations,
           );
         }
 
@@ -252,7 +289,12 @@ export function registerPipelineListeners(
             progressPercent: 100,
             vttJson: finalSegments,
           })
-          .where(eq(videoProcessing.videoId, payload.videoId));
+          .where(
+            and(
+              eq(videoProcessing.videoId, payload.videoId),
+              eq(videoProcessing.targetLang, payload.targetLang),
+            ),
+          );
 
         globalEvents.emit(EVENTS.PROCESSING_UPDATE, {
           videoId: payload.videoId,
@@ -267,7 +309,12 @@ export function registerPipelineListeners(
         await db
           .update(videoProcessing)
           .set({ status: ProcessingStatus.ERROR })
-          .where(eq(videoProcessing.videoId, payload.videoId));
+          .where(
+            and(
+              eq(videoProcessing.videoId, payload.videoId),
+              eq(videoProcessing.targetLang, payload.targetLang),
+            ),
+          );
       }
     },
   );

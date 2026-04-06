@@ -1,6 +1,6 @@
 import { db } from "$lib/server/infrastructure/database";
 import { video, videoProcessing } from "@notflix/database";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { CONFIG, ProcessingStatus } from "$lib/server/infrastructure/config";
 import { taskRegistry } from "$lib/server/services/task-registry.service";
 import { triggerPipeline } from "$lib/server/services/pipeline-trigger";
@@ -35,10 +35,19 @@ export const load = async ({ depends, locals }) => {
 
   // Determine which videos have ANY completed processing (any language).
   // Used to show "Translate to X" vs "Transcribe" button in the UI.
-  const completedRows = await db
-    .select({ videoId: videoProcessing.videoId })
-    .from(videoProcessing)
-    .where(eq(videoProcessing.status, ProcessingStatus.COMPLETED));
+  const videoIds = videos.map((v) => v.id);
+  const completedRows =
+    videoIds.length > 0
+      ? await db
+          .select({ videoId: videoProcessing.videoId })
+          .from(videoProcessing)
+          .where(
+            and(
+              eq(videoProcessing.status, ProcessingStatus.COMPLETED),
+              inArray(videoProcessing.videoId, videoIds),
+            ),
+          )
+      : [];
   const completedIds = new Set(completedRows.map((r) => r.videoId));
 
   return {

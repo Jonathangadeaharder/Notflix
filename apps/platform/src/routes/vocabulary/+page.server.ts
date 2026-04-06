@@ -31,10 +31,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   // Build conditions against the global vocab reference
   const conditions = [eq(vocabReference.lang, lang)];
 
+  const allowedLevels = new Set(["A1", "A2", "B1", "B2", "C1", "C2"]);
   if (level) {
     if (level === "untracked") {
       conditions.push(sql`${vocabReference.level} IS NULL`);
-    } else {
+    } else if (allowedLevels.has(level)) {
       conditions.push(
         eq(
           vocabReference.level,

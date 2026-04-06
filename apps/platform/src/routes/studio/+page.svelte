@@ -146,8 +146,11 @@
               use:enhance={() => {
                 submittingId = video.id;
                 return async ({ update }) => {
-                  await update();
-                  submittingId = null;
+                  try {
+                    await update();
+                  } finally {
+                    submittingId = null;
+                  }
                 };
               }}
             >
@@ -174,8 +177,11 @@
               use:enhance={() => {
                 submittingId = video.id;
                 return async ({ update }) => {
-                  await update();
-                  submittingId = null;
+                  try {
+                    await update();
+                  } finally {
+                    submittingId = null;
+                  }
                 };
               }}
             >
@@ -202,8 +208,11 @@
               use:enhance={() => {
                 submittingId = video.id;
                 return async ({ update }) => {
-                  await update();
-                  submittingId = null;
+                  try {
+                    await update();
+                  } finally {
+                    submittingId = null;
+                  }
                 };
               }}
             >

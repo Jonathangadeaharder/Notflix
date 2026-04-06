@@ -14,21 +14,35 @@ function clampProgressPercent(progressPercent: number): number {
   );
 }
 
-export const GET = async ({ params, locals }: RequestEvent) => {
+async function validateRequest(
+  locals: RequestEvent["locals"],
+  params: RequestEvent["params"],
+) {
   const session = await locals.auth();
   if (!session) {
-    return json(
-      { error: "Unauthorized" },
-      { status: HTTP_STATUS.UNAUTHORIZED },
-    );
+    return {
+      errorResponse: json(
+        { error: "Unauthorized" },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      ),
+    };
   }
 
   if (!params.id) {
-    return json(
-      { error: "Video not found" },
-      { status: HTTP_STATUS.NOT_FOUND },
-    );
+    return {
+      errorResponse: json(
+        { error: "Video not found" },
+        { status: HTTP_STATUS.NOT_FOUND },
+      ),
+    };
   }
+
+  return { session, id: params.id as string };
+}
+
+export const GET = async ({ params, locals }: RequestEvent) => {
+  const { session, id, errorResponse } = await validateRequest(locals, params);
+  if (errorResponse) return errorResponse;
 
   const [processing] = await db
     .select({
@@ -39,7 +53,7 @@ export const GET = async ({ params, locals }: RequestEvent) => {
     .from(videoProcessing)
     .where(
       and(
-        eq(videoProcessing.videoId, params.id),
+        eq(videoProcessing.videoId, id),
         eq(videoProcessing.targetLang, CONFIG.DEFAULT_TARGET_LANG),
       ),
     )
@@ -56,7 +70,7 @@ export const GET = async ({ params, locals }: RequestEvent) => {
     .where(
       and(
         eq(watchProgress.userId, session.user.id),
-        eq(watchProgress.videoId, params.id),
+        eq(watchProgress.videoId, id),
       ),
     )
     .limit(1);
@@ -69,22 +83,9 @@ export const GET = async ({ params, locals }: RequestEvent) => {
   });
 };
 
-// eslint-disable-next-line max-lines-per-function
 export const POST = async ({ params, request, locals }: RequestEvent) => {
-  const session = await locals.auth();
-  if (!session) {
-    return json(
-      { error: "Unauthorized" },
-      { status: HTTP_STATUS.UNAUTHORIZED },
-    );
-  }
-
-  if (!params.id) {
-    return json(
-      { error: "Video not found" },
-      { status: HTTP_STATUS.NOT_FOUND },
-    );
-  }
+  const { session, id, errorResponse } = await validateRequest(locals, params);
+  if (errorResponse) return errorResponse;
 
   let body;
   try {
@@ -114,7 +115,7 @@ export const POST = async ({ params, request, locals }: RequestEvent) => {
     .insert(watchProgress)
     .values({
       userId: session.user.id,
-      videoId: params.id,
+      videoId: id,
       currentTime: Math.max(0, Math.round(currentTime)),
       duration: Math.max(0, Math.round(duration)),
       progressPercent,

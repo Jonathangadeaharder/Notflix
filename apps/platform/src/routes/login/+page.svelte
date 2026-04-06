@@ -11,7 +11,15 @@
   let errorMessage = $state("");
   let fieldErrors = $state<{ email?: string; password?: string }>({});
 
-  const callbackUrl = $derived($page.url.searchParams.get("next") ?? "/");
+  function getSafeCallbackUrl(next: string | null) {
+    if (!next) return "/";
+    if (!next.startsWith("/") || next.startsWith("//")) return "/";
+    return next;
+  }
+
+  const callbackUrl = $derived(
+    getSafeCallbackUrl($page.url.searchParams.get("next")),
+  );
 
   async function handleLogin(e: Event) {
     e.preventDefault();
