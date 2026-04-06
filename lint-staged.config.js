@@ -32,7 +32,7 @@ export default {
   ],
   'packages/database/**/*.ts': (files) => [
     `pnpm --filter @notflix/database exec eslint --fix ${relTo('packages/database', files)}`,
-    `pnpm exec prettier --write "packages/database/src/**/*.ts"`,
+    `pnpm exec prettier --write "packages/database/**/*.ts"`,
   ],
   'packages/shared-types/**/*.ts': (files) => [
     `pnpm --filter @notflix/shared-types exec eslint --fix ${relTo('packages/shared-types', files)}`,

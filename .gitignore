@@ -64,6 +64,11 @@ all_package_jsons.txt
 test-results/
 playwright-report/
 blob-report/
+**/playwright_output.txt
+
+# Diff artifacts
+*.diff
+git_conflicts.diff
 # Deploy Keys (NEVER commit)
 *.key
 *.key.pub

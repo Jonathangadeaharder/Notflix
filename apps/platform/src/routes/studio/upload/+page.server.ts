@@ -8,7 +8,6 @@ import { CONFIG } from "$lib/server/infrastructure/config";
 import { z } from "zod";
 import { taskRegistry } from "$lib/server/services/task-registry.service";
 import { triggerPipeline } from "$lib/server/services/pipeline-trigger";
-import type { User } from "$lib/server/infrastructure/auth";
 
 import { HTTP_STATUS, LIMITS } from "$lib/constants";
 
@@ -19,6 +18,7 @@ const MAX_LANG_LEN = 5;
 const uploadSchema = z.object({
   title: z.string().min(1, "Title is required").max(LIMITS.MAX_TITLE_LENGTH),
   targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("es"),
+  nativeLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("en"),
 });
 
 export const load = async () => {
@@ -26,20 +26,21 @@ export const load = async () => {
     initialData: {
       title: "",
       targetLang: "es",
+      nativeLang: "en",
     },
   };
 };
 
 export const actions = {
-  upload: async ({ request, locals }) => {
-    const session = await locals.auth();
+  upload: async ({ request }) => {
     const formData = await request.formData();
 
     const title = formData.get("title") as string;
     const targetLang = formData.get("targetLang") as string;
+    const nativeLang = formData.get("nativeLang") as string;
     const file = formData.get("file") as File;
 
-    const result = uploadSchema.safeParse({ title, targetLang });
+    const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
 
     if (!result.success || !file || file.size === 0) {
       const fieldErrors = result.success
@@ -52,7 +53,7 @@ export const actions = {
           ...fieldErrors,
           file: fileErrors.length > 0 ? fileErrors : undefined,
         },
-        data: { title, targetLang },
+        data: { title, targetLang, nativeLang },
       });
     }
 
@@ -68,7 +69,7 @@ export const actions = {
       published: true,
     });
 
-    queueProcessing(videoId, result.data.targetLang, session?.user);
+    queueProcessing(videoId, result.data.targetLang, result.data.nativeLang);
 
     throw redirect(HTTP_STATUS.SEE_OTHER, "/studio"); // 303 is standard for redirects after post
   },
@@ -92,15 +93,14 @@ async function saveUploadedFile(file: File, videoId: string): Promise<string> {
 function queueProcessing(
   videoId: string,
   targetLang: string,
-  user: User | undefined,
+  nativeLang: string,
 ) {
   taskRegistry.register(
     `processVideo:${videoId}`,
     triggerPipeline({
       videoId,
       targetLang,
-      nativeLang: user?.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
-      userId: user?.id,
+      nativeLang,
     }),
   );
 }
