@@ -56,10 +56,9 @@ export function toAiServicePath(localPath: string): string {
   if (!isDocker) {
     return localPath;
   }
-  const filename = path.basename(localPath);
-  // Default to the standard Docker internal path if env var not set
+  // Split on both / and \ so Windows paths (stored from local uploads)
+  // work correctly when the pipeline runs inside the Linux Docker container.
+  const filename = localPath.split(/[/\\]/).pop() || path.basename(localPath);
   const mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH;
-
-  // Simple, robust concatenation. No magic OS detection.
   return `${mediaRootInternal}/${filename}`;
 }

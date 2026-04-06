@@ -9,6 +9,7 @@
   import { invalidate } from "$app/navigation";
 
   let { data } = $props();
+  let submittingId = $state<string | null>(null);
 
   const POLLING_INTERVAL_MS = 3000;
 
@@ -122,7 +123,17 @@
             Watch Now
           </Button>
           {#if video.status === "ERROR"}
-            <form method="POST" action="{base}/studio?/reprocess" use:enhance>
+            <form
+              method="POST"
+              action="{base}/studio?/reprocess"
+              use:enhance={() => {
+                submittingId = video.id;
+                return async ({ update }) => {
+                  await update();
+                  submittingId = null;
+                };
+              }}
+            >
               <input type="hidden" name="id" value={video.id} />
               <input
                 type="hidden"
@@ -132,6 +143,7 @@
               <Button
                 type="submit"
                 variant="ghost"
+                disabled={submittingId === video.id}
                 class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
               >
                 <RotateCw class="mr-1 h-3 w-3" />
@@ -139,7 +151,17 @@
               </Button>
             </form>
           {:else if !video.status && !video.hasAnyTranscription}
-            <form method="POST" action="{base}/studio?/reprocess" use:enhance>
+            <form
+              method="POST"
+              action="{base}/studio?/reprocess"
+              use:enhance={() => {
+                submittingId = video.id;
+                return async ({ update }) => {
+                  await update();
+                  submittingId = null;
+                };
+              }}
+            >
               <input type="hidden" name="id" value={video.id} />
               <input
                 type="hidden"
@@ -149,6 +171,7 @@
               <Button
                 type="submit"
                 variant="ghost"
+                disabled={submittingId === video.id}
                 class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
               >
                 <Mic class="mr-1 h-3 w-3" />
@@ -156,7 +179,17 @@
               </Button>
             </form>
           {:else if !video.status && video.hasAnyTranscription}
-            <form method="POST" action="{base}/studio?/reprocess" use:enhance>
+            <form
+              method="POST"
+              action="{base}/studio?/reprocess"
+              use:enhance={() => {
+                submittingId = video.id;
+                return async ({ update }) => {
+                  await update();
+                  submittingId = null;
+                };
+              }}
+            >
               <input type="hidden" name="id" value={video.id} />
               <input
                 type="hidden"
@@ -166,6 +199,7 @@
               <Button
                 type="submit"
                 variant="ghost"
+                disabled={submittingId === video.id}
                 class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
               >
                 <Languages class="mr-1 h-3 w-3" />
