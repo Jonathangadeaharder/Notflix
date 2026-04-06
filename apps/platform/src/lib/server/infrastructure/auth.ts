@@ -5,7 +5,7 @@ import { env as publicEnv } from "$env/dynamic/public";
 import type { RequestEvent } from "@sveltejs/kit";
 import { db } from "./database";
 import { user as userTable } from "@notflix/database";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { User as DbUser } from "@notflix/database";
 
 export type User = DbUser;
@@ -78,7 +78,19 @@ async function upsertProfile(authUser: SupabaseAuthUser): Promise<User | null> {
     })
     .onConflictDoNothing()
     .returning();
-  return created ?? null;
+  if (!created) return null;
+
+  // Copy master vocabulary from the seed user to the new user
+  const SEED_USER_ID = "00000000-0000-0000-0000-000000000123";
+  await db.execute(sql`
+    INSERT INTO known_words (user_id, lemma, lang, level, is_proper_noun)
+    SELECT ${created.id}::uuid, lemma, lang, level, is_proper_noun
+    FROM known_words
+    WHERE user_id = ${SEED_USER_ID}::uuid
+    ON CONFLICT DO NOTHING
+  `);
+
+  return created;
 }
 
 export async function resolveSession(
