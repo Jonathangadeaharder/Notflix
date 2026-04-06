@@ -3,12 +3,15 @@
   import * as Card from "$lib/components/ui/card";
   import { LogIn } from "lucide-svelte";
   import { signInEmail, signUpEmail } from "$lib/auth-client";
+  import { page } from "$app/stores";
 
   let isLoading = $state(false);
   let email = $state("");
   let password = $state("");
   let errorMessage = $state("");
   let fieldErrors = $state<{ email?: string; password?: string }>({});
+
+  const callbackUrl = $derived($page.url.searchParams.get("next") ?? "/");
 
   async function handleLogin(e: Event) {
     e.preventDefault();
@@ -32,7 +35,7 @@
 
     isLoading = true;
 
-    const { error } = await signInEmail(email, password, "/");
+    const { error } = await signInEmail(email, password, callbackUrl);
 
     if (error) {
       errorMessage = error;
@@ -49,7 +52,7 @@
       "test@example.com",
       "password123",
       "Demo User",
-      "/",
+      callbackUrl,
     );
 
     if (signUpError) {
@@ -57,7 +60,7 @@
       const { error: signInError } = await signInEmail(
         "test@example.com",
         "password123",
-        "/",
+        callbackUrl,
       );
 
       if (signInError) {

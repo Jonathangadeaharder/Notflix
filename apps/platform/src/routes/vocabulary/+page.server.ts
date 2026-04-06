@@ -9,7 +9,7 @@ import { HTTP_STATUS } from "$lib/constants";
 export const load: PageServerLoad = async ({ locals, url }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(HTTP_STATUS.SEE_OTHER, "/login");
+    throw redirect(HTTP_STATUS.SEE_OTHER, "/login?next=/vocabulary");
   }
 
   const userId = session.user.id;
