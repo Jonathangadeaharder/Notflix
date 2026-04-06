@@ -1,4 +1,5 @@
 import { CONFIG } from "../infrastructure/config";
+import { getRequestId } from "../request-context";
 import type {
   IAiGateway,
   TranscriptionResponse,
@@ -25,6 +26,10 @@ export class RealAiGateway implements IAiGateway {
       "Content-Type": "application/json",
       "X-API-Key": CONFIG.AI_SERVICE_API_KEY,
     };
+    const requestId = getRequestId();
+    if (requestId) {
+      headers["X-Request-ID"] = requestId;
+    }
     return headers;
   }
 
