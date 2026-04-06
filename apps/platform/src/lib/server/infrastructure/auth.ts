@@ -27,10 +27,28 @@ function createSupabaseServerClient(event: RequestEvent) {
   const internalUrl = env.SUPABASE_URL || publicUrl;
 
   const customFetch: typeof fetch = (input, init) => {
-    if (typeof input === "string" && internalUrl && internalUrl !== publicUrl) {
-      input = input.replace(publicUrl, internalUrl);
+    let url = "";
+    if (typeof input === "string") {
+      url = input;
+    } else if (input instanceof URL) {
+      url = input.href;
+    } else {
+      url = input.url;
     }
-    return fetch(input, init);
+
+    const rewritten =
+      internalUrl && internalUrl !== publicUrl
+        ? url.replace(publicUrl, internalUrl)
+        : url;
+
+    let request: Request | string;
+    if (typeof input === "string" || input instanceof URL) {
+      request = rewritten;
+    } else {
+      request = new Request(rewritten, input);
+    }
+
+    return fetch(request, init);
   };
 
   return createServerClient(

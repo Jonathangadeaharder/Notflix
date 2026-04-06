@@ -22,7 +22,14 @@ function parseLemmasFromCsv(filePath: string): string[] {
   const lines = fs.readFileSync(filePath, "utf-8").split("\n");
   return lines
     .slice(1) // skip header row
-    .map((line) => line.split(",")[1]?.trim())
+    .map((line) => {
+      const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      let lemma = cols[1]?.trim();
+      if (lemma?.startsWith('"') && lemma?.endsWith('"')) {
+        lemma = lemma.slice(1, -1).replace(/""/g, '"');
+      }
+      return lemma;
+    })
     .filter((lemma): lemma is string => !!lemma);
 }
 

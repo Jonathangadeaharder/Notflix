@@ -112,7 +112,8 @@ export class RealAiGateway implements IAiGateway {
     let languageProbability = 1.0;
     let duration = 0;
 
-    const reader = res.body!.getReader();
+    if (!res.body) throw new Error("AI Service response body is null");
+    const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
 
