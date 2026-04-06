@@ -146,5 +146,15 @@ services:
     depends_on:
       db: { condition: service_healthy }
 
+  # ── Dozzle (Log Viewer UI) ───────────────────────────
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: notflix-logs
+    ports: ["9999:8080"]
+    volumes:
+      - //var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DOZZLE_NO_ANALYTICS: "true"
+
 volumes:
   pg_data:
