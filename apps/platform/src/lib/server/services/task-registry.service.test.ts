@@ -76,7 +76,7 @@ describe("TaskRegistry: failure handling", () => {
   });
 
   it("logs pending count when waitForAll called with active tasks", async () => {
-    let resolveTask: () => void;
+    let resolveTask!: () => void;
     const work = new Promise<void>((resolve) => {
       resolveTask = resolve;
     });

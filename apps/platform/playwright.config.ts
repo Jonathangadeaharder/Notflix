@@ -19,6 +19,13 @@ const config: PlaywrightTestConfig = {
 
   // Reporter configuration
   reporter: process.env.CI ? "github" : "list",
+
+  webServer: {
+    command: "pnpm run test:e2e:server",
+    url: "http://localhost:5173",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
 };
 
 export default config;

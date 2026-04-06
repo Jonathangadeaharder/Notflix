@@ -50,11 +50,12 @@
       method="POST"
       action="?/upload"
       enctype="multipart/form-data"
-      use:enhance={() => {
+      use:enhance={({ cancel }) => {
         fileError = "";
         if (!fileInput?.files?.length) {
           fileError = "Please select a video or audio file to upload.";
-          return ({ cancel }) => cancel();
+          cancel();
+          return;
         }
         isSubmitting = true;
         return async ({ update }) => {
