@@ -15,6 +15,16 @@ const mockAiGateway: IAiGateway = {
     language_probability: 0.99,
     segments: [{ start: 0, end: 1, text: "Hola mundo" }],
   }),
+  transcribeWithProgress: vi
+    .fn()
+    .mockImplementation(async (filePath, lang, onProgress) => {
+      if (onProgress) await onProgress(50);
+      return {
+        language: "es",
+        language_probability: 0.99,
+        segments: [{ start: 0, end: 1, text: "Hola mundo" }],
+      };
+    }),
   analyzeBatch: vi.fn().mockResolvedValue({
     results: [[{ text: "Hola", lemma: "hola", pos: "INTJ", is_stop: false }]],
   }),

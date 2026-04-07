@@ -17,8 +17,13 @@ docker compose build -q
 echo Starting services...
 docker compose up -d
 echo.
-echo   Stack is running. To view logs:
-echo     docker compose logs -f platform
-echo     docker compose logs -f db
-echo     docker compose logs -f auth
+echo   Stack is running.
 echo.
+echo   Access:
+for /f "tokens=2 delims=:" %%p in ('docker compose port platform 5173 2^>nul') do echo     Platform   http://localhost:%%p
+for /f "tokens=2 delims=:" %%p in ('docker compose port kong 8000 2^>nul') do echo     Kong API   http://localhost:%%p
+for /f "tokens=2 delims=:" %%p in ('docker compose port dozzle 8080 2^>nul') do echo     Logs       http://localhost:%%p
+echo.
+echo   Press any key to stop the stack...
+pause >nul
+docker compose down

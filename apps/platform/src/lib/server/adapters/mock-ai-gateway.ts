@@ -23,6 +23,17 @@ export class MockAiGateway implements IAiGateway {
     };
   }
 
+  async transcribeWithProgress(
+    filePath: string,
+    _lang: string,
+    onProgress: (percent: number) => void | Promise<void>,
+  ): Promise<TranscriptionResponse> {
+    console.log(`[MockAiGateway] transcribeWithProgress ${filePath}...`);
+    await onProgress(20);
+    await onProgress(40);
+    return await this.transcribe(filePath);
+  }
+
   async analyzeBatch(texts: string[]): Promise<FilterResponse> {
     return {
       results: texts.map(() => [

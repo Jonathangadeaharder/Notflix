@@ -37,6 +37,14 @@ class ITranscriber(ABC):  # pylint: disable=too-few-public-methods
         Transcribes an audio file.
         """
 
+    @abstractmethod
+    def transcribe_stream(self, file_path: str, language: Optional[str] = None):
+        """
+        Streams transcription progress as dicts.
+        First yield: {"type": "info", "language": str, "probability": float, "duration": float}
+        Subsequent yields: {"type": "segment", "start": float, "end": float, "text": str}
+        """
+
 
 class IFilter(ABC):
     """

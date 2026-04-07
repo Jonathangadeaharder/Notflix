@@ -3,21 +3,14 @@
   import { Input } from "$lib/components/ui/input";
   import * as Card from "$lib/components/ui/card";
   import { Badge } from "$lib/components/ui/badge";
-  import {
-    Search,
-    Trash2,
-    ChevronLeft,
-    ChevronRight,
-    BookOpen,
-  } from "lucide-svelte";
-  import { goto, invalidate } from "$app/navigation";
+  import { Search, ChevronLeft, ChevronRight, BookOpen } from "lucide-svelte";
+  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
 
   let searchInput = $derived(data.filters.search ?? "");
-  let isDeleting = $state<string | null>(null);
 
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2", "untracked"] as const;
 
@@ -62,30 +55,6 @@
   function clearSearch() {
     searchInput = "";
     setFilter("search", null);
-  }
-
-  async function deleteWord(lemma: string, lang: string) {
-    isDeleting = lemma;
-    try {
-      const response = await fetch("/api/words/known", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lemma, lang }),
-      });
-      if (response.ok) {
-        invalidate("app:vocabulary");
-        // Refresh the page data
-        // eslint-disable-next-line svelte/no-navigation-without-resolve
-        goto($page.url.toString(), {
-          replaceState: true,
-          invalidateAll: true,
-        });
-      }
-    } catch (e) {
-      console.error("Failed to delete word:", e);
-    } finally {
-      isDeleting = null;
-    }
   }
 
   function goToPage(newPage: number) {
@@ -204,15 +173,13 @@
             <div class="p-8 text-center text-zinc-500">
               <BookOpen class="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No words found.</p>
-              <p class="text-sm mt-1">
-                Start watching videos to build your vocabulary!
-              </p>
+              <p class="text-sm mt-1">Try adjusting your filters.</p>
             </div>
           {:else}
             <div class="divide-y divide-zinc-800">
               {#each data.words as word (word.lemma)}
                 <div
-                  class="flex items-center justify-between px-4 py-3 hover:bg-zinc-800/50 transition-colors group"
+                  class="flex items-center justify-between px-4 py-3 hover:bg-zinc-800/50 transition-colors"
                 >
                   <div class="flex items-center gap-3">
                     <span
@@ -230,25 +197,13 @@
                       </Badge>
                     {/if}
                   </div>
-                  <div class="flex items-center gap-2">
-                    <Badge
-                      class="{levelColors[
-                        word.level ?? 'untracked'
-                      ]} text-white text-xs"
-                    >
-                      {word.level ?? "Untracked"}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={isDeleting === word.lemma}
-                      onclick={() => deleteWord(word.lemma, word.lang)}
-                      class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-magenta-500 hover:bg-magenta-950/50 transition-all"
-                      title="Remove from known words"
-                    >
-                      <Trash2 class="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Badge
+                    class="{levelColors[
+                      word.level ?? 'untracked'
+                    ]} text-white text-xs"
+                  >
+                    {word.level ?? "Untracked"}
+                  </Badge>
                 </div>
               {/each}
             </div>

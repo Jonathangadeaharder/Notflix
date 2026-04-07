@@ -17,6 +17,10 @@ describe('Video Pipeline Choreography Handlers', () => {
         } as any;
 
         const mockAiGateway = {
+            transcribeWithProgress: vi.fn().mockImplementation(async (path, lang, cb) => {
+                await cb(100);
+                return { segments: [] };
+            }),
             transcribe: vi.fn().mockResolvedValue({ segments: [] }),
             analyzeBatch: vi.fn().mockResolvedValue({ texts: [] }),
             translate: vi.fn().mockResolvedValue({ translations: [] }),
@@ -26,6 +30,7 @@ describe('Video Pipeline Choreography Handlers', () => {
         const mockFilter = { filterBatch: vi.fn().mockResolvedValue([]) } as any;
 
         // Initialize Native InMemory Event Bus Handler
+        globalEvents.removeAllListeners();
         registerPipelineListeners(mockDb, mockAiGateway, mockFilter);
 
         // Spy on subsequent events triggered by choreography
@@ -44,6 +49,6 @@ describe('Video Pipeline Choreography Handlers', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         expect(mockDb.insert).toHaveBeenCalled();
-        expect(mockAiGateway.transcribe).toHaveBeenCalled();
+        expect(mockAiGateway.transcribeWithProgress).toHaveBeenCalled();
     });
 });
