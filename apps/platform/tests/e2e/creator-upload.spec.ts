@@ -22,18 +22,17 @@ test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
 
         await uploadPage.uploadVideo(uniqueTitle, audioPath);
 
-        // 1. Verify Pending state
-        await expect(page.locator(`[data-testid="video-item"]`, { hasText: uniqueTitle })).toBeVisible();
-        await expect(page.locator(`[data-testid="status-PENDING"]`).first()).toBeVisible();
-
+        // 1. Verify upload succeeded — the video card is visible on the studio page
         const videoCard = page.locator(`[data-testid="video-item"]`, { hasText: uniqueTitle });
+        await expect(videoCard).toBeVisible();
 
         if (process.env.CI) {
             // Without AI service in CI, processing fails fast — verify error handling
             await studioPage.waitForVideoStatus(uniqueTitle, 'ERROR', ERROR_TIMEOUT_MS);
             await expect(videoCard.locator('text=Retry')).toBeVisible();
         } else {
-            // With full stack locally, verify completed processing
+            // With full stack locally, verify PENDING → COMPLETED transition
+            await expect(page.locator(`[data-testid="status-PENDING"]`).first()).toBeVisible();
             await studioPage.waitForVideoStatus(uniqueTitle, 'COMPLETED', COMPLETED_TIMEOUT_MS);
             const watchLink = videoCard.locator('a[href^="/watch/"]').first();
             await expect(watchLink).toBeVisible();
