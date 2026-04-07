@@ -20,7 +20,7 @@ function parseLemmasFromCsv(filePath: string): string[] {
   return lines
     .slice(1) // skip header row
     .map((line) => {
-      const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      const cols = splitCsvLine(line);
       let lemma = cols[1]?.trim();
       if (lemma?.startsWith('"') && lemma?.endsWith('"')) {
         lemma = lemma.slice(1, -1).replace(/""/g, '"');
@@ -30,14 +30,31 @@ function parseLemmasFromCsv(filePath: string): string[] {
     .filter((lemma): lemma is string => !!lemma);
 }
 
+function splitCsvLine(line: string): string[] {
+  const cols: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (const char of line) {
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      current += char;
+    } else if (char === "," && !inQuotes) {
+      cols.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  cols.push(current);
+  return cols;
+}
+
 async function seed() {
   console.log("Seeding vocab_reference...");
 
   for (const level of LEVELS) {
-    const csvPath = path.resolve(
-      process.cwd(),
-      `assets/vocab/es/${level}.csv`,
-    );
+    const csvPath = path.resolve(process.cwd(), `assets/vocab/es/${level}.csv`);
 
     if (!fs.existsSync(csvPath)) {
       console.warn(`Missing: ${csvPath}`);

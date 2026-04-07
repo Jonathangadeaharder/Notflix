@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
-export const GET: RequestHandler = async ({ locals: _ }) => {
+export const GET: RequestHandler = async () => {
   const videos = await db
     .select({
       id: video.id,

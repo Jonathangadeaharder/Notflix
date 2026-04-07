@@ -79,7 +79,7 @@ LOGS_DIR.mkdir(exist_ok=True, parents=True)
 logging.root.handlers = []
 
 
-def rename_event_to_message(logger, method_name, event_dict):
+def rename_event_to_message(_logger, _method_name, event_dict):
     if "event" in event_dict:
         event_dict["message"] = event_dict.pop("event")
     return event_dict
