@@ -17,7 +17,7 @@ const MAX_LANG_LEN = 5;
 const uploadSchema = z.object({
   title: z.string().min(1, "Title is required").max(LIMITS.MAX_TITLE_LENGTH),
   targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("es"),
-  nativeLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("en"),
+  nativeLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).optional(),
 });
 
 export const load = async () => {
@@ -73,9 +73,13 @@ export const actions = {
     processVideo(
       videoId,
       result.data.targetLang,
-      result.data.nativeLang || session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
+      result.data.nativeLang ??
+        session.user.nativeLang ??
+        CONFIG.DEFAULT_NATIVE_LANG,
       session.user.id,
-    ).catch((err) => console.error(`[Pipeline] Background error for ${videoId}:`, err));
+    ).catch((err) =>
+      console.error(`[Pipeline] Background error for ${videoId}:`, err),
+    );
 
     throw redirect(HTTP_STATUS.SEE_OTHER, "/studio"); // 303 is standard for redirects after post
   },

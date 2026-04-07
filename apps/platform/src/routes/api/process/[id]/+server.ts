@@ -11,7 +11,10 @@ interface ProcessRequest {
 }
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-  const session = (await locals.auth())!;
+  const session = await locals.auth();
+  if (!session) {
+    return json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const videoId = params.id;
   if (!videoId) {
@@ -29,7 +32,9 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
       body.targetLang || "es",
       body.nativeLang || "en",
       session.user.id,
-    ).catch((err) => console.error(`[Pipeline] Background error for ${videoId}:`, err));
+    ).catch((err) =>
+      console.error(`[Pipeline] Background error for ${videoId}:`, err),
+    );
 
     return json({ success: true, message: "Processing started in background" });
   } catch (err) {

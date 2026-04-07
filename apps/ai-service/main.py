@@ -110,9 +110,23 @@ std_logger.addHandler(logging.FileHandler(LOGS_DIR / "ai-service.log"))
 
 logger = structlog.get_logger()
 
+
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        return record.args and len(record.args) >= 3 and record.args[2] != "/health"
+        args = getattr(record, "args", None)
+        path = None
+
+        if isinstance(args, (tuple, list)):
+            if len(args) >= 3:
+                path = args[2]
+        elif isinstance(args, dict):
+            path = args.get("path")
+
+        if path is None:
+            return True
+
+        return bool(path != "/health")
+
 
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
@@ -415,8 +429,8 @@ async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberD
             if callable(close):
                 try:
                     close()
-                except ValueError:
-                    pass
+                except ValueError as exc:
+                    logger.warning("generator_close_error", error=str(exc))
 
     return EventSourceResponse(event_generator())
 

@@ -21,7 +21,10 @@ const profileSchema = z.object({
 const HTTP_STATUS_SEE_OTHER = 303;
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const session = (await locals.auth())!;
+  const session = await locals.auth();
+  if (!session) {
+    throw redirect(HTTP_STATUS_SEE_OTHER, "/login?next=/profile");
+  }
 
   const [profile] = await db
     .select()
@@ -47,7 +50,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   updateInterval: async ({ request, locals }) => {
-    const session = (await locals.auth())!;
+    const session = await locals.auth();
+    if (!session) {
+      return fail(HTTP_STATUS.UNAUTHORIZED, {
+        errors: { auth: ["Unauthorized"] },
+        data: {},
+      });
+    }
 
     const formData = await request.formData();
     const data = Object.fromEntries(formData);
