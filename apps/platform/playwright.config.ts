@@ -23,10 +23,6 @@ const config: PlaywrightTestConfig = {
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
-    env: {
-      PORT: "5173",
-      ORIGIN: "http://localhost:5173",
-    },
   },
 };
 
