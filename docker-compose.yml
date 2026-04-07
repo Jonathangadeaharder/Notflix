@@ -130,6 +130,7 @@ services:
   ai-service:
     image: notflix_ai-service
     container_name: notflix-ai
+    tty: true
     build:
       context: .
       dockerfile: apps/ai-service/Dockerfile

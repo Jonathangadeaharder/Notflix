@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 import logging
 import shlex
@@ -77,6 +78,13 @@ LOGS_DIR.mkdir(exist_ok=True, parents=True)
 
 logging.root.handlers = []
 
+
+def rename_event_to_message(logger, method_name, event_dict):
+    if "event" in event_dict:
+        event_dict["message"] = event_dict.pop("event")
+    return event_dict
+
+
 structlog.configure(
     processors=[
         structlog.contextvars.merge_contextvars,  # Added for Request ID
@@ -87,6 +95,7 @@ structlog.configure(
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
+        rename_event_to_message,
         structlog.processors.JSONRenderer(),
     ],
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -96,7 +105,7 @@ structlog.configure(
 
 std_logger = logging.getLogger()
 std_logger.setLevel(logging.INFO)
-std_logger.addHandler(logging.StreamHandler())
+std_logger.addHandler(logging.StreamHandler(sys.stdout))
 std_logger.addHandler(logging.FileHandler(LOGS_DIR / "ai-service.log"))
 
 logger = structlog.get_logger()
@@ -392,7 +401,10 @@ async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberD
         finally:
             close = getattr(gen, "close", None)
             if callable(close):
-                close()
+                try:
+                    close()
+                except ValueError:
+                    pass
 
     return EventSourceResponse(event_generator())
 
