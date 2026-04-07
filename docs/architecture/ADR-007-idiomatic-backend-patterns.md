@@ -8,7 +8,7 @@
 
 We adopt the following backend patterns:
 
-- **Background tasks:** fire-and-forget work is tracked through a centralized `TaskRegistry`
+- **Background tasks:** fire-and-forget work is handled via standard promises.
 - **Dependency injection:** the host uses a shared container; the AI service uses FastAPI `Depends(...)`
 - **Progress state:** long-running processing persists coarse lifecycle plus UI-facing progress in `video_processing`
 - **Request context:** request IDs flow through AsyncLocalStorage on the host and `X-Request-ID` across service calls

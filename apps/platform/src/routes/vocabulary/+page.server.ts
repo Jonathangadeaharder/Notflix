@@ -2,11 +2,14 @@ import { db } from "$lib/server/infrastructure/database";
 import { vocabReference, user } from "$lib/server/db/schema";
 import { eq, and, sql, ilike } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
-import { HTTP_STATUS } from "$lib/constants";
+import { redirect } from "@sveltejs/kit";
 
 // eslint-disable-next-line max-lines-per-function, complexity
 export const load: PageServerLoad = async ({ locals, url }) => {
-  const session = (await locals.auth())!;
+  const session = await locals.auth();
+  if (!session) {
+    throw redirect(303, "/login?next=/vocabulary");
+  }
   const userId = session.user.id;
 
   // Get user's target language

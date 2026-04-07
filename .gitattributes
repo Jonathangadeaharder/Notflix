@@ -16,3 +16,4 @@
 *.mp4 binary
 *.mp3 binary
 *.vtt text eol=lf
+*.bat text eol=crlf

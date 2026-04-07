@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-**Source:** `packages/database/schema.ts`
+**Source:** `apps/platform/src/lib/server/db/schema.ts`
 **ORM:** Drizzle (PostgreSQL)
 
 This document is normative for persistent data shape and stored field semantics.

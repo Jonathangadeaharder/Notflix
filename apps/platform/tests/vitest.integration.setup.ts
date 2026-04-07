@@ -3,6 +3,7 @@
 process.env.RUNNING_IN_DOCKER = process.env.RUNNING_IN_DOCKER || "false";
 
 if (!process.env.DATABASE_URL) {
-  console.warn("[Integration] DATABASE_URL not set. Using default local connection.");
-  process.env.DATABASE_URL = "postgres://postgres:password@127.0.0.1:5432/postgres";
+  throw new Error(
+    "[Integration] DATABASE_URL not set. Aborting integration test run."
+  );
 }

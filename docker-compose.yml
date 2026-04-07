@@ -143,13 +143,6 @@ services:
       PYTHONUNBUFFERED:   "1"
       LOGS_DIR:           /app/logs
       AI_SERVICE_API_KEY: dev_secret_key
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     depends_on:
       db: { condition: service_healthy }
     healthcheck:

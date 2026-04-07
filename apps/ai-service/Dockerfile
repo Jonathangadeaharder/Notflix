@@ -9,12 +9,8 @@ ENV UV_LINK_MODE=copy
 COPY apps/ai-service/requirements.lock ./
 # Install base deps from lock, then reinstall torch/torchaudio with CUDA 12.6 wheels
 RUN uv venv /opt/venv && \
-    uv pip install --python /opt/venv -r requirements.lock && \
-    uv pip install --python /opt/venv \
-        "torch" "torchaudio" \
-        --extra-index-url https://download.pytorch.org/whl/cu126 \
-        --reinstall-package torch \
-        --reinstall-package torchaudio
+    uv pip install --python /opt/venv -r requirements.lock \
+        "torch" "torchaudio" --extra-index-url https://download.pytorch.org/whl/cu126
 
 # ── CUDA runtime base (driver ≥ 525 required; RTX 2000 Ada + 591.64 is fine)
 FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS runner

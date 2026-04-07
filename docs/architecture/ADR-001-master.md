@@ -28,7 +28,7 @@ We have pivoted from an "Enterprise-grade" distributed architecture to a **KISS 
 
 ### 3.1 Task Management (No Queue)
 
-We removed **BullMQ** and **Redis**. Background tasks are now handled as standard asynchronous Promises within the Node.js process, tracked by a centralized `TaskRegistry`.
+We removed **BullMQ** and **Redis**. Background tasks are now handled as standard asynchronous Promises within the Node.js process.
 
 ### 3.2 Storage (Local FS)
 
@@ -51,11 +51,11 @@ We removed **NDJSON/Streaming AI responses**. All communication between the Plat
 ```text
 /
 ├── apps/
-│   ├── platform/             # SvelteKit (Host Platform)
+│   ├── platform/             # SvelteKit (Host Platform, Shared DB & Types)
 │   └── ai-service/           # Python (AI Microservice)
-├── packages/
-│   └── database/             # Shared Database Logic
 ├── infra/
 │   └── docker-compose.yml    # Orchestration
 └── media/                    # Shared File Storage
+```
+ared File Storage
 ```

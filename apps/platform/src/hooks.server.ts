@@ -54,8 +54,8 @@ if (!building) {
       // Cleanup stale tasks from previous crash/restart
       await db
         .update(videoProcessing)
-        .set({ status: "ERROR" } as any)
-        .where(eq(videoProcessing.status, "PENDING" as any));
+        .set({ status: "ERROR" })
+        .where(eq(videoProcessing.status, "PENDING"));
     } catch (err) {
       console.error("[System] Startup cleanup failed:", err);
     }
