@@ -17,6 +17,10 @@ describe('Video Pipeline Choreography Handlers', () => {
         } as any;
 
         const mockAiGateway = {
+            transcribeWithProgress: vi.fn().mockImplementation(async (path, lang, cb) => {
+                await cb(100);
+                return { segments: [] };
+            }),
             transcribe: vi.fn().mockResolvedValue({ segments: [] }),
             analyzeBatch: vi.fn().mockResolvedValue({ texts: [] }),
             translate: vi.fn().mockResolvedValue({ translations: [] }),

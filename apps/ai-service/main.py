@@ -389,8 +389,6 @@ async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberD
                     yield {"event": event_type, "data": json.dumps(item)}
                 except StopIteration:
                     break
-        except asyncio.CancelledError:
-            raise
         finally:
             close = getattr(gen, "close", None)
             if callable(close):
