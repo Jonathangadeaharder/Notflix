@@ -9,14 +9,12 @@ WORKDIR /app
 
 # ── Dependency layer
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/database/package.json packages/database/
 COPY apps/platform/package.json apps/platform/
 
-RUN pnpm install --filter @notflix/platform --filter @notflix/database --ignore-scripts && \
-    pnpm rebuild esbuild
+RUN pnpm install --filter @notflix/platform --ignore-scripts && \
+    pnpm rebuild esbuild rollup
 
 # ── Source layer
-COPY packages/database packages/database
 COPY apps/platform apps/platform
 
 RUN pnpm run --filter @notflix/platform prepare && \

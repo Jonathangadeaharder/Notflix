@@ -4,7 +4,7 @@ import {
   user,
   videoProcessing,
   type DbVttSegment,
-} from "@notflix/database";
+} from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { toMediaUrl } from "$lib/server/utils/media-utils";

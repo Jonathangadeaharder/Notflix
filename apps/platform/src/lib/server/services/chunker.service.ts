@@ -1,5 +1,5 @@
 import { db } from "$lib/server/infrastructure/database";
-import { videoProcessing, type DbTokenAnalysis } from "@notflix/database";
+import { videoProcessing, type DbTokenAnalysis } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import type { VttSegment } from "../domain/translation-core";
 import { getKnownLemmas } from "./knowledge.service";

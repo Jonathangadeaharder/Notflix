@@ -1,7 +1,7 @@
 import os
 import pytest
 from unittest.mock import MagicMock
-from core.interfaces import TokenAnalysis
+from core.models import TokenAnalysis
 from core.filter import SpacyFilter
 from core.translator import OpusTranslator
 

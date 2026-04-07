@@ -1,4 +1,4 @@
-import type { DbTokenAnalysis, DbVttSegment } from "@notflix/database";
+import type { DbTokenAnalysis, DbVttSegment } from "$lib/server/db/schema";
 import type { Subtitle, WordData } from "./types";
 
 type SegmentWithTranslation = DbVttSegment & { translation?: string };

@@ -1,7 +1,7 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { CONFIG } from "./config";
-import * as schema from "@notflix/database";
+import * as schema from "$lib/server/db/schema";
 
 let _client: postgres.Sql | undefined;
 let _db: ReturnType<typeof drizzle> | undefined;

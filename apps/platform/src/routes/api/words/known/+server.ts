@@ -1,21 +1,16 @@
 import { json } from "@sveltejs/kit";
 import { db } from "$lib/server/infrastructure/database";
-import { knownWords } from "@notflix/database";
+import { knownWords } from "$lib/server/db/schema";
 import type { RequestHandler } from "./$types";
 
-const HTTP_STATUS_UNAUTHORIZED = 401;
 const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_OK = 200;
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   const session = await locals.auth();
   if (!session) {
-    return json(
-      { error: "Unauthorized" },
-      { status: HTTP_STATUS_UNAUTHORIZED },
-    );
+    return json({ error: "Unauthorized" }, { status: 401 });
   }
-
   const userId = session.user.id;
   let body;
   try {

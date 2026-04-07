@@ -1,9 +1,8 @@
 import { db } from "$lib/server/infrastructure/database";
-import { video, videoProcessing } from "@notflix/database";
+import { video, videoProcessing } from "$lib/server/db/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { CONFIG, ProcessingStatus } from "$lib/server/infrastructure/config";
-import { taskRegistry } from "$lib/server/services/task-registry.service";
-import { triggerPipeline } from "$lib/server/services/pipeline-trigger";
+import { processVideo } from "$lib/server/services/video-pipeline";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
 
 export const load = async ({ depends, locals }) => {
@@ -70,16 +69,15 @@ export const actions = {
       session?.user.targetLang ||
       CONFIG.DEFAULT_TARGET_LANG;
 
-    if (!id) return { success: false };
+    if (!id || !session) return { success: false };
 
-    taskRegistry.register(
-      `reprocessVideo:${id}`,
-      triggerPipeline({
-        videoId: id,
-        targetLang,
-        nativeLang: session?.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
-        userId: session?.user.id,
-      }),
+    processVideo(
+      id,
+      targetLang,
+      session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
+      session.user.id,
+    ).catch((err) =>
+      console.error(`[Pipeline] Background error for ${id}:`, err),
     );
 
     return { success: true };

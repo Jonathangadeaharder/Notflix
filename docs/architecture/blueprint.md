@@ -107,7 +107,7 @@ flowchart TB
     classDef infra fill:#00ba7c,stroke:#fff,stroke-width:2px,color:#fff;
     classDef workshop fill:#ff69b4,stroke:#fff,stroke-width:2px,color:#fff;
 
-    class UI,BFF,Domain,EventBus,UploadPipe,TaskReg,VocabSvc,Adapters svelte;
+    class UI,BFF,Domain,UploadPipe,VocabSvc,Adapters svelte;
     class FastAPI,Transcriber,Translator,Filter python;
     class DB,Storage,DBClient data;
     class Kong Infra infra;
@@ -168,7 +168,7 @@ Your `docs/architecture/` folder acts as the constitution for the codebase. Here
 
 | ADR ID | Decision & Rationale | Architectural Impact & Enforcement |
 | :--- | :--- | :--- |
-| **ADR-001** | **Master Monorepo** (pnpm workspaces) | Keeps SvelteKit, Python FastAPI, and Database schemas perfectly version-synced. Types flow seamlessly from `packages/shared-types` into both Svelte and Python. |
+| **ADR-001** | **Master Monorepo** (pnpm workspaces) | Keeps SvelteKit, Python FastAPI, and Database schemas perfectly version-synced. Types flow seamlessly from `apps/platform/src/lib/types.ts` into both Svelte and Python. |
 | **ADR-002** | **Centralized Authentication** | Auth is handled entirely in the SvelteKit BFF (`auth-client.ts`, `infrastructure/auth.ts`) via secure HTTP-Only cookies. API routes and `/studio` are protected natively via SvelteKit `hooks.server.ts`. |
 | **ADR-003** | **AI Service Security** | The FastAPI Python app is isolated from the public internet. Kong Gateway routes public traffic to SvelteKit, preventing unauthorized execution of expensive LLM transcription tasks. |
 | **ADR-004** | **Observability** | Centralized logging (`api/log`) and metrics (`dashboard-metrics.ts`). Crucial for tracing asynchronous, multi-step video processing failures across the Node/Python boundary. |
@@ -185,7 +185,7 @@ The `docs/specs/` directory defines the core domain logic and business constrain
 | Specification | Description & Code Mapping |
 | :--- | :--- |
 | **`design-brief.md`** & **`doc-authority.md`** | Defines the "Netflix-style" UX tailored for language acquisition. Establishes this documentation folder as the Single Source of Truth (SSOT), preventing configuration drift. |
-| **`database-schema.md`** | Realized in `packages/database/schema.ts` (Drizzle ORM). Maps the relational integrity between Users -> Videos -> Subtitles -> Vocabulary Lemmas -> Known Words. |
+| **`database-schema.md`** | Realized in `apps/platform/src/lib/server/db/schema.ts` (Drizzle ORM). Maps the relational integrity between Users -> Videos -> Subtitles -> Vocabulary Lemmas -> Known Words. |
 | **`functional-specs.md`** | Defines the user workflows: Admins upload media via `/studio/upload`. Users consume media via `/watch/[id]`, clicking unknown words to trigger interactive popups. |
 | **`processing-progress.md`** | Defines the state-machine for async processing (`UPLOADED` ➔ `CHUNKING` ➔ `TRANSCRIBING` ➔ `FILTERING` ➔ `READY`). Polled by the UI at `/api/videos/[id]/progress`. |
 | **`learning-session-state.md`** | The Finite State Machine (FSM) for a user's learning loop. Governs the logic inside `GameOverlay.svelte`—when a video pauses, how quizzes are presented, and how answers update the database via `/api/words/known/`. |
@@ -197,10 +197,10 @@ The `docs/specs/` directory defines the core domain logic and business constrain
 Based on your prompt, here is how you implement your specific requirements using this architecture:
 
 #### Problem 1: "I want clear separated units that I can test separately without monster mocks."
-**Solution: Event-Driven Choreography (ADR-007) + Native Svelte Locals (ADR-005)**
-1.  **Kill the Orchestrator:** Do not use `video-orchestrator.service.ts` to call the Database, Chunker, and AI Gateway sequentially. 
-2.  **Use the Event Bus:** The Upload Service saves the file and simply emits `VideoUploaded`. The `chunker.service.ts` listens to this event, processes the file, and emits `VideoChunked`.
-3.  **The Testing Benefit:** To test the Chunker, you don't mock the AI service or the database. You just push a mock `VideoUploaded` event into it and assert it outputs a `VideoChunked` event. It becomes a pure, easily testable unit.
+**Solution: Idiomatic Synchronous Pipeline (ADR-007) + Native Svelte Locals (ADR-005)**
+1.  **Kill the God-Class Orchestrator:** Do not use a sprawling orchestrator to handle everything.
+2.  **Use Direct Service Functions:** The Upload Service saves the file and directly triggers the pipeline.
+3.  **The Testing Benefit:** To test the Chunker, you don't mock the AI service. It becomes a pure, easily testable unit.
 4.  **Kill the DI Container:** Delete `container.ts`. Instantiate your services once per request inside SvelteKit's `hooks.server.ts` and pass them via `event.locals`. Testing a Svelte endpoint is now as simple as passing a mock `locals` object.
 
 #### Problem 2: "I want a way to show the current designs to the designer even if I can't get the server running."

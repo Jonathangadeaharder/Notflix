@@ -1,13 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { db } from "$lib/server/infrastructure/database";
-import { video } from "@notflix/database";
+import { video } from "$lib/server/db/schema";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import crypto from "crypto";
 import { CONFIG } from "$lib/server/infrastructure/config";
 import { z } from "zod";
-import { taskRegistry } from "$lib/server/services/task-registry.service";
-import { triggerPipeline } from "$lib/server/services/pipeline-trigger";
+import { processVideo } from "$lib/server/services/video-pipeline";
 
 import { HTTP_STATUS, LIMITS } from "$lib/constants";
 
@@ -18,7 +17,7 @@ const MAX_LANG_LEN = 5;
 const uploadSchema = z.object({
   title: z.string().min(1, "Title is required").max(LIMITS.MAX_TITLE_LENGTH),
   targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("es"),
-  nativeLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("en"),
+  nativeLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).optional(),
 });
 
 export const load = async () => {
@@ -32,7 +31,9 @@ export const load = async () => {
 };
 
 export const actions = {
-  upload: async ({ request }) => {
+  upload: async ({ request, locals }) => {
+    const session = await locals.auth();
+    if (!session) throw redirect(HTTP_STATUS.SEE_OTHER, "/login");
     const formData = await request.formData();
 
     const title = formData.get("title") as string;
@@ -69,7 +70,16 @@ export const actions = {
       published: true,
     });
 
-    queueProcessing(videoId, result.data.targetLang, result.data.nativeLang);
+    processVideo(
+      videoId,
+      result.data.targetLang,
+      result.data.nativeLang ??
+        session.user.nativeLang ??
+        CONFIG.DEFAULT_NATIVE_LANG,
+      session.user.id,
+    ).catch((err) =>
+      console.error(`[Pipeline] Background error for ${videoId}:`, err),
+    );
 
     throw redirect(HTTP_STATUS.SEE_OTHER, "/studio"); // 303 is standard for redirects after post
   },
@@ -88,19 +98,4 @@ async function saveUploadedFile(file: File, videoId: string): Promise<string> {
   await writeFile(filePath, buffer);
 
   return filePath;
-}
-
-function queueProcessing(
-  videoId: string,
-  targetLang: string,
-  nativeLang: string,
-) {
-  taskRegistry.register(
-    `processVideo:${videoId}`,
-    triggerPipeline({
-      videoId,
-      targetLang,
-      nativeLang,
-    }),
-  );
 }

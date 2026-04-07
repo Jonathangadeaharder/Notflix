@@ -1,12 +1,23 @@
 import { CONFIG } from "../infrastructure/config";
 import { getRequestId } from "../request-context";
-import type {
-  IAiGateway,
-  TranscriptionResponse,
-  FilterResponse,
-  TranslationResponse,
-  ThumbnailResponse,
-} from "../domain/interfaces";
+
+export type TranscriptionResponse = {
+  segments: Array<{ start: number; end: number; text: string }>;
+  language: string;
+  language_probability: number;
+};
+
+export type FilterResponse = {
+  results: any[][];
+};
+
+export type TranslationResponse = {
+  translations: string[];
+};
+
+export type ThumbnailResponse = {
+  thumbnail_path: string;
+};
 
 export class AiServiceError extends Error {
   constructor(
@@ -18,7 +29,7 @@ export class AiServiceError extends Error {
   }
 }
 
-export class RealAiGateway implements IAiGateway {
+export class RealAiGateway {
   private readonly timeoutMs = CONFIG.AI_SERVICE_TIMEOUT_MS;
   private readonly transcribeTimeoutMs =
     CONFIG.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS;
@@ -147,8 +158,8 @@ export class RealAiGateway implements IAiGateway {
                 });
                 if (duration > 0) {
                   const lastEnd = parsed.end as number;
-                  const rawPercent = Math.round((lastEnd / duration) * 40);
-                  await onProgress(Math.min(rawPercent, 40));
+                  const rawPercent = Math.round((lastEnd / duration) * 80);
+                  await onProgress(Math.min(rawPercent, 80));
                 }
               }
             } catch {

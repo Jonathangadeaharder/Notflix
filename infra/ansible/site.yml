@@ -1,6 +1,0 @@
----
-- name: Deploy Notflix
-  hosts: notflix
-  become: true
-  roles:
-    - notflix

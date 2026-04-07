@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from "@sveltejs/kit";
-import { videoProcessing, watchProgress } from "@notflix/database";
+import { videoProcessing, watchProgress } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { db } from "$lib/server/infrastructure/database";
 import { CONFIG, ProcessingStatus } from "$lib/server/infrastructure/config";
@@ -18,16 +18,6 @@ async function validateRequest(
   locals: RequestEvent["locals"],
   params: RequestEvent["params"],
 ) {
-  const session = await locals.auth();
-  if (!session) {
-    return {
-      errorResponse: json(
-        { error: "Unauthorized" },
-        { status: HTTP_STATUS.UNAUTHORIZED },
-      ),
-    };
-  }
-
   if (!params.id) {
     return {
       errorResponse: json(
@@ -37,6 +27,7 @@ async function validateRequest(
     };
   }
 
+  const session = (await locals.auth())!;
   return { session, id: params.id as string };
 }
 

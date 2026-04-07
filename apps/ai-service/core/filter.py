@@ -4,12 +4,12 @@ from typing import List, Dict
 
 import spacy
 import structlog
-from .interfaces import IFilter, TokenAnalysis
+from .models import TokenAnalysis
 
 logger = structlog.get_logger()
 
 
-class SpacyFilter(IFilter):
+class SpacyFilter:
     def __init__(self):
         self._models: Dict[str, spacy.language.Language] = {}
         self._lock = threading.Lock()
@@ -23,9 +23,7 @@ class SpacyFilter(IFilter):
                 self._models[lang] = spacy.blank(blank_lang)
                 return self._models[lang]
             model_candidates = (
-                ["es_core_news_sm"]
-                if lang == "es"
-                else ["en_core_web_sm"]
+                ["es_core_news_sm"] if lang == "es" else ["en_core_web_sm"]
             )
             loaded = False
             last_error = None
@@ -87,6 +85,7 @@ class SpacyFilter(IFilter):
                         lemma=token.lemma_,
                         pos=token.pos_,
                         is_stop=token.is_stop,
+                        whitespace=token.whitespace_,
                     )
                 )
             results.append(tokens)

@@ -1,5 +1,5 @@
 import { db as defaultDb } from "../infrastructure/database";
-import type { TokenAnalysis } from "../domain/interfaces";
+import type { TokenAnalysis } from "../domain/translation-core";
 import { getKnownLemmas } from "./knowledge.service";
 import { LIMITS } from "$lib/constants";
 

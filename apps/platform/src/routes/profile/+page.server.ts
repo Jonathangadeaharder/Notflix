@@ -1,5 +1,5 @@
 import { db } from "$lib/server/infrastructure/database";
-import { user } from "@notflix/database";
+import { user } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import type { PageServerLoad, Actions } from "./$types";
 import { redirect, fail } from "@sveltejs/kit";
@@ -23,7 +23,7 @@ const HTTP_STATUS_SEE_OTHER = 303;
 export const load: PageServerLoad = async ({ locals }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(HTTP_STATUS_SEE_OTHER, "/login");
+    throw redirect(HTTP_STATUS_SEE_OTHER, "/login?next=/profile");
   }
 
   const [profile] = await db
@@ -52,7 +52,10 @@ export const actions: Actions = {
   updateInterval: async ({ request, locals }) => {
     const session = await locals.auth();
     if (!session) {
-      throw redirect(HTTP_STATUS_SEE_OTHER, "/login");
+      return fail(HTTP_STATUS.UNAUTHORIZED, {
+        errors: { auth: ["Unauthorized"] },
+        data: {},
+      });
     }
 
     const formData = await request.formData();

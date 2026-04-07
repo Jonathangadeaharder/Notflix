@@ -1,13 +1,11 @@
 import { type PlaywrightTestConfig } from "@playwright/test";
 
-const CI_RETRIES = 2;
-
 const config: PlaywrightTestConfig = {
-  timeout: 600000, // 10 min for large video processing
-  retries: process.env.CI ? CI_RETRIES : 0,
+  timeout: 60000,
+  retries: process.env.CI ? 1 : 0,
   workers: 1,
 
-  testDir: "tests",
+  testDir: "tests/e2e",
   testMatch: ["**/*.spec.ts", "**/*.spec.js"],
 
   use: {
@@ -25,6 +23,11 @@ const config: PlaywrightTestConfig = {
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      ...process.env,
+      PORT: "5173",
+      ORIGIN: "http://localhost:5173",
+    },
   },
 };
 

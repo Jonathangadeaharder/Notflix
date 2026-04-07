@@ -14,15 +14,6 @@ describe('DELETE /api/videos/[id]', () => {
 		vi.clearAllMocks();
 	});
 
-	it('returns 401 when unauthenticated', async () => {
-		const response = await DELETE({
-			params: { id: VIDEO_ID },
-			locals: { auth: vi.fn().mockResolvedValue(null) }
-		} as never);
-
-		expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
-	});
-
 	it('returns 404 when service reports missing video', async () => {
 		vi.mocked(deleteVideoAndAssets).mockResolvedValue({ ok: false, reason: 'NOT_FOUND' });
 

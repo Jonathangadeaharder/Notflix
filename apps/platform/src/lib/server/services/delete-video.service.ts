@@ -1,5 +1,5 @@
 import { db as defaultDb } from "$lib/server/infrastructure/database";
-import { video, videoProcessing } from "@notflix/database";
+import { video, videoProcessing } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { unlink } from "fs/promises";
 

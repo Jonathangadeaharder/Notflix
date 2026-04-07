@@ -4,7 +4,6 @@ from typing import List
 import structlog
 import torch
 from transformers import MarianMTModel, MarianTokenizer
-from .interfaces import ITranslator
 
 logger = structlog.get_logger()
 
@@ -17,7 +16,7 @@ FALLBACK_MAPPING = {
 }
 
 
-class OpusTranslator(ITranslator):  # pylint: disable=too-few-public-methods
+class OpusTranslator:  # pylint: disable=too-few-public-methods
     def __init__(self, device=None):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self._models = {}

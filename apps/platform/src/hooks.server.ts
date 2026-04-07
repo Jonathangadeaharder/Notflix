@@ -2,18 +2,18 @@ import { resolveSession } from "$lib/server/infrastructure/auth";
 import type { Session } from "$lib/server/infrastructure/auth";
 import { building } from "$app/environment";
 import { randomUUID } from "crypto";
-import { MockAiGateway } from "$lib/server/adapters/mock-ai-gateway";
-import { RealAiGateway } from "$lib/server/adapters/real-ai-gateway";
-import { SmartFilter } from "$lib/server/services/linguistic-filter.service";
-import { SubtitleService } from "$lib/server/services/subtitle.service";
-import { registerPipelineListeners } from "$lib/server/services/video-pipeline";
 import { db } from "$lib/server/infrastructure/database";
-import { user as userTable } from "@notflix/database";
+import { user as userTable, videoProcessing } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
+import { json, redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
 
 const E2E_USER_ID = "00000000-e2e0-4000-a000-000000000000";
 const SESSION_TTL_MS = 86400000;
+
+const PROTECTED_PAGE_ROUTES = ["/studio", "/profile", "/vocabulary"];
+const PROTECTED_API_PREFIX = "/api/";
+const AUTH_EXEMPT_API = new Set(["/api/health"]);
 
 async function resolveE2eSession(): Promise<Session | null> {
   const [existing] = await db
@@ -51,20 +51,13 @@ async function resolveE2eSession(): Promise<Session | null> {
 if (!building) {
   (async () => {
     try {
-      console.log("[System] Initializing Event Pipeline...");
-      const gateway = new RealAiGateway();
-      const filter = new SmartFilter(db);
-      registerPipelineListeners(db, gateway, filter);
-      console.log("[System] Choreography Listeners registered.");
-
-      // Cleanup stale tasks
-      const { videoProcessing } = await import("@notflix/database");
+      // Cleanup stale tasks from previous crash/restart
       await db
         .update(videoProcessing)
-        .set({ status: "ERROR" } as any)
-        .where(eq(videoProcessing.status, "PENDING" as any));
+        .set({ status: "ERROR" })
+        .where(eq(videoProcessing.status, "PENDING"));
     } catch (err) {
-      console.error("[System] Startup Failed:", err);
+      console.error("[System] Startup cleanup failed:", err);
     }
   })();
 }
@@ -72,13 +65,7 @@ if (!building) {
 export const handle: Handle = async ({ event, resolve }) => {
   const requestId = event.request.headers.get("x-request-id") || randomUUID();
 
-  // Instantiate lightweight services once per request (Request-isolated DI)
-  const useMock =
-    process.env.NODE_ENV === "test" || process.env.USE_MOCK_AI === "true";
   event.locals.db = db;
-  event.locals.aiGateway = useMock ? new MockAiGateway() : new RealAiGateway();
-  event.locals.smartFilter = new SmartFilter(db);
-  event.locals.subtitleService = new SubtitleService(db);
 
   let sessionCache: Session | null | undefined;
   event.locals.auth = async () => {
@@ -90,6 +77,25 @@ export const handle: Handle = async ({ event, resolve }) => {
     sessionCache = await resolveSession(event);
     return sessionCache;
   };
+
+  // Centralized auth guard
+  const { pathname } = event.url;
+  const isProtectedPage = PROTECTED_PAGE_ROUTES.some((r) =>
+    pathname.startsWith(r),
+  );
+  const isProtectedApi =
+    pathname.startsWith(PROTECTED_API_PREFIX) && !AUTH_EXEMPT_API.has(pathname);
+
+  if (isProtectedPage || isProtectedApi) {
+    const session = await event.locals.auth();
+    if (!session) {
+      if (isProtectedApi) {
+        return json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const next = encodeURIComponent(pathname);
+      return redirect(303, `/login?next=${next}`);
+    }
+  }
 
   const response = await resolve(event, {
     filterSerializedResponseHeaders: (name) =>

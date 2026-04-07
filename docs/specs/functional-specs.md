@@ -11,7 +11,7 @@ Notflix is a video-first language learning product. It does not translate everyt
 
 ## 2. Data Model Overview
 
-Persistent storage is defined in `packages/database/schema.ts`.
+Persistent storage is defined in `apps/platform/src/lib/server/db/schema.ts`.
 
 - **User/profile:** native language, target language, and game interval preferences
 - **Known words:** lemma-level vocabulary state per user and language

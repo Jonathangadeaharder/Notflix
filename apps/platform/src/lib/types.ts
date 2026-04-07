@@ -1,6 +1,5 @@
 /**
- * Shared types for Notflix monorepo
- * Used by both platform (SvelteKit) and ai-service (FastAPI)
+ * Shared types for Notflix platform
  */
 
 // --- Token Analysis ---

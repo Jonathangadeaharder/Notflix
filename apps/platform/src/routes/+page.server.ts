@@ -11,7 +11,7 @@ import {
   video,
   videoProcessing,
   watchProgress,
-} from "@notflix/database";
+} from "$lib/server/db/schema";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 const DASHBOARD_VIDEO_LIMIT = 12;

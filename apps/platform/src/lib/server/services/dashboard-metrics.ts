@@ -1,4 +1,4 @@
-import type { DbVttSegment } from "@notflix/database";
+import type { DbVttSegment } from "$lib/server/db/schema";
 import { ProcessingStatus } from "../infrastructure/config";
 
 const COMPREHENSION_WEIGHTS: Record<string, number> = {

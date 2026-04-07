@@ -1,321 +1,261 @@
-import {
-  globalEvents,
-  EVENTS,
-  type VideoUploadedPayload,
-  type TranscriptionCompletedPayload,
-  type AnalysisCompletedPayload,
-} from "../infrastructure/event-bus";
+import { db as drizzleDb } from "../infrastructure/database";
+import { video, videoProcessing } from "$lib/server/db/schema";
+import { eq, and } from "drizzle-orm";
+import { ProcessingStatus, toAiServicePath } from "../infrastructure/config";
+import { RealAiGateway } from "../adapters/real-ai-gateway";
+import { SmartFilter } from "./linguistic-filter.service";
 import {
   mapAnalysisToSegments,
-  extractUniqueLemmas,
   extractUnknownLemmas,
   mapTranslationsToSegments,
 } from "../domain/translation-core";
-import type { IAiGateway } from "../domain/interfaces";
-import { db as drizzleDb } from "../infrastructure/database";
-import type { SmartFilter } from "./linguistic-filter.service";
-import { video, videoProcessing } from "@notflix/database";
-import { eq, and } from "drizzle-orm";
-import { ProcessingStatus, toAiServicePath } from "../infrastructure/config";
 
-// The pipeline sets up event listeners to chain the heavy workload completely decoupled.
-export function registerPipelineListeners(
+const PROGRESS_DB_MIN_INTERVAL_MS = 2000;
+
+export async function processVideo(
+  videoId: string,
+  targetLang: string,
+  nativeLang: string,
+  userId: string,
+  db: typeof drizzleDb = drizzleDb,
+): Promise<void> {
+  const aiGateway = new RealAiGateway();
+  const filter = new SmartFilter(db);
+
+  try {
+    await initProcessingRecord(db, videoId, targetLang);
+    const transcription = await transcribeWithProgress(
+      aiGateway,
+      db,
+      videoId,
+      targetLang,
+    );
+    await generateThumbnail(aiGateway, db, videoId, transcription.record);
+    const finalSegments = await analyzeSegments(
+      aiGateway,
+      db,
+      videoId,
+      targetLang,
+      transcription.data,
+    );
+    const translated = await translateAndFilter(
+      filter,
+      aiGateway,
+      db,
+      videoId,
+      targetLang,
+      nativeLang,
+      userId,
+      finalSegments,
+    );
+    await persistCompletion(db, videoId, targetLang, translated);
+    console.log(`[Pipeline] Processing fully complete for: ${videoId}.`);
+  } catch (err) {
+    await handleProcessingError(db, videoId, targetLang, err);
+    throw err;
+  }
+}
+
+async function initProcessingRecord(
   db: typeof drizzleDb,
-  aiGateway: IAiGateway,
+  videoId: string,
+  targetLang: string,
+): Promise<void> {
+  await setStage(db, videoId, targetLang, "QUEUED", 0);
+  await db
+    .insert(videoProcessing)
+    .values({
+      videoId,
+      targetLang,
+      status: ProcessingStatus.PENDING,
+      progressStage: "QUEUED",
+      progressPercent: 0,
+      vttJson: null,
+    })
+    .onConflictDoUpdate({
+      target: [videoProcessing.videoId, videoProcessing.targetLang],
+      set: {
+        status: ProcessingStatus.PENDING,
+        progressStage: "QUEUED",
+        progressPercent: 0,
+        vttJson: null,
+      },
+    });
+}
+
+async function transcribeWithProgress(
+  aiGateway: RealAiGateway,
+  db: typeof drizzleDb,
+  videoId: string,
+  targetLang: string,
+): Promise<{ record: typeof video.$inferSelect; data: any }> {
+  await setStage(db, videoId, targetLang, "TRANSCRIBING", 0);
+  const [record] = await db
+    .select()
+    .from(video)
+    .where(eq(video.id, videoId))
+    .limit(1);
+  if (!record) throw new Error(`Video not found: ${videoId}`);
+
+  const aiPath = toAiServicePath(record.filePath);
+  console.log(`[Pipeline] Calling AI service for transcription: ${aiPath}`);
+
+  let lastPersistedPercent = 0;
+  let lastPersistedAt = 0;
+
+  const transcription = await aiGateway.transcribeWithProgress(
+    aiPath,
+    targetLang,
+    async (percent) => {
+      const clamped = Math.min(80, Math.max(0, Math.round(percent)));
+      const now = Date.now();
+      if (
+        clamped <= lastPersistedPercent &&
+        now - lastPersistedAt < PROGRESS_DB_MIN_INTERVAL_MS
+      )
+        return;
+      lastPersistedPercent = clamped;
+      lastPersistedAt = now;
+      console.log(`[Pipeline] Transcription progress: ${clamped}%`);
+      await setStage(db, videoId, targetLang, "TRANSCRIBING", clamped);
+    },
+  );
+
+  await setStage(db, videoId, targetLang, "TRANSCRIBING", 80);
+  return { record, data: transcription };
+}
+
+async function generateThumbnail(
+  aiGateway: RealAiGateway,
+  db: typeof drizzleDb,
+  videoId: string,
+  record: typeof video.$inferSelect,
+): Promise<void> {
+  if (record.filePath.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) return;
+  const aiPath = toAiServicePath(record.filePath);
+  aiGateway
+    .generateThumbnail(aiPath)
+    .then(async (res) => {
+      await db
+        .update(video)
+        .set({ thumbnailPath: res.thumbnail_path })
+        .where(eq(video.id, videoId));
+    })
+    .catch((e) => console.warn("[Pipeline] Thumbnail failed:", e));
+}
+
+async function analyzeSegments(
+  aiGateway: RealAiGateway,
+  db: typeof drizzleDb,
+  videoId: string,
+  targetLang: string,
+  transcription: any,
+): Promise<any[]> {
+  await setStage(db, videoId, targetLang, "ANALYZING", 85);
+  console.log(`[Pipeline] Starting Analysis.`);
+  const segmentTexts = transcription.segments.map((s: any) => s.text);
+  const batchAnalysis = await aiGateway.analyzeBatch(segmentTexts, targetLang);
+  return mapAnalysisToSegments(transcription, batchAnalysis.results);
+}
+
+async function translateAndFilter(
   filter: SmartFilter,
-) {
-  // 1. UPLOAD -> TRANSCRIBE
-  globalEvents.on(
-    EVENTS.VIDEO_UPLOADED,
-    async (payload: VideoUploadedPayload) => {
-      console.log(
-        `[Pipeline] Video Uploaded: ${payload.videoId}. Initiating pipeline.`,
-      );
+  aiGateway: RealAiGateway,
+  db: typeof drizzleDb,
+  videoId: string,
+  targetLang: string,
+  nativeLang: string,
+  userId: string,
+  finalSegments: any[],
+): Promise<any[]> {
+  await setStage(db, videoId, targetLang, "TRANSLATING", 93);
+  console.log(`[Pipeline] Starting Translation.`);
 
-      try {
-        await db
-          .insert(videoProcessing)
-          .values({
-            videoId: payload.videoId,
-            targetLang: payload.targetLang,
-            status: ProcessingStatus.PENDING,
-            progressStage: "QUEUED",
-            progressPercent: 0,
-            vttJson: null,
-          })
-          .onConflictDoUpdate({
-            target: [videoProcessing.videoId, videoProcessing.targetLang],
-            set: {
-              status: ProcessingStatus.PENDING,
-              progressStage: "QUEUED",
-              progressPercent: 0,
-              vttJson: null,
-            },
-          });
-
-        globalEvents.emit(EVENTS.PROCESSING_UPDATE, {
-          videoId: payload.videoId,
-          status: "TRANSCRIBING",
-          percent: 10,
-        });
-        await db
-          .update(videoProcessing)
-          .set({ progressStage: "TRANSCRIBING", progressPercent: 5 })
-          .where(eq(videoProcessing.videoId, payload.videoId));
-
-        const [record] = await db
-          .select()
-          .from(video)
-          .where(eq(video.id, payload.videoId))
-          .limit(1);
-        if (!record) throw new Error("Video not found");
-
-        const aiPath = toAiServicePath(record.filePath);
-        const PROGRESS_DB_PERCENT_STEP = 5;
-        const PROGRESS_DB_MIN_INTERVAL_MS = 1000;
-        let lastPersistedPercent = 5;
-        let lastPersistedAt = Date.now();
-
-        const transcription = await aiGateway.transcribeWithProgress(
-          aiPath,
-          payload.targetLang,
-          async (percent) => {
-            const normalizedPercent = Math.max(
-              lastPersistedPercent,
-              Math.min(100, Math.round(percent)),
-            );
-            const now = Date.now();
-            const percentAdvanced =
-              normalizedPercent - lastPersistedPercent >=
-              PROGRESS_DB_PERCENT_STEP;
-            const intervalElapsed =
-              now - lastPersistedAt >= PROGRESS_DB_MIN_INTERVAL_MS;
-            const shouldPersist =
-              normalizedPercent === 100 || percentAdvanced || intervalElapsed;
-
-            if (!shouldPersist) {
-              return;
-            }
-
-            lastPersistedPercent = normalizedPercent;
-            lastPersistedAt = now;
-
-            await db
-              .update(videoProcessing)
-              .set({
-                progressStage: "TRANSCRIBING",
-                progressPercent: normalizedPercent,
-              })
-              .where(
-                and(
-                  eq(videoProcessing.videoId, payload.videoId),
-                  eq(videoProcessing.targetLang, payload.targetLang),
-                ),
-              );
-          },
-        );
-
-        await db
-          .update(videoProcessing)
-          .set({ progressStage: "TRANSCRIBING", progressPercent: 100 })
-          .where(
-            and(
-              eq(videoProcessing.videoId, payload.videoId),
-              eq(videoProcessing.targetLang, payload.targetLang),
-            ),
-          );
-
-        globalEvents.emit(EVENTS.TRANSCRIPTION_COMPLETED, {
-          ...payload,
-          transcription,
-        } satisfies TranscriptionCompletedPayload);
-
-        // Spawn thumbnail in background, completely detached
-        if (!record.filePath.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) {
-          aiGateway
-            .generateThumbnail(aiPath)
-            .then(async (res) => {
-              await db
-                .update(video)
-                .set({ thumbnailPath: res.thumbnail_path })
-                .where(eq(video.id, payload.videoId));
-            })
-            .catch((e) => console.warn("Thumbnail failed", e));
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        const stack = err instanceof Error ? err.stack : undefined;
-        console.error(
-          `[Pipeline Error] TRANSCRIBE videoId=${payload.videoId}: ${message}`,
-          stack ?? "",
-        );
-        await db
-          .update(videoProcessing)
-          .set({ status: ProcessingStatus.ERROR, progressStage: "FAILED" })
-          .where(eq(videoProcessing.videoId, payload.videoId));
-      }
-    },
+  const segmentsTokens = finalSegments.map((s: any) => s.tokens);
+  const filteredSegments = await filter.filterBatch(
+    segmentsTokens,
+    userId,
+    targetLang,
   );
+  finalSegments.forEach((seg, i) => {
+    seg.classification = filteredSegments[i].classification;
+    seg.tokens = filteredSegments[i].tokens;
+  });
 
-  // 2. TRANSCRIBE -> ANALYZE
-  globalEvents.on(
-    EVENTS.TRANSCRIPTION_COMPLETED,
-    async (payload: TranscriptionCompletedPayload) => {
-      console.log(
-        `[Pipeline] Transcription complete for: ${payload.videoId}. Starting Analysis.`,
-      );
-      try {
-        globalEvents.emit(EVENTS.PROCESSING_UPDATE, {
-          videoId: payload.videoId,
-          status: "ANALYZING",
-          percent: 50,
-        });
-        await db
-          .update(videoProcessing)
-          .set({ progressStage: "ANALYZING", progressPercent: 50 })
-          .where(eq(videoProcessing.videoId, payload.videoId));
+  const lemmaList = extractUnknownLemmas(finalSegments);
+  const sentenceTexts = finalSegments.map((s: any) => s.text);
 
-        const segmentTexts = payload.transcription.segments.map(
-          (s: any) => s.text,
-        );
-        const batchAnalysis = await aiGateway.analyzeBatch(
-          segmentTexts,
-          payload.targetLang,
-        );
-        const mappedSegments = mapAnalysisToSegments(
-          payload.transcription,
-          batchAnalysis.results,
-        );
+  const [lemmaRes, sentenceRes] = await Promise.all([
+    lemmaList.length > 0
+      ? aiGateway.translate(lemmaList, targetLang, nativeLang)
+      : Promise.resolve({ translations: [] }),
+    aiGateway.translate(sentenceTexts, targetLang, nativeLang),
+  ]);
 
-        globalEvents.emit(EVENTS.ANALYSIS_COMPLETED, {
-          videoId: payload.videoId,
-          targetLang: payload.targetLang,
-          nativeLang: payload.nativeLang,
-          userId: payload.userId,
-          segments: mappedSegments,
-        } satisfies AnalysisCompletedPayload);
-      } catch (err) {
-        console.error(`[Pipeline Error] ANALYZE:`, err);
-        await db
-          .update(videoProcessing)
-          .set({ status: ProcessingStatus.ERROR })
-          .where(eq(videoProcessing.videoId, payload.videoId));
-      }
-    },
+  return mapTranslationsToSegments(
+    finalSegments,
+    lemmaList,
+    lemmaRes.translations,
+    sentenceRes.translations,
   );
+}
 
-  // 3. ANALYZE -> ENRICH (TRANSLATE) -> COMPLETE
-  globalEvents.on(
-    EVENTS.ANALYSIS_COMPLETED,
-    async (payload: AnalysisCompletedPayload) => {
-      console.log(
-        `[Pipeline] Analysis complete for: ${payload.videoId}. Starting Translation Enrichment.`,
-      );
-      try {
-        globalEvents.emit(EVENTS.PROCESSING_UPDATE, {
-          videoId: payload.videoId,
-          status: "TRANSLATING",
-          percent: 80,
-        });
-        await db
-          .update(videoProcessing)
-          .set({ progressStage: "TRANSLATING", progressPercent: 80 })
-          .where(eq(videoProcessing.videoId, payload.videoId));
+async function persistCompletion(
+  db: typeof drizzleDb,
+  videoId: string,
+  targetLang: string,
+  finalSegments: any[],
+): Promise<void> {
+  await db
+    .update(videoProcessing)
+    .set({
+      status: ProcessingStatus.COMPLETED,
+      progressStage: "READY",
+      progressPercent: 100,
+      vttJson: finalSegments,
+    })
+    .where(
+      and(
+        eq(videoProcessing.videoId, videoId),
+        eq(videoProcessing.targetLang, targetLang),
+      ),
+    );
+}
 
-        let finalSegments = payload.segments;
-        const sentenceTexts = finalSegments.map((s: any) => s.text);
+async function handleProcessingError(
+  db: typeof drizzleDb,
+  videoId: string,
+  targetLang: string,
+  err: unknown,
+): Promise<void> {
+  const message = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack : undefined;
+  console.error(`[Pipeline Error] videoId=${videoId}: ${message}`, stack ?? "");
+  await db
+    .update(videoProcessing)
+    .set({ status: ProcessingStatus.ERROR, progressStage: "FAILED" })
+    .where(
+      and(
+        eq(videoProcessing.videoId, videoId),
+        eq(videoProcessing.targetLang, targetLang),
+      ),
+    );
+}
 
-        async function translateAndMapSegments(
-          segmentsToMap: any[],
-          lemmasToTranslate: string[],
-        ) {
-          const [lemmaRes, sentenceRes] = await Promise.all([
-            lemmasToTranslate.length > 0
-              ? aiGateway.translate(
-                  lemmasToTranslate,
-                  payload.targetLang,
-                  payload.nativeLang,
-                )
-              : { translations: [] },
-            aiGateway.translate(
-              sentenceTexts,
-              payload.targetLang,
-              payload.nativeLang,
-            ),
-          ]);
-
-          return mapTranslationsToSegments(
-            segmentsToMap,
-            lemmasToTranslate,
-            lemmaRes.translations,
-            sentenceRes.translations,
-          );
-        }
-
-        if (!payload.userId) {
-          // Guest mode
-          const lemmaList = extractUniqueLemmas(finalSegments, 50); // limit 50
-          finalSegments = await translateAndMapSegments(
-            finalSegments,
-            lemmaList,
-          );
-        } else {
-          // User mode with Linguistic Filter
-          const segmentsTokens = finalSegments.map((s: any) => s.tokens);
-          const filteredSegments = await filter.filterBatch(
-            segmentsTokens,
-            payload.userId,
-            payload.targetLang,
-          );
-
-          finalSegments.forEach((seg, i) => {
-            seg.classification = filteredSegments[i].classification;
-            seg.tokens = filteredSegments[i].tokens;
-          });
-
-          const lemmaList = extractUnknownLemmas(finalSegments);
-          finalSegments = await translateAndMapSegments(
-            finalSegments,
-            lemmaList,
-          );
-        }
-
-        // Save COMPLETED
-        await db
-          .update(videoProcessing)
-          .set({
-            status: ProcessingStatus.COMPLETED,
-            progressStage: "READY",
-            progressPercent: 100,
-            vttJson: finalSegments,
-          })
-          .where(
-            and(
-              eq(videoProcessing.videoId, payload.videoId),
-              eq(videoProcessing.targetLang, payload.targetLang),
-            ),
-          );
-
-        globalEvents.emit(EVENTS.PROCESSING_UPDATE, {
-          videoId: payload.videoId,
-          status: ProcessingStatus.COMPLETED,
-          percent: 100,
-        });
-        console.log(
-          `[Pipeline] Processing fully complete for: ${payload.videoId}.`,
-        );
-      } catch (err) {
-        console.error(`[Pipeline Error] ENRICH:`, err);
-        await db
-          .update(videoProcessing)
-          .set({ status: ProcessingStatus.ERROR })
-          .where(
-            and(
-              eq(videoProcessing.videoId, payload.videoId),
-              eq(videoProcessing.targetLang, payload.targetLang),
-            ),
-          );
-      }
-    },
-  );
+async function setStage(
+  db: typeof drizzleDb,
+  videoId: string,
+  targetLang: string,
+  stage: string,
+  percent: number,
+): Promise<void> {
+  await db
+    .update(videoProcessing)
+    .set({ progressStage: stage, progressPercent: percent })
+    .where(
+      and(
+        eq(videoProcessing.videoId, videoId),
+        eq(videoProcessing.targetLang, targetLang),
+      ),
+    );
 }

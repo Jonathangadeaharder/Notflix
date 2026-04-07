@@ -3,15 +3,7 @@ import { deleteVideoAndAssets } from "$lib/server/services/delete-video.service"
 import type { RequestHandler } from "./$types";
 import { HTTP_STATUS } from "$lib/constants";
 
-export const DELETE: RequestHandler = async ({ params, locals }) => {
-  const session = await locals.auth();
-  if (!session) {
-    return json(
-      { error: "Unauthorized" },
-      { status: HTTP_STATUS.UNAUTHORIZED },
-    );
-  }
-
+export const DELETE: RequestHandler = async ({ params }) => {
   const { id } = params;
 
   try {

@@ -14,14 +14,6 @@ describe("GET /api/videos", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 when unauthenticated", async () => {
-    const response = await GET({
-      locals: { auth: vi.fn().mockResolvedValue(null) },
-    } as never);
-
-    expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
-  });
-
   it("returns videos for authenticated users", async () => {
     const chain = {
       from: vi.fn().mockReturnThis(),

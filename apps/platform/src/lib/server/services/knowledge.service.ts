@@ -1,5 +1,5 @@
 import { db } from "../infrastructure/database";
-import { knownWords } from "@notflix/database";
+import { knownWords } from "$lib/server/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 
 export async function getKnownLemmas(

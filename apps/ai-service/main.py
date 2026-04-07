@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 import logging
 import shlex
@@ -17,7 +18,7 @@ from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, field_validator
 from sse_starlette.sse import EventSourceResponse
 from core.filter import SpacyFilter
-from core.interfaces import Segment, TokenAnalysis
+from core.models import Segment, TokenAnalysis
 from core.transcriber import WhisperTranscriber
 from core.translator import OpusTranslator
 
@@ -77,6 +78,13 @@ LOGS_DIR.mkdir(exist_ok=True, parents=True)
 
 logging.root.handlers = []
 
+
+def rename_event_to_message(_logger, _method_name, event_dict):
+    if "event" in event_dict:
+        event_dict["message"] = event_dict.pop("event")
+    return event_dict
+
+
 structlog.configure(
     processors=[
         structlog.contextvars.merge_contextvars,  # Added for Request ID
@@ -87,6 +95,7 @@ structlog.configure(
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
+        rename_event_to_message,
         structlog.processors.JSONRenderer(),
     ],
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -96,10 +105,30 @@ structlog.configure(
 
 std_logger = logging.getLogger()
 std_logger.setLevel(logging.INFO)
-std_logger.addHandler(logging.StreamHandler())
+std_logger.addHandler(logging.StreamHandler(sys.stdout))
 std_logger.addHandler(logging.FileHandler(LOGS_DIR / "ai-service.log"))
 
 logger = structlog.get_logger()
+
+
+class EndpointFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = getattr(record, "args", None)
+        path = None
+
+        if isinstance(args, (tuple, list)):
+            if len(args) >= 3:
+                path = args[2]
+        elif isinstance(args, dict):
+            path = args.get("path")
+
+        if path is None:
+            return True
+
+        return bool(path != "/health")
+
+
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 
 # --- State ---
@@ -136,23 +165,24 @@ async def lifespan(_app: FastAPI):
         brain_state["filter"] = SpacyFilter()
         brain_state["translator"] = OpusTranslator(device="cpu")
     else:
-        # Using 'base' model for better non-English performance as requested
-        brain_state["transcriber"] = WhisperTranscriber(model_size="base")
+        brain_state["transcriber"] = WhisperTranscriber(model_size="tiny")
         brain_state["filter"] = SpacyFilter()
         brain_state["translator"] = OpusTranslator()
     logger.info("startup_models_loaded")
+    print("[AI Service] Models loaded. Ready to accept requests.", flush=True)
     yield
     logger.info("shutdown_cleanup")
 
 
 # --- App ---
+_secured = [Depends(get_api_key)]
+
 app = FastAPI(
     title="AI Service",
     version="1.0.0",
     description=(
         "Stateless AI worker for transcription, translation and linguistic analysis."
     ),
-    dependencies=[Depends(get_api_key)],
     lifespan=lifespan,
     servers=[
         {"url": "http://ai-service:8000", "description": "Internal Docker Network"}
@@ -251,6 +281,7 @@ class FilterResponse(BaseModel):
     response_model=ThumbnailResponse,
     tags=["Media"],
     description="Generates a thumbnail from a video file using FFmpeg.",
+    dependencies=_secured,
 )
 async def generate_thumbnail(req: ThumbnailRequest):
     logger.info(
@@ -303,6 +334,7 @@ async def generate_thumbnail(req: ThumbnailRequest):
     response_model=TranscriptionResponse,
     tags=["AI"],
     description="Transcribes an audio file using Faster-Whisper.",
+    dependencies=_secured,
 )
 def transcribe(req: TranscriptionRequest, transcriber: TranscriberDep):
     logger.info("request_received", endpoint="/transcribe", file_path=req.file_path)
@@ -347,6 +379,7 @@ def transcribe(req: TranscriptionRequest, transcriber: TranscriberDep):
     "/transcribe/stream",
     tags=["AI"],
     description="Streams transcription progress via SSE. Yields info then segment events.",
+    dependencies=_secured,
 )
 async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberDep):
     logger.info(
@@ -381,18 +414,23 @@ async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberD
     async def event_generator():
         loop = asyncio.get_running_loop()
         gen = transcriber.transcribe_stream(str(candidate_path), req.language)
+        _done = object()
         try:
             while True:
-                try:
-                    item = await loop.run_in_executor(None, next, gen)
-                    event_type = item.get("type", "segment")
-                    yield {"event": event_type, "data": json.dumps(item)}
-                except StopIteration:
+                # Use next(gen, _done) to avoid StopIteration leaking into the
+                # asyncio Future, where Python converts it to RuntimeError
+                item = await loop.run_in_executor(None, next, gen, _done)
+                if item is _done:
                     break
+                event_type = item.get("type", "segment")
+                yield {"event": event_type, "data": json.dumps(item)}
         finally:
             close = getattr(gen, "close", None)
             if callable(close):
-                close()
+                try:
+                    close()
+                except ValueError as exc:
+                    logger.warning("generator_close_error", error=str(exc))
 
     return EventSourceResponse(event_generator())
 
@@ -402,6 +440,7 @@ async def transcribe_stream(req: TranscriptionRequest, transcriber: TranscriberD
     response_model=TranslationResponse,
     tags=["AI"],
     description="Translates a batch of texts using MarianMT models.",
+    dependencies=_secured,
 )
 def translate(req: TranslationRequest, translator: TranslatorDep):
     # Translator logic handles missing models with error logs now
@@ -414,6 +453,7 @@ def translate(req: TranslationRequest, translator: TranslatorDep):
     response_model=FilterResponse,
     tags=["AI"],
     description="Analyzes a batch of texts using SpaCy for linguistic filtering.",
+    dependencies=_secured,
 )
 def filter_text(req: FilterRequest, text_filter: FilterDep):
     results = text_filter.analyze_batch(req.texts, req.language)

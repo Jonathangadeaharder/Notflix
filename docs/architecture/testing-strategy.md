@@ -38,23 +38,19 @@ UI Components must be "dumb." They take interfaces as `export let` props and emi
 #### A. Database Adapters (Testcontainers)
 **Architectural Rule:** *Never mock the database.* If you mock the DB, you are not testing your SQL. Use Docker (Testcontainers) to spin up an ephemeral PostgreSQL instance.
 
-| Test Suite | Target Adapter | Act | Assert |
-| :--- | :--- | :--- | :--- |
-| **`postgres-video.test.ts`** | `PostgresVideoRepository` | Call `.insert(mockVideo)`, then update its status to `TRANSCRIBING`, then call `.findById(mockVideo.id)`. | Assert the retrieved data matches the `IVideo` interface perfectly. This proves your Drizzle ORM schema and migrations are flawless. |
-
-#### B. AI Gateway Contract Tests (VCR / Cassettes)
-**Architectural Rule:** We must prove our adapter parses real LLM JSON correctly, but we cannot hit OpenAI/Claude on every CI run (it is slow, costs money, and causes network flakes).
+#### B. AI Gateway Contract Tests
+**Architectural Rule:** We must prove our adapter parses real LLM JSON correctly, but we cannot hit OpenAI/Claude on every CI run.
 
 | Test Suite | Target Adapter | Testing Strategy & Assertion |
 | :--- | :--- | :--- |
-| **`real-ai-gateway.test.ts`** | `RealAiGateway` | Use **VCR** (e.g., `vcrpy` for Python or `@pollyjs/core` for Node). Call `gateway.transcribe(audioBuffer)`. On the *first* test run, it makes a real HTTP call to OpenAI and saves the JSON response to a local YAML "cassette" file. On all *future* CI runs, it intercepts the HTTP request and replays the cassette. Assert the adapter transforms the HTTP JSON strictly into our internal `ITranscript` interface. |
+| **`real-ai-gateway.test.ts`** | `RealAiGateway` | Mock the HTTP calls to the AI service. Assert the adapter transforms the HTTP JSON strictly into our internal `ITranscript` interface. |
 
-#### C. Event Choreography (The "No Monster Mock" Zone)
-Because we moved from Orchestration to Event-Driven Choreography (ADR-007), we only test that a service reacts to one event and emits another.
+#### C. Service Integration
+Because we moved to an Idiomatic Synchronous Pipeline (ADR-007), we test that a service processes data correctly end-to-end.
 
 | Test Suite | Target Service | Setup / Dependency Injection | Act | Assert |
 | :--- | :--- | :--- | :--- | :--- |
-| **`chunker.handler.test.ts`** | `ChunkerService` | Inject an `InMemoryStorageAdapter` and an `InMemoryEventBus`. | Call `chunker.handle(new VideoUploadedEvent('vid_123'))`. | Assert `MockStorage.download()` was called. Assert `InMemoryEventBus.emitted(new AudioChunkedEvent(...))` is true. |
+| **`chunker.integration.test.ts`** | `ChunkerService` | Inject an `InMemoryStorageAdapter`. | Call `chunker.processVideo(...)`. | Assert `MockStorage.download()` was called and chunking completed successfully. |
 
 #### D. SvelteKit BFF Endpoints (Framework Native DI)
 **Architectural Rule:** Do not spin up a local server to test endpoints. Pass a mocked SvelteKit `RequestEvent`.
@@ -67,7 +63,7 @@ Because we moved from Orchestration to Event-Driven Choreography (ADR-007), we o
 
 ### 3. Level 3: End-to-End (E2E) Tests (The User Journeys)
 **Goal:** Validate the entire system wired together (Browser ➔ Kong ➔ SvelteKit ➔ Postgres ➔ FastAPI). 
-**Architectural Rule:** Run via Playwright. Configure the E2E environment to use the real database, but your `hooks.server.ts` must read an env var (e.g., `USE_MOCK_AI=true`) and inject the `MockAiGateway`. This bypasses 3-minute LLM processing times, allowing E2E tests to complete the choreography loop instantly and deterministically.
+**Architectural Rule:** Run via Playwright. Configure the E2E environment to use the real database, but your tests must intercept and mock the AI service HTTP calls. This bypasses 3-minute LLM processing times, allowing E2E tests to complete the pipeline loop instantly and deterministically.
 
 #### Journey 1: The Content Creator (Upload & Process)
 *   **Target:** `tests/e2e/creator-upload.spec.ts`
@@ -96,5 +92,5 @@ Because we moved from Orchestration to Event-Driven Choreography (ADR-007), we o
 
 ### Summary: How these tests prove the Architecture is perfect
 1. **If you can't write a Unit Test without mocking the Database:** Your service is violating the architecture by coupling to a concrete Implementation instead of a Repository Interface.
-2. **If your E2E tests are slow or flaky:** You forgot to use the `MockAiGateway` adapter, proving you didn't properly decouple your AI dependencies at the framework boundary (`hooks.server.ts`).
+2. **If your E2E tests are slow or flaky:** You forgot to mock the AI service HTTP calls, proving you didn't properly isolate your AI dependencies in the test environment.
 3. **If your Designer can't view a Component in Histoire:** Your Svelte component is fetching data directly from the server instead of accepting data via `export let` props, violating UI isolation rules.
