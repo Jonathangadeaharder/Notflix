@@ -1,7 +1,11 @@
 /* eslint-disable sonarjs/no-duplicate-string */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
-import { video, videoProcessing, type DbVttSegment } from "$lib/server/db/schema";
+import {
+  video,
+  videoProcessing,
+  type DbVttSegment,
+} from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { SubtitleService } from "./subtitle.service";
 

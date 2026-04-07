@@ -99,7 +99,9 @@
             <div class="absolute bottom-0 left-0 right-0">
               <div class="h-1 bg-zinc-800 relative overflow-hidden">
                 {#if !video.progressPercent || video.progressPercent === 0}
-                  <div class="absolute inset-0 bg-magenta-500/40 animate-pulse"></div>
+                  <div
+                    class="absolute inset-0 bg-magenta-500/40 animate-pulse"
+                  ></div>
                 {:else}
                   <div
                     class="h-full bg-magenta-500 transition-all duration-1000"

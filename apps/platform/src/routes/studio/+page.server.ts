@@ -76,7 +76,9 @@ export const actions = {
       targetLang,
       session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
       session.user.id,
-    ).catch((err) => console.error(`[Pipeline] Background error for ${id}:`, err));
+    ).catch((err) =>
+      console.error(`[Pipeline] Background error for ${id}:`, err),
+    );
 
     return { success: true };
   },

@@ -80,7 +80,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // Centralized auth guard
   const { pathname } = event.url;
-  const isProtectedPage = PROTECTED_PAGE_ROUTES.some((r) => pathname.startsWith(r));
+  const isProtectedPage = PROTECTED_PAGE_ROUTES.some((r) =>
+    pathname.startsWith(r),
+  );
   const isProtectedApi =
     pathname.startsWith(PROTECTED_API_PREFIX) && !AUTH_EXEMPT_API.has(pathname);
 

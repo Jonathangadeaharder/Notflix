@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
-import { video, videoProcessing, user, knownWords } from "$lib/server/db/schema";
+import {
+  video,
+  videoProcessing,
+  user,
+  knownWords,
+} from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { generateDeck } from "./chunker.service";
 import type { VttSegment } from "../domain/translation-core";

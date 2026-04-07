@@ -1,10 +1,8 @@
 import { type PlaywrightTestConfig } from "@playwright/test";
 
-const CI_RETRIES = 2;
-
 const config: PlaywrightTestConfig = {
-  timeout: 600000, // 10 min for large video processing
-  retries: process.env.CI ? CI_RETRIES : 0,
+  timeout: 60000,
+  retries: process.env.CI ? 1 : 0,
   workers: 1,
 
   testDir: "tests/e2e",
