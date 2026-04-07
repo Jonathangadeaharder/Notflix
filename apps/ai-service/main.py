@@ -426,24 +426,22 @@ async def health():
 
 
 def resolve_candidate_path(raw_path: str, allowed_root: Path) -> Path:
+    import os
+
     if not raw_path or not str(raw_path).strip():
         raise ValueError("Empty file path")
     if "\x00" in str(raw_path):
         raise ValueError("Invalid file path")
 
-    input_path = Path(str(raw_path))
-    if input_path.is_absolute():
-        candidate_path = input_path.resolve()
-    else:
-        candidate_path = (allowed_root / input_path).resolve()
+    base_path = os.path.abspath(str(allowed_root))
+    user_path = str(raw_path).lstrip("\\/")
 
-    if os.path.commonpath([str(allowed_root), str(candidate_path)]) != str(
-        allowed_root
-    ):
+    fullpath = os.path.normpath(os.path.join(base_path, user_path))
+
+    if not fullpath.startswith(base_path):
         raise ValueError("Path traversal detected")
 
-    candidate_path.relative_to(allowed_root)
-    return candidate_path
+    return Path(fullpath)
 
 
 def resolve_candidate_audio_path(raw_path: str, audio_base_dir: Path) -> Path:
