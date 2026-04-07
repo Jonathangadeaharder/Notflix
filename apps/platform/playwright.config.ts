@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? CI_RETRIES : 0,
   workers: 1,
 
-  testDir: "tests",
+  testDir: "tests/e2e",
   testMatch: ["**/*.spec.ts", "**/*.spec.js"],
 
   use: {

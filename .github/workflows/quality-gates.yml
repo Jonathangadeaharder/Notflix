@@ -110,42 +110,18 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Sync node_modules
         run: pnpm install --no-frozen-lockfile
 
       - name: Sync SvelteKit
         run: pnpm --filter @notflix/platform prepare
 
-      - name: Install uv
-        run: pip install uv
-
       - name: Install Playwright browsers
         working-directory: apps/platform
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Install AI Service dependencies (CPU-only)
-        working-directory: apps/ai-service
-        run: |
-          uv pip install --system torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-          uv pip install --system -r requirements.txt
-
       - name: Apply database schema
         run: pnpm --filter @notflix/platform db:push
-
-      - name: Start AI Service
-        working-directory: apps/ai-service
-        env:
-          AI_SERVICE_API_KEY: dev_secret_key
-          MEDIA_ROOT: ${{ github.workspace }}/media
-          AUDIO_BASE_DIR: ${{ github.workspace }}/media
-        run: |
-          nohup python -m uvicorn main:app --host 127.0.0.1 --port 8000 &
-          for i in $(seq 1 30); do curl -sf -H "X-API-Key: dev_secret_key" http://127.0.0.1:8000/health && break || sleep 2; done
 
       - name: Run platform E2E tests
         run: pnpm --filter @notflix/platform test:e2e
