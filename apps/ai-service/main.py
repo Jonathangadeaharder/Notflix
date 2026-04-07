@@ -426,17 +426,18 @@ async def health():
 
 
 def resolve_candidate_path(raw_path: str, allowed_root: Path) -> Path:
-    import os
-
     if not raw_path or not str(raw_path).strip():
         raise ValueError("Empty file path")
     if "\x00" in str(raw_path):
         raise ValueError("Invalid file path")
 
     base_path = os.path.abspath(str(allowed_root))
-    user_path = str(raw_path).lstrip("\\/")
+    user_path = str(raw_path)
 
-    fullpath = os.path.normpath(os.path.join(base_path, user_path))
+    if os.path.isabs(user_path):
+        fullpath = os.path.normpath(user_path)
+    else:
+        fullpath = os.path.normpath(os.path.join(base_path, user_path))
 
     if not fullpath.startswith(base_path):
         raise ValueError("Path traversal detected")
