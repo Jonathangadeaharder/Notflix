@@ -6,35 +6,52 @@ import { processVideo } from "./video-pipeline";
 
 // Mock the AI gateway used inside processVideo
 vi.mock("../adapters/real-ai-gateway", () => ({
-  RealAiGateway: vi.fn().mockImplementation(() => ({
-    generateThumbnail: vi.fn().mockResolvedValue({ thumbnail_path: "thumb.jpg" }),
-    transcribe: vi.fn().mockResolvedValue({
+  RealAiGateway: vi.fn().mockImplementation(function (this: any) {
+    this.generateThumbnail = vi
+      .fn()
+      .mockResolvedValue({ thumbnail_path: "thumb.jpg" });
+    this.transcribe = vi.fn().mockResolvedValue({
       language: "es",
       language_probability: 0.99,
       segments: [{ start: 0, end: 1, text: "Hola mundo" }],
-    }),
-    transcribeWithProgress: vi.fn().mockImplementation(async (_filePath, _lang, onProgress) => {
-      if (onProgress) await onProgress(50);
-      return {
-        language: "es",
-        language_probability: 0.99,
-        segments: [{ start: 0, end: 1, text: "Hola mundo" }],
-      };
-    }),
-    analyzeBatch: vi.fn().mockResolvedValue({
+    });
+    this.transcribeWithProgress = vi
+      .fn()
+      .mockImplementation(async (_filePath, _lang, onProgress) => {
+        if (onProgress) await onProgress(50);
+        return {
+          language: "es",
+          language_probability: 0.99,
+          segments: [{ start: 0, end: 1, text: "Hola mundo" }],
+        };
+      });
+    this.analyzeBatch = vi.fn().mockResolvedValue({
       results: [[{ text: "Hola", lemma: "hola", pos: "INTJ", is_stop: false }]],
-    }),
-    translate: vi.fn().mockResolvedValue({ translations: ["Hello world"] }),
-  })),
+    });
+    this.translate = vi
+      .fn()
+      .mockResolvedValue({ translations: ["Hello world"] });
+  }),
 }));
 
 // Mock SmartFilter to avoid real DB knowledge lookups
 vi.mock("./linguistic-filter.service", () => ({
-  SmartFilter: vi.fn().mockImplementation(() => ({
-    filterBatch: vi.fn().mockResolvedValue([
-      { classification: "LEARNING", tokens: [{ text: "Hola", lemma: "hola", pos: "INTJ", is_stop: false, isKnown: false }] },
-    ]),
-  })),
+  SmartFilter: vi.fn().mockImplementation(function (this: any) {
+    this.filterBatch = vi.fn().mockResolvedValue([
+      {
+        classification: "LEARNING",
+        tokens: [
+          {
+            text: "Hola",
+            lemma: "hola",
+            pos: "INTJ",
+            is_stop: false,
+            isKnown: false,
+          },
+        ],
+      },
+    ]);
+  }),
 }));
 
 describe("Video Pipeline Integration", () => {
@@ -50,7 +67,9 @@ describe("Video Pipeline Integration", () => {
   });
 
   afterAll(async () => {
-    await db.delete(videoProcessing).where(eq(videoProcessing.videoId, testVideoId));
+    await db
+      .delete(videoProcessing)
+      .where(eq(videoProcessing.videoId, testVideoId));
     await db.delete(video).where(eq(video.id, testVideoId));
   });
 

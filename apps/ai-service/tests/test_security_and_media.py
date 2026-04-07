@@ -32,10 +32,13 @@ def _api_client(app_fixture, monkeypatch):
 
 
 def test_requires_api_key(api_client):
-    response = api_client.get("/health")
+    response = api_client.post(
+        "/filter",
+        json={"texts": ["hello"], "language": "en"},
+    )
     assert response.status_code == 403
 
-    response = api_client.get("/health", headers={"X-API-Key": "test_key"})
+    response = api_client.get("/health")
     assert response.status_code == 200
     assert "X-Request-ID" in response.headers
 
@@ -196,7 +199,15 @@ def test_translate_and_filter_with_mocks(api_client):
     ]
     filter_service = MagicMock()
     filter_service.analyze_batch.side_effect = lambda texts, _language: [
-        [{"text": text, "lemma": text, "pos": "NOUN", "is_stop": False}]
+        [
+            {
+                "text": text,
+                "lemma": text,
+                "pos": "NOUN",
+                "is_stop": False,
+                "whitespace": " ",
+            }
+        ]
         for text in texts
     ]
     main.app.dependency_overrides[main.get_translator] = lambda: translator

@@ -3,23 +3,23 @@ import { processVideo } from '../../src/lib/server/services/video-pipeline';
 
 // Mock AI gateway and filter so the sequential pipeline can run without real services
 vi.mock('../../src/lib/server/adapters/real-ai-gateway', () => ({
-    RealAiGateway: vi.fn().mockImplementation(() => ({
-        transcribeWithProgress: vi.fn().mockImplementation(async (_path, _lang, cb) => {
+    RealAiGateway: vi.fn().mockImplementation(function (this: any) {
+        this.transcribeWithProgress = vi.fn().mockImplementation(async (_path, _lang, cb) => {
             if (cb) await cb(100);
             return { segments: [{ start: 0, end: 1, text: 'Hola' }], language: 'es', language_probability: 1 };
-        }),
-        analyzeBatch: vi.fn().mockResolvedValue({ results: [[{ text: 'Hola', lemma: 'hola', pos: 'INTJ', is_stop: false }]] }),
-        translate: vi.fn().mockResolvedValue({ translations: ['Hello'] }),
-        generateThumbnail: vi.fn().mockResolvedValue({ thumbnail_path: '' }),
-    })),
+        });
+        this.analyzeBatch = vi.fn().mockResolvedValue({ results: [[{ text: 'Hola', lemma: 'hola', pos: 'INTJ', is_stop: false }]] });
+        this.translate = vi.fn().mockResolvedValue({ translations: ['Hello'] });
+        this.generateThumbnail = vi.fn().mockResolvedValue({ thumbnail_path: '' });
+    }),
 }));
 
 vi.mock('../../src/lib/server/services/linguistic-filter.service', () => ({
-    SmartFilter: vi.fn().mockImplementation(() => ({
-        filterBatch: vi.fn().mockResolvedValue([
+    SmartFilter: vi.fn().mockImplementation(function (this: any) {
+        this.filterBatch = vi.fn().mockResolvedValue([
             { classification: 'LEARNING', tokens: [{ text: 'Hola', lemma: 'hola', pos: 'INTJ', is_stop: false, isKnown: false }] },
-        ]),
-    })),
+        ]);
+    }),
 }));
 
 describe('processVideo sequential pipeline', () => {
