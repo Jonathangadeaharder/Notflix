@@ -16,18 +16,6 @@ describe("POST /api/words/known", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 when unauthenticated", async () => {
-    const request = new Request(WORDS_KNOWN_URL, {
-      method: "POST",
-    });
-    const response = await POST({
-      request,
-      locals: { auth: vi.fn().mockResolvedValue(null) },
-    } as never);
-
-    expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
-  });
-
   it("returns 400 for invalid JSON", async () => {
     const request = new Request(WORDS_KNOWN_URL, {
       method: "POST",

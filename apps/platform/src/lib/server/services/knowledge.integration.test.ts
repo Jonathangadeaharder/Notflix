@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
-import { user, knownWords } from "@notflix/database";
+import { user, knownWords } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getKnownLemmas } from "./knowledge.service";
 

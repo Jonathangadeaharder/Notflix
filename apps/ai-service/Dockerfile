@@ -7,16 +7,28 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 COPY apps/ai-service/requirements.lock ./
-RUN uv venv /opt/venv && uv pip install --python /opt/venv -r requirements.lock
+# Install base deps from lock, then reinstall torch/torchaudio with CUDA 12.6 wheels
+RUN uv venv /opt/venv && \
+    uv pip install --python /opt/venv -r requirements.lock && \
+    uv pip install --python /opt/venv \
+        "torch" "torchaudio" \
+        --extra-index-url https://download.pytorch.org/whl/cu126 \
+        --reinstall-package torch \
+        --reinstall-package torchaudio
 
-FROM python:3.12-slim AS runner
+# ── CUDA runtime base (driver ≥ 525 required; RTX 2000 Ada + 591.64 is fine)
+FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS runner
 
-WORKDIR /app
-
-# ── System dependencies
+# Install Python 3.12 (deadsnakes) + ffmpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 python3.12-distutils python3.12-venv \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 # ── Dependency layer
 COPY --from=builder /opt/venv /opt/venv

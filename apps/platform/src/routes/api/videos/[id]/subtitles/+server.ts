@@ -1,5 +1,6 @@
 import { error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
+import { SubtitleService } from "$lib/server/services/subtitle.service";
 import { HTTP_STATUS } from "$lib/constants";
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
@@ -11,11 +12,10 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   }
 
   try {
-    const vttContent = await locals.subtitleService.generateVtt(
+    const subtitleService = new SubtitleService(locals.db);
+    const vttContent = await subtitleService.generateVtt(
       videoId,
-      mode as unknown as Parameters<
-        typeof locals.subtitleService.generateVtt
-      >[1],
+      mode as Parameters<typeof subtitleService.generateVtt>[1],
     );
     return new Response(vttContent, {
       headers: {

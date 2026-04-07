@@ -5,12 +5,12 @@ from typing import Optional
 import structlog
 import torch
 from faster_whisper import WhisperModel
-from .interfaces import ITranscriber, TranscriptionResult, Segment
+from .models import TranscriptionResult, Segment
 
 logger = structlog.get_logger()
 
 
-class WhisperTranscriber(ITranscriber):
+class WhisperTranscriber:
     def __init__(self, model_size="tiny", device=None, compute_type="float32"):
         self._test_mode = os.getenv("AI_SERVICE_TEST_MODE") == "1"
         if self._test_mode:
@@ -84,7 +84,17 @@ class WhisperTranscriber(ITranscriber):
                 "duration": info.duration,
             }
 
+            segment_count = 0
             for segment in segments:
+                segment_count += 1
+                if segment_count % 10 == 0:
+                    pct = round(segment.end / info.duration * 100, 1) if info.duration else 0
+                    logger.info(
+                        "transcription_progress",
+                        segments_yielded=segment_count,
+                        audio_position_s=round(segment.end, 1),
+                        percent=pct,
+                    )
                 yield {
                     "type": "segment",
                     "start": segment.start,

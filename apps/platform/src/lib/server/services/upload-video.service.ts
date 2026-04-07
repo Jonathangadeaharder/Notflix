@@ -1,4 +1,4 @@
-import type { NewVideo } from "@notflix/database";
+import type { NewVideo } from "$lib/server/db/schema";
 import { LIMITS } from "$lib/constants";
 import type { User } from "$lib/server/infrastructure/auth";
 import crypto from "crypto";
@@ -56,7 +56,7 @@ type UploadDependencies = {
     videoId: string,
     targetLang: string,
     nativeLang: string,
-    userId?: string,
+    userId: string,
   ) => Promise<unknown>;
 };
 
@@ -72,7 +72,7 @@ const defaultDependencies: UploadDependencies = {
 
 export async function handleVideoUpload(
   payload: UploadPayload,
-  user: User | undefined,
+  user: User,
   overrides: Partial<UploadDependencies>,
 ): Promise<UploadResult> {
   const dependencies = { ...defaultDependencies, ...overrides };
@@ -104,8 +104,8 @@ export async function handleVideoUpload(
     dependencies.processVideo(
       videoId,
       validation.data.targetLang,
-      user?.nativeLang || dependencies.defaultNativeLang,
-      user?.id,
+      user.nativeLang || dependencies.defaultNativeLang,
+      user.id,
     ),
   );
 

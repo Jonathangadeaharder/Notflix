@@ -4,9 +4,9 @@ import { env } from "$env/dynamic/private";
 import { env as publicEnv } from "$env/dynamic/public";
 import type { RequestEvent } from "@sveltejs/kit";
 import { db } from "./database";
-import { user as userTable } from "@notflix/database";
+import { user as userTable } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
-import type { User as DbUser } from "@notflix/database";
+import type { User as DbUser } from "$lib/server/db/schema";
 
 export type User = DbUser;
 

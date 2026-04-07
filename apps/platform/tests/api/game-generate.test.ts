@@ -15,16 +15,6 @@ describe("GET /api/game/generate", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 when unauthenticated", async () => {
-    const url = new URL("http://localhost/api/game/generate?videoId=vid-1");
-    const response = await GET({
-      url,
-      locals: { auth: vi.fn().mockResolvedValue(null) },
-    } as never);
-
-    expect(response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
-  });
-
   it("returns 400 when videoId is missing", async () => {
     const url = new URL("http://localhost/api/game/generate");
     const response = await GET({

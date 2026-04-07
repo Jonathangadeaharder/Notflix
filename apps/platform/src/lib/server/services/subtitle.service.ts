@@ -3,7 +3,7 @@ import {
   videoProcessing,
   type DbVttSegment,
   type DbTokenAnalysis,
-} from "@notflix/database";
+} from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { generateVtt, secondsToSrtTime } from "../utils/subtitle-utils";
 

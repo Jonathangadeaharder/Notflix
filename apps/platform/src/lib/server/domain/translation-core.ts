@@ -1,4 +1,14 @@
-import type { TranscriptionResponse, TokenAnalysis } from "./interfaces";
+import type { TranscriptionResponse } from "../adapters/real-ai-gateway";
+
+export type TokenAnalysis = {
+  text: string;
+  lemma: string;
+  pos: string;
+  is_stop: boolean;
+  whitespace?: string;
+  translation?: string;
+  isKnown?: boolean;
+};
 
 export type VttSegment = {
   start: number;

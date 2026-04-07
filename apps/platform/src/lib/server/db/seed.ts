@@ -3,9 +3,6 @@ import postgres from "postgres";
 import { vocabReference } from "./schema";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -34,16 +31,16 @@ function parseLemmasFromCsv(filePath: string): string[] {
 }
 
 async function seed() {
-  console.log("🌱 Seeding vocab_reference...");
+  console.log("Seeding vocab_reference...");
 
   for (const level of LEVELS) {
     const csvPath = path.resolve(
-      __dirname,
-      `../../assets/vocab/es/${level}.csv`,
+      process.cwd(),
+      `assets/vocab/es/${level}.csv`,
     );
 
     if (!fs.existsSync(csvPath)) {
-      console.warn(`⚠️  Missing: ${csvPath}`);
+      console.warn(`Missing: ${csvPath}`);
       continue;
     }
 
@@ -63,11 +60,11 @@ async function seed() {
     console.log(` ${level}: ${lemmas.length} words`);
   }
 
-  console.log("\n✨ Seeding complete!");
+  console.log("\nSeeding complete!");
   process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error("❌ Seeding failed:", err);
+  console.error("Seeding failed:", err);
   process.exit(1);
 });

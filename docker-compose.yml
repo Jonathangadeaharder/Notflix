@@ -79,15 +79,16 @@ services:
       - sh
       - -c
       - |
-        pnpm run --filter @notflix/database db:push &&
-        pnpm run --filter @notflix/database seed
+        cd apps/platform &&
+        pnpm exec drizzle-kit push &&
+        pnpm exec tsx src/lib/server/db/seed.ts
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/postgres
     depends_on:
       db: { condition: service_healthy }
     volumes:
-      - ./packages/database:/app/packages/database
-      - /app/packages/database/node_modules
+      - ./apps/platform:/app/apps/platform
+      - /app/apps/platform/node_modules
       - /app/node_modules
       - ./assets:/app/assets
 
@@ -104,13 +105,11 @@ services:
     volumes:
       # Source mounts (hot-reload)
       - ./apps/platform:/app/apps/platform
-      - ./packages/database:/app/packages/database
       - ./media:/app/media
       - ./logs:/app/logs
       # Anonymous volumes: protect container-native node_modules
       - /app/node_modules
       - /app/apps/platform/node_modules
-      - /app/packages/database/node_modules
     environment:
       DATABASE_URL:            postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/postgres
       AI_SERVICE_URL:          http://ai-service:8000
@@ -124,13 +123,12 @@ services:
       db:         { condition: service_healthy }
       init-db:    { condition: service_completed_successfully }
       kong:       { condition: service_started }
-      ai-service: { condition: service_started }
+      ai-service: { condition: service_healthy }
 
   # ── AI Service (FastAPI) ──────────────────────────────
   ai-service:
     image: notflix_ai-service
     container_name: notflix-ai
-    tty: true
     build:
       context: .
       dockerfile: apps/ai-service/Dockerfile
@@ -140,12 +138,26 @@ services:
       - ./apps/ai-service:/app
       - ./media:/app/media
       - ./logs:/app/logs
+      - hf_cache:/root/.cache/huggingface
     environment:
       PYTHONUNBUFFERED:   "1"
       LOGS_DIR:           /app/logs
       AI_SERVICE_API_KEY: dev_secret_key
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     depends_on:
       db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
 
   # ── Dozzle (Log Viewer UI) ───────────────────────────
   dozzle:
@@ -153,9 +165,10 @@ services:
     container_name: notflix-logs
     ports: ["9999:8080"]
     volumes:
-      - //var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       DOZZLE_NO_ANALYTICS: "true"
 
 volumes:
   pg_data:
+  hf_cache:

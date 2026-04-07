@@ -1,5 +1,5 @@
 import { db } from "$lib/server/infrastructure/database";
-import { user } from "@notflix/database";
+import { user } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import type { PageServerLoad, Actions } from "./$types";
 import { redirect, fail } from "@sveltejs/kit";
@@ -21,10 +21,7 @@ const profileSchema = z.object({
 const HTTP_STATUS_SEE_OTHER = 303;
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const session = await locals.auth();
-  if (!session) {
-    throw redirect(HTTP_STATUS_SEE_OTHER, "/login");
-  }
+  const session = (await locals.auth())!;
 
   const [profile] = await db
     .select()
@@ -50,10 +47,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   updateInterval: async ({ request, locals }) => {
-    const session = await locals.auth();
-    if (!session) {
-      throw redirect(HTTP_STATUS_SEE_OTHER, "/login");
-    }
+    const session = (await locals.auth())!;
 
     const formData = await request.formData();
     const data = Object.fromEntries(formData);

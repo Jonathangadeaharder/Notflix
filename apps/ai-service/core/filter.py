@@ -4,12 +4,12 @@ from typing import List, Dict
 
 import spacy
 import structlog
-from .interfaces import IFilter, TokenAnalysis
+from .models import TokenAnalysis
 
 logger = structlog.get_logger()
 
 
-class SpacyFilter(IFilter):
+class SpacyFilter:
     def __init__(self):
         self._models: Dict[str, spacy.language.Language] = {}
         self._lock = threading.Lock()

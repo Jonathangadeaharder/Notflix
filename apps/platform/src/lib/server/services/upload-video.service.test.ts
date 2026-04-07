@@ -13,7 +13,7 @@ async function validateMissingFileScenario() {
   const deps = createDependencies();
   const result = await handleVideoUpload(
     { title: "My Video", targetLang: "es", file: null },
-    undefined,
+    createSessionUser(),
     deps,
   );
 
@@ -62,30 +62,6 @@ async function validateAuthenticatedUploadScenario() {
   );
 }
 
-async function validateGuestUploadFallbackScenario() {
-  const deps = createDependencies();
-  const file = new File(["plain-content"], "clip", {
-    type: "application/octet-stream",
-  });
-
-  await handleVideoUpload(
-    { title: "Guest upload", targetLang: "es", file },
-    undefined,
-    deps,
-  );
-
-  expect(deps.saveFileToStorage).toHaveBeenCalledWith(
-    file,
-    join(TEST_UPLOAD_DIR, "video-123.bin"),
-  );
-  expect(deps.processVideo).toHaveBeenCalledWith(
-    "video-123",
-    "es",
-    DEFAULT_NATIVE_LANG,
-    undefined,
-  );
-}
-
 function createDependencies() {
   return {
     uploadDir: TEST_UPLOAD_DIR,
@@ -111,10 +87,5 @@ describe("handleVideoUpload", () => {
   it("persists the video and queues processing for authenticated users", async () => {
     expect.hasAssertions();
     await validateAuthenticatedUploadScenario();
-  });
-
-  it("falls back to default native language for guest uploads", async () => {
-    expect.hasAssertions();
-    await validateGuestUploadFallbackScenario();
   });
 });
