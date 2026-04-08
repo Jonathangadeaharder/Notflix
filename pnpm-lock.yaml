@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       drizzle-orm:
-        specifier: 0.45.1
-        version: 0.45.1(kysely@0.28.9)(postgres@3.4.8)
+        specifier: 0.45.2
+        version: 0.45.2(kysely@0.28.9)(postgres@3.4.8)
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -36,8 +36,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       drizzle-orm:
-        specifier: 0.45.1
-        version: 0.45.1(kysely@0.28.9)(postgres@3.4.8)
+        specifier: 0.45.2
+        version: 0.45.2(kysely@0.28.9)(postgres@3.4.8)
       pino:
         specifier: ^10.3.0
         version: 10.3.1
@@ -1730,8 +1730,8 @@ packages:
     resolution: {integrity: sha512-O9EC/miwdnRDY10qRxM8P3Pg8hXe3LyU4ZipReKOgTwn4OqANmftj8XJz1UPUAS6NMHf0E2htjsbQujUTkncCg==}
     hasBin: true
 
-  drizzle-orm@0.45.1:
-    resolution: {integrity: sha512-Te0FOdKIistGNPMq2jscdqngBRfBpC8uMFVwqjf6gtTVJHIQ/dosgV/CLBU2N4ZJBsXL5savCba9b0YJskKdcA==}
+  drizzle-orm@0.45.2:
+    resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -4281,7 +4281,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.1(kysely@0.28.9)(postgres@3.4.8):
+  drizzle-orm@0.45.2(kysely@0.28.9)(postgres@3.4.8):
     optionalDependencies:
       kysely: 0.28.9
       postgres: 3.4.8
