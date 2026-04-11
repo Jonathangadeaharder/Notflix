@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ── Shared base: CUDA + Python 3.12 (same distro for builder & runner)
-FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:13.2.0-cudnn-runtime-ubuntu22.04 AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common curl \
