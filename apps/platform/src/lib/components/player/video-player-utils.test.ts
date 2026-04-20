@@ -290,15 +290,20 @@ describe("getTranscriptItemClass", () => {
   );
 
   it(
-    "WhenExactBoundary_ThenReturnsActiveClass",
+    "WhenStartBoundary_ThenReturnsActiveClass",
     { timeout: TEST_TIMEOUT_MS },
     () => {
       expect(getTranscriptItemClass(0, base)).toBe(
         "border-amber-400/70 bg-white/10",
       );
-      expect(getTranscriptItemClass(5, base)).toBe(
-        "border-amber-400/70 bg-white/10",
-      );
+    },
+  );
+
+  it(
+    "WhenEndBoundary_ThenReturnsNonActiveClass",
+    { timeout: TEST_TIMEOUT_MS },
+    () => {
+      expect(getTranscriptItemClass(5, base)).toBe("border-white/10");
     },
   );
 });
@@ -405,5 +410,13 @@ describe("calcProgressPercent", () => {
 
   it("WhenComplete_ThenReturns100", { timeout: TEST_TIMEOUT_MS }, () => {
     expect(calcProgressPercent(100, 100)).toBe(100);
+  });
+
+  it("WhenOverflow_ThenClampsTo100", { timeout: TEST_TIMEOUT_MS }, () => {
+    expect(calcProgressPercent(150, 100)).toBe(100);
+  });
+
+  it("WhenNegativeTime_ThenClampsToZero", { timeout: TEST_TIMEOUT_MS }, () => {
+    expect(calcProgressPercent(-10, 100)).toBe(0);
   });
 });

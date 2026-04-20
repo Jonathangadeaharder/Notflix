@@ -98,8 +98,7 @@ export function getTranscriptItemClass(
   currentTime: number,
   subtitle: Subtitle,
 ): string {
-  const isCurrent =
-    currentTime >= subtitle.start && currentTime <= subtitle.end;
+  const isCurrent = currentTime >= subtitle.start && currentTime < subtitle.end;
 
   if (isCurrent) {
     return "border-amber-400/70 bg-white/10";
@@ -160,5 +159,6 @@ export function calcProgressPercent(
   const roundedCurrent = Math.round(currentTime);
   const roundedDuration = Math.round(duration);
   if (roundedDuration <= 0) return 0;
-  return (roundedCurrent / roundedDuration) * PERCENTAGE_BASE;
+  const percent = (roundedCurrent / roundedDuration) * PERCENTAGE_BASE;
+  return Math.min(PERCENTAGE_BASE, Math.max(0, percent));
 }
