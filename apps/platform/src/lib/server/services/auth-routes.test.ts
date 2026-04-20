@@ -52,8 +52,9 @@ describe("Auth Route Decision", () => {
   });
 
   it("WhenApiSubPath_ThenRequiresAuth", () => {
-    expect(resolveAuthRequirement("/api/health/status").requiresAuth).toBe(
-      true,
-    );
+    expect(resolveAuthRequirement("/api/health/status")).toEqual({
+      requiresAuth: true,
+      responseKind: "json401",
+    });
   });
 });
