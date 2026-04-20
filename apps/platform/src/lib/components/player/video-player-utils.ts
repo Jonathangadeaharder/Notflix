@@ -140,6 +140,7 @@ export function shouldReportProgress(
   duration: number,
   lastReportedSecond: number,
 ): boolean {
+  if (!Number.isFinite(currentTime) || !Number.isFinite(duration)) return false;
   const roundedCurrentTime = Math.round(currentTime);
   const roundedDuration = Math.round(duration);
   if (roundedDuration <= 0) return false;
@@ -156,6 +157,7 @@ export function calcProgressPercent(
   currentTime: number,
   duration: number,
 ): number {
+  if (!Number.isFinite(currentTime) || !Number.isFinite(duration)) return 0;
   const roundedDuration = Math.round(duration);
   if (roundedDuration <= 0) return 0;
   const percent = (currentTime / duration) * PERCENTAGE_BASE;

@@ -406,6 +406,11 @@ describe("shouldReportProgress", () => {
       expect(shouldReportProgress(10, -1, 0)).toBe(false);
     },
   );
+
+  it("WhenNaN_ThenReturnsFalse", { timeout: TEST_TIMEOUT_MS }, () => {
+    expect(shouldReportProgress(NaN, 100, 0)).toBe(false);
+    expect(shouldReportProgress(10, NaN, 0)).toBe(false);
+  });
 });
 
 describe("calcProgressPercent", () => {
@@ -427,5 +432,10 @@ describe("calcProgressPercent", () => {
 
   it("WhenNegativeTime_ThenClampsToZero", { timeout: TEST_TIMEOUT_MS }, () => {
     expect(calcProgressPercent(-10, 100)).toBe(0);
+  });
+
+  it("WhenNaN_ThenReturnsZero", { timeout: TEST_TIMEOUT_MS }, () => {
+    expect(calcProgressPercent(NaN, 100)).toBe(0);
+    expect(calcProgressPercent(50, NaN)).toBe(0);
   });
 });

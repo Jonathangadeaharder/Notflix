@@ -32,5 +32,8 @@ export function splitCsvLine(line: string): string[] {
     }
   }
   cols.push(current);
+  if (inQuotes) {
+    return [line];
+  }
   return cols;
 }
