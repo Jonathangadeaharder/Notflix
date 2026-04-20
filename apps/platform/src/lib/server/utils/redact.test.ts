@@ -42,11 +42,33 @@ describe("redact", () => {
   });
 
   it(
-    "WhenArrayValue_ThenPreservesArrayWithoutRecursion",
+    "WhenArrayValue_ThenRecursivelyRedacts",
     { timeout: TEST_TIMEOUT_MS },
     () => {
       const result = redact({ items: [{ password: "inner" }], name: "test" });
-      expect(result).toEqual({ items: [{ password: "inner" }], name: "test" });
+      expect(result).toEqual({
+        items: [{ password: "[REDACTED]" }],
+        name: "test",
+      });
+    },
+  );
+
+  it(
+    "WhenArrayWithNestedObjects_ThenRedactsAll",
+    { timeout: TEST_TIMEOUT_MS },
+    () => {
+      const result = redact({
+        data: [
+          { token: "a", safe: "x" },
+          { secret: "b", name: "y" },
+        ],
+      });
+      expect(result).toEqual({
+        data: [
+          { token: "[REDACTED]", safe: "x" },
+          { secret: "[REDACTED]", name: "y" },
+        ],
+      });
     },
   );
 
