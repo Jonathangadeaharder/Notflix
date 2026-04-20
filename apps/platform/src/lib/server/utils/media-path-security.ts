@@ -4,6 +4,9 @@ const CONTENT_TYPE_MAP: Record<string, string> = {
   ".mp4": "video/mp4",
   ".webm": "video/webm",
   ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".ogg": "audio/ogg",
   ".wav": "audio/wav",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -38,7 +41,12 @@ export function resolveMediaPath(
   const fullPath = path.resolve(resolvedMediaRoot, filePath);
 
   const relativePath = path.relative(resolvedMediaRoot, fullPath);
-  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+  if (
+    relativePath === ".." ||
+    relativePath.startsWith(`${path.sep}..`) ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
     throw new MediaPathError(403, "Forbidden");
   }
 

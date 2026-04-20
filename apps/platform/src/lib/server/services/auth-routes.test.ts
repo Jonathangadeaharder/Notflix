@@ -38,4 +38,22 @@ describe("Auth Route Decision", () => {
       expect(resolveAuthRequirement(exempt).requiresAuth).toBe(false);
     }
   });
+
+  it("WhenPrefixSimilarRoute_ThenNoAuthRequired", () => {
+    expect(resolveAuthRequirement("/studio-public").requiresAuth).toBe(false);
+    expect(resolveAuthRequirement("/profiled").requiresAuth).toBe(false);
+    expect(resolveAuthRequirement("/vocabulary-list").requiresAuth).toBe(false);
+  });
+
+  it("WhenProtectedSubRoute_ThenRequiresAuth", () => {
+    const decision = resolveAuthRequirement("/studio/upload");
+    expect(decision.requiresAuth).toBe(true);
+    expect(decision.responseKind).toBe("redirect");
+  });
+
+  it("WhenApiSubPath_ThenRequiresAuth", () => {
+    expect(resolveAuthRequirement("/api/health/status").requiresAuth).toBe(
+      true,
+    );
+  });
 });

@@ -8,8 +8,8 @@ export interface AuthDecision {
 }
 
 export function resolveAuthRequirement(pathname: string): AuthDecision {
-  const isProtectedPage = PROTECTED_PAGE_ROUTES.some((r) =>
-    pathname.startsWith(r),
+  const isProtectedPage = PROTECTED_PAGE_ROUTES.some(
+    (r) => pathname === r || pathname.startsWith(`${r}/`),
   );
   const isProtectedApi =
     pathname.startsWith(PROTECTED_API_PREFIX) && !AUTH_EXEMPT_API.has(pathname);

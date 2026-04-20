@@ -69,6 +69,15 @@ describe("resolveMediaPath", () => {
   });
 
   it(
+    "WhenFilenameStartsWithDoubleDot_ThenAllowed",
+    { timeout: TEST_TIMEOUT_MS },
+    () => {
+      const result = resolveMediaPath("..cover.webp", mediaRoot);
+      expect(result.contentType).toBe("image/webp");
+    },
+  );
+
+  it(
     "WhenValidContentTypeMapping_ThenCorrectType",
     { timeout: TEST_TIMEOUT_MS },
     () => {
@@ -81,6 +90,9 @@ describe("resolveMediaPath", () => {
         ["file.png", "image/png"],
         ["file.webp", "image/webp"],
         ["file.webm", "video/webm"],
+        ["file.m4a", "audio/mp4"],
+        ["file.aac", "audio/aac"],
+        ["file.ogg", "audio/ogg"],
         ["file.xyz", "application/octet-stream"],
       ];
       for (const [filename, expectedType] of cases) {
