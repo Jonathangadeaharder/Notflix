@@ -4,7 +4,8 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 // --- Spec: apps/ai-service/openapi.json ---
-// Validates that the TypeScript types in $lib/types match the OpenAPI schema.
+// Smoke test: verifies the OpenAPI schema has expected structure and fields.
+// Does NOT validate TypeScript types against the schema.
 
 interface OpenApiSchema {
   components: {
@@ -28,7 +29,7 @@ function loadOpenApi(): OpenApiSchema {
   return openApi;
 }
 
-describe("AI Service OpenAPI Contract", () => {
+describe("AI Service OpenAPI Smoke Test", () => {
   it("WhenTranscribeResponse_ThenMatchesOpenApiSchema", () => {
     const schema = loadOpenApi().components.schemas.TranscriptionResponse;
     expect(schema.required).toEqual(

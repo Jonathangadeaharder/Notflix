@@ -3,36 +3,15 @@ import { describe, it, expect, vi } from "vitest";
 const mockReadFileSync =
   vi.fn<(filePath: string, encoding: string) => string>();
 
-// Prevent top-level side effects from seed.ts (DB connection + seed() call)
-vi.mock("postgres", () => ({
-  default: () => ({ end: () => {} }),
-}));
-vi.mock("drizzle-orm/postgres-js", () => ({
-  drizzle: () => ({}),
-}));
-vi.mock("./schema", () => ({
-  vocabReference: {},
-}));
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
   return {
     ...actual,
     readFileSync: mockReadFileSync,
-    existsSync: () => false,
   };
 });
 
-// Prevent seed() process.exit from killing the test runner
-vi.stubGlobal(
-  "process",
-  Object.assign({}, process, {
-    exit: vi.fn(() => {}),
-    stdout: { write: vi.fn() },
-  }),
-);
-
-// Import after mocks are set up
-const { splitCsvLine, parseLemmasFromCsv } = await import("./seed");
+const { splitCsvLine, parseLemmasFromCsv } = await import("./seed-csv");
 
 const CSV_TIMEOUT_MS = 5_000;
 
