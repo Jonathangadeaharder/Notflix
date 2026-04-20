@@ -13,11 +13,14 @@ vi.mock("drizzle-orm/postgres-js", () => ({
 vi.mock("./schema", () => ({
   vocabReference: {},
 }));
-vi.mock("node:fs", () => ({
-  ...vi.importActual("node:fs"),
-  readFileSync: mockReadFileSync,
-  existsSync: () => false,
-}));
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  return {
+    ...actual,
+    readFileSync: mockReadFileSync,
+    existsSync: () => false,
+  };
+});
 
 // Prevent seed() process.exit from killing the test runner
 vi.stubGlobal(
