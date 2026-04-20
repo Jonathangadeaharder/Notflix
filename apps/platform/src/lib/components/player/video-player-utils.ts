@@ -22,7 +22,7 @@ const ERROR_MESSAGES: Record<number, string> = {
 
 const DEFAULT_ERROR_MESSAGE = "Unknown error occurred";
 
-const AUDIO_EXTENSIONS = [".m4a", ".mp3", ".wav"];
+const AUDIO_EXTENSIONS = [".m4a", ".mp3", ".wav", ".aac", ".ogg"];
 
 const PROGRESS_REPORT_INTERVAL_SECONDS = 5;
 const PERCENTAGE_BASE = 100;

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Address all 7 CodeRabbit review findings on PR #59 — fix a path-traversal security vulnerability, an ESM `__dirname` bug, a missing `await` in `vi.mock`, add missing MIME type, fix boundary overlap, clamp progress percent, and redact array elements.
+**Goal:** Address all 8 CodeRabbit review findings on PR #59 — fix a path-traversal security vulnerability, an ESM `__dirname` bug, a missing `await` in `vi.mock`, add missing MIME type, fix boundary overlap, clamp progress percent, redact array elements, and fix path separator assertion on Windows.
 
 **Architecture:** Each fix is independent and touches a different file. Tasks are ordered by severity (critical → minor). All fixes include test updates where needed.
 

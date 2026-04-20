@@ -29,7 +29,18 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
   }
 
   try {
-    const body = (await request.json()) as ProcessRequest;
+    const parsed = await request.json();
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      return json(
+        { error: "Invalid request body" },
+        { status: HTTP_STATUS_BAD_REQUEST },
+      );
+    }
+    const body = parsed as ProcessRequest;
 
     processVideo({
       videoId,

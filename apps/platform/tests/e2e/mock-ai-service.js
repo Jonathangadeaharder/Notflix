@@ -109,7 +109,7 @@ function handleTranscribeStream(req, res) {
     if (cleanedUp) return;
     if (i < segments.length) {
       const seg = segments[i];
-      res.write(`event:segment\ndata:${JSON.stringify({ type: "segment", ...seg })}\n\n`);
+      res.write(`data:${JSON.stringify(seg)}\n\n`);
       i++;
     } else {
       res.write("data:[DONE]\n\n");

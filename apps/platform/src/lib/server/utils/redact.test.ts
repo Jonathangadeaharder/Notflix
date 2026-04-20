@@ -106,6 +106,25 @@ describe("redact", () => {
   });
 
   it(
+    "WhenCompoundSensitiveKey_ThenRedactsValue",
+    { timeout: TEST_TIMEOUT_MS },
+    () => {
+      const result = redact({
+        accessToken: "abc",
+        refreshToken: "def",
+        auth_token: "ghi",
+        "set-cookie": "session=xyz",
+        safeField: "ok",
+      });
+      expect(result.accessToken).toBe("[REDACTED]");
+      expect(result.refreshToken).toBe("[REDACTED]");
+      expect(result.auth_token).toBe("[REDACTED]");
+      expect(result["set-cookie"]).toBe("[REDACTED]");
+      expect(result.safeField).toBe("ok");
+    },
+  );
+
+  it(
     "WhenEmptyObject_ThenReturnsEmptyObject",
     { timeout: TEST_TIMEOUT_MS },
     () => {
