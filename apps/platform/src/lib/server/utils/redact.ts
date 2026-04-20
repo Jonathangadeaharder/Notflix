@@ -6,12 +6,18 @@ const SENSITIVE_KEYS = new Set([
   "cookie",
 ]);
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === null || proto === Object.prototype;
+}
+
 function redactValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => redactValue(item));
   }
-  if (value !== null && typeof value === "object") {
-    return redact(value as Record<string, unknown>);
+  if (isPlainObject(value)) {
+    return redact(value);
   }
   return value;
 }

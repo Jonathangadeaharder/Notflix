@@ -25,8 +25,9 @@ test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
         const videoCard = page.locator(`[data-testid="video-item"]`, { hasText: uniqueTitle });
         await expect(videoCard).toBeVisible();
 
-        // Mock AI service processes the video successfully in both CI and local
-        await expect(page.locator(`[data-testid="status-PENDING"]`).first()).toBeVisible();
+        // Wait for either PENDING or COMPLETED on this specific card (avoids global match + race)
+        const pendingOrCompleted = videoCard.locator('[data-testid="status-PENDING"], [data-testid="status-COMPLETED"]');
+        await expect(pendingOrCompleted).toBeVisible({ timeout: COMPLETED_TIMEOUT_MS });
         await studioPage.waitForVideoStatus(uniqueTitle, 'COMPLETED', COMPLETED_TIMEOUT_MS);
         const watchLink = videoCard.locator('a[href^="/watch/"]').first();
         await expect(watchLink).toBeVisible();

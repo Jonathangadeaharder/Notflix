@@ -98,6 +98,13 @@ describe("redact", () => {
     },
   );
 
+  it("WhenDateValue_ThenPreservesDate", { timeout: TEST_TIMEOUT_MS }, () => {
+    const date = new Date("2024-01-01");
+    const result = redact({ timestamp: date, name: "test" });
+    expect(result.timestamp).toBe(date);
+    expect(result.name).toBe("test");
+  });
+
   it(
     "WhenEmptyObject_ThenReturnsEmptyObject",
     { timeout: TEST_TIMEOUT_MS },
