@@ -33,10 +33,11 @@ export function resolveMediaPath(
     throw new MediaPathError(400, "Missing file path");
   }
 
-  const fullPath = path.join(mediaRoot, filePath);
+  const resolvedMediaRoot = path.resolve(mediaRoot);
+  const fullPath = path.resolve(resolvedMediaRoot, filePath);
 
-  // Security: Ensure the resolved path is still within the media root
-  if (!fullPath.startsWith(mediaRoot)) {
+  const relativePath = path.relative(resolvedMediaRoot, fullPath);
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
     throw new MediaPathError(403, "Forbidden");
   }
 

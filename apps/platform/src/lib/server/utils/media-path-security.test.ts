@@ -42,6 +42,21 @@ describe("resolveMediaPath", () => {
     },
   );
 
+  it(
+    "WhenSiblingPrefixTraversal_ThenRejected",
+    { timeout: TEST_TIMEOUT_MS },
+    () => {
+      let caught: MediaPathError | undefined;
+      try {
+        resolveMediaPath("../media-evil/file.mp4", mediaRoot);
+      } catch (err) {
+        caught = err as MediaPathError;
+      }
+      expect(caught).toBeInstanceOf(MediaPathError);
+      expect(caught?.statusCode).toBe(403);
+    },
+  );
+
   it("WhenUndefinedPath_ThenRejected", { timeout: TEST_TIMEOUT_MS }, () => {
     let caught: MediaPathError | undefined;
     try {
