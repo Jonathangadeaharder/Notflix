@@ -40,7 +40,7 @@ const config: PlaywrightTestConfig = {
         PLAYWRIGHT_TEST: "true",
         AI_SERVICE_URL: `http://127.0.0.1:${MOCK_AI_PORT}`,
         DATABASE_URL:
-          process.env.DATABASE_URL ||
+          process.env.E2E_DATABASE_URL ||
           "postgres://postgres:password@127.0.0.1:5432/postgres",
       },
     },
