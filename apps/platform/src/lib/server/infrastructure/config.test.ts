@@ -29,7 +29,7 @@ describe("resolveUploadDir", () => {
     () => {
       const result = resolveUploadDir("media/uploads", false);
       expect(path.isAbsolute(result)).toBe(true);
-      expect(result).toContain("media/uploads");
+      expect(path.normalize(result)).toContain(path.normalize("media/uploads"));
     },
   );
 });
