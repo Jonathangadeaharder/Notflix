@@ -23,7 +23,7 @@ function redactValue(value: unknown): unknown {
 }
 
 export function redact(obj: Record<string, unknown>): Record<string, unknown> {
-  const newObj: Record<string, unknown> = {};
+  const newObj = Object.create(null) as Record<string, unknown>;
   for (const [key, value] of Object.entries(obj)) {
     if (SENSITIVE_KEYS.has(key.toLowerCase())) {
       newObj[key] = "[REDACTED]";

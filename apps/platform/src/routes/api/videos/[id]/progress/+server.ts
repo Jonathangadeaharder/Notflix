@@ -7,6 +7,7 @@ import { HTTP_STATUS } from "$lib/constants";
 import { ProgressStage } from "$lib/types";
 
 const MAX_PROGRESS_PERCENT = 100;
+const HTTP_STATUS_UNAUTHORIZED = 401;
 
 async function validateRequest(
   locals: RequestEvent["locals"],
@@ -21,7 +22,15 @@ async function validateRequest(
     };
   }
 
-  const session = (await locals.auth())!;
+  const session = await locals.auth();
+  if (!session?.user) {
+    return {
+      errorResponse: json(
+        { error: "Unauthorized" },
+        { status: HTTP_STATUS_UNAUTHORIZED },
+      ),
+    };
+  }
   return { session, id: params.id as string };
 }
 

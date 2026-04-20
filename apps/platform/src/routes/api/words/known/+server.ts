@@ -5,9 +5,16 @@ import type { RequestHandler } from "./$types";
 
 const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_OK = 200;
+const HTTP_STATUS_UNAUTHORIZED = 401;
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const session = (await locals.auth())!;
+  const session = await locals.auth();
+  if (!session?.user) {
+    return json(
+      { error: "Unauthorized" },
+      { status: HTTP_STATUS_UNAUTHORIZED },
+    );
+  }
   const userId = session.user.id;
   let body;
   try {

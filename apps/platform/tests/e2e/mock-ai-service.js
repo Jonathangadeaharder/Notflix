@@ -104,7 +104,9 @@ function handleTranscribeStream(req, res) {
 
   const segments = TRANSCRIPTION_RESPONSE.segments;
   let i = 0;
+  let cleanedUp = false;
   const interval = setInterval(() => {
+    if (cleanedUp) return;
     if (i < segments.length) {
       const seg = segments[i];
       res.write(`event:segment\ndata:${JSON.stringify({ type: "segment", ...seg })}\n\n`);
@@ -115,6 +117,10 @@ function handleTranscribeStream(req, res) {
       res.end();
     }
   }, 50);
+  req.on("close", () => {
+    cleanedUp = true;
+    clearInterval(interval);
+  });
 }
 
 // ---------- Route handler ----------
