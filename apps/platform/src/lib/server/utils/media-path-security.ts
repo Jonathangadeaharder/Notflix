@@ -2,6 +2,7 @@ import path from "path";
 
 const CONTENT_TYPE_MAP: Record<string, string> = {
   ".mp4": "video/mp4",
+  ".webm": "video/webm",
   ".mp3": "audio/mpeg",
   ".wav": "audio/wav",
   ".jpg": "image/jpeg",

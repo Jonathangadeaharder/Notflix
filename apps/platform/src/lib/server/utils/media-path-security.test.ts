@@ -80,6 +80,7 @@ describe("resolveMediaPath", () => {
         ["file.jpeg", "image/jpeg"],
         ["file.png", "image/png"],
         ["file.webp", "image/webp"],
+        ["file.webm", "video/webm"],
         ["file.xyz", "application/octet-stream"],
       ];
       for (const [filename, expectedType] of cases) {
