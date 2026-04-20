@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
-import { join } from "path";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 // --- Spec: apps/ai-service/openapi.json ---
 // Validates that the TypeScript types in $lib/types match the OpenAPI schema.
@@ -10,6 +11,9 @@ interface OpenApiSchema {
     schemas: Record<string, any>;
   };
 }
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const openApiPath = join(
   __dirname,
