@@ -70,14 +70,15 @@ export const actions = {
       published: true,
     });
 
-    processVideo(
+    processVideo({
       videoId,
-      result.data.targetLang,
-      result.data.nativeLang ??
+      targetLang: result.data.targetLang,
+      nativeLang:
+        result.data.nativeLang ??
         session.user.nativeLang ??
         CONFIG.DEFAULT_NATIVE_LANG,
-      session.user.id,
-    ).catch((err) =>
+      userId: session.user.id,
+    }).catch((err) =>
       console.error(`[Pipeline] Background error for ${videoId}:`, err),
     );
 

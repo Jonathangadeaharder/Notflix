@@ -9,16 +9,30 @@ import {
   extractUnknownLemmas,
   mapTranslationsToSegments,
 } from "../domain/translation-core";
+import type {
+  TranscriptionResponse,
+  VttSegment,
+  ProgressStageType,
+} from "$lib/types";
+import { ProgressStage } from "$lib/types";
 
 const PROGRESS_DB_MIN_INTERVAL_MS = 2000;
 
-export async function processVideo(
-  videoId: string,
-  targetLang: string,
-  nativeLang: string,
-  userId: string,
-  db: typeof drizzleDb = drizzleDb,
-): Promise<void> {
+interface ProcessVideoOptions {
+  videoId: string;
+  targetLang: string;
+  nativeLang: string;
+  userId: string;
+  db?: typeof drizzleDb;
+}
+
+export async function processVideo({
+  videoId,
+  targetLang,
+  nativeLang,
+  userId,
+  db = drizzleDb,
+}: ProcessVideoOptions): Promise<void> {
   const aiGateway = new RealAiGateway();
   const filter = new SmartFilter(db);
 
@@ -61,14 +75,13 @@ async function initProcessingRecord(
   videoId: string,
   targetLang: string,
 ): Promise<void> {
-  await setStage(db, videoId, targetLang, "QUEUED", 0);
   await db
     .insert(videoProcessing)
     .values({
       videoId,
       targetLang,
       status: ProcessingStatus.PENDING,
-      progressStage: "QUEUED",
+      progressStage: ProgressStage.QUEUED,
       progressPercent: 0,
       vttJson: null,
     })
@@ -76,7 +89,7 @@ async function initProcessingRecord(
       target: [videoProcessing.videoId, videoProcessing.targetLang],
       set: {
         status: ProcessingStatus.PENDING,
-        progressStage: "QUEUED",
+        progressStage: ProgressStage.QUEUED,
         progressPercent: 0,
         vttJson: null,
       },
@@ -88,8 +101,8 @@ async function transcribeWithProgress(
   db: typeof drizzleDb,
   videoId: string,
   targetLang: string,
-): Promise<{ record: typeof video.$inferSelect; data: any }> {
-  await setStage(db, videoId, targetLang, "TRANSCRIBING", 0);
+): Promise<{ record: typeof video.$inferSelect; data: TranscriptionResponse }> {
+  await setStage(db, videoId, targetLang, ProgressStage.TRANSCRIBING, 0);
   const [record] = await db
     .select()
     .from(video)
@@ -117,11 +130,17 @@ async function transcribeWithProgress(
       lastPersistedPercent = clamped;
       lastPersistedAt = now;
       console.log(`[Pipeline] Transcription progress: ${clamped}%`);
-      await setStage(db, videoId, targetLang, "TRANSCRIBING", clamped);
+      await setStage(
+        db,
+        videoId,
+        targetLang,
+        ProgressStage.TRANSCRIBING,
+        clamped,
+      );
     },
   );
 
-  await setStage(db, videoId, targetLang, "TRANSCRIBING", 80);
+  await setStage(db, videoId, targetLang, ProgressStage.TRANSCRIBING, 80);
   return { record, data: transcription };
 }
 
@@ -149,11 +168,11 @@ async function analyzeSegments(
   db: typeof drizzleDb,
   videoId: string,
   targetLang: string,
-  transcription: any,
-): Promise<any[]> {
-  await setStage(db, videoId, targetLang, "ANALYZING", 85);
+  transcription: TranscriptionResponse,
+): Promise<VttSegment[]> {
+  await setStage(db, videoId, targetLang, ProgressStage.ANALYZING, 85);
   console.log(`[Pipeline] Starting Analysis.`);
-  const segmentTexts = transcription.segments.map((s: any) => s.text);
+  const segmentTexts = transcription.segments.map((s) => s.text);
   const batchAnalysis = await aiGateway.analyzeBatch(segmentTexts, targetLang);
   return mapAnalysisToSegments(transcription, batchAnalysis.results);
 }
@@ -166,12 +185,12 @@ async function translateAndFilter(
   targetLang: string,
   nativeLang: string,
   userId: string,
-  finalSegments: any[],
-): Promise<any[]> {
-  await setStage(db, videoId, targetLang, "TRANSLATING", 93);
+  finalSegments: VttSegment[],
+): Promise<VttSegment[]> {
+  await setStage(db, videoId, targetLang, ProgressStage.TRANSLATING, 93);
   console.log(`[Pipeline] Starting Translation.`);
 
-  const segmentsTokens = finalSegments.map((s: any) => s.tokens);
+  const segmentsTokens = finalSegments.map((s) => s.tokens);
   const filteredSegments = await filter.filterBatch(
     segmentsTokens,
     userId,
@@ -183,7 +202,7 @@ async function translateAndFilter(
   });
 
   const lemmaList = extractUnknownLemmas(finalSegments);
-  const sentenceTexts = finalSegments.map((s: any) => s.text);
+  const sentenceTexts = finalSegments.map((s) => s.text);
 
   const [lemmaRes, sentenceRes] = await Promise.all([
     lemmaList.length > 0
@@ -204,13 +223,13 @@ async function persistCompletion(
   db: typeof drizzleDb,
   videoId: string,
   targetLang: string,
-  finalSegments: any[],
+  finalSegments: VttSegment[],
 ): Promise<void> {
   await db
     .update(videoProcessing)
     .set({
       status: ProcessingStatus.COMPLETED,
-      progressStage: "READY",
+      progressStage: ProgressStage.READY,
       progressPercent: 100,
       vttJson: finalSegments,
     })
@@ -233,7 +252,10 @@ async function handleProcessingError(
   console.error(`[Pipeline Error] videoId=${videoId}: ${message}`, stack ?? "");
   await db
     .update(videoProcessing)
-    .set({ status: ProcessingStatus.ERROR, progressStage: "FAILED" })
+    .set({
+      status: ProcessingStatus.ERROR,
+      progressStage: ProgressStage.FAILED,
+    })
     .where(
       and(
         eq(videoProcessing.videoId, videoId),
@@ -246,7 +268,7 @@ async function setStage(
   db: typeof drizzleDb,
   videoId: string,
   targetLang: string,
-  stage: string,
+  stage: ProgressStageType,
   percent: number,
 ): Promise<void> {
   await db

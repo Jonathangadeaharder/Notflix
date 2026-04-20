@@ -12,7 +12,7 @@ const uploadDir = env.UPLOAD_DIR || "media/uploads";
 // Detect if running inside Docker container
 const isDocker = env.RUNNING_IN_DOCKER === "true";
 
-function resolveUploadDir(dir: string, docker: boolean): string {
+export function resolveUploadDir(dir: string, docker: boolean): string {
   if (docker) return dir;
   const isAbsolute = dir.startsWith("/") || dir.includes(":");
   return isAbsolute ? dir : path.resolve(process.cwd(), "../../", dir);
@@ -54,13 +54,16 @@ export enum ProcessingStatus {
  * Converts a local file path to a path that the AI Service can understand.
  * Relies on MEDIA_ROOT_INTERNAL env var to be consistent across services.
  */
-export function toAiServicePath(localPath: string): string {
-  if (!isDocker) {
+export function toAiServicePath(
+  localPath: string,
+  runningInDocker = isDocker,
+  mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH,
+): string {
+  if (!runningInDocker) {
     return localPath;
   }
   // Split on both / and \ so Windows paths (stored from local uploads)
   // work correctly when the pipeline runs inside the Linux Docker container.
   const filename = localPath.split(/[/\\]/).pop() || path.basename(localPath);
-  const mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH;
   return `${mediaRootInternal}/${filename}`;
 }

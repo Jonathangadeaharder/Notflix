@@ -71,12 +71,12 @@ export const actions = {
 
     if (!id || !session) return { success: false };
 
-    processVideo(
-      id,
+    processVideo({
+      videoId: id,
       targetLang,
-      session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
-      session.user.id,
-    ).catch((err) =>
+      nativeLang: session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
+      userId: session.user.id,
+    }).catch((err) =>
       console.error(`[Pipeline] Background error for ${id}:`, err),
     );
 

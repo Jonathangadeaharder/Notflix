@@ -1,23 +1,10 @@
-import type { TranscriptionResponse } from "../adapters/real-ai-gateway";
+import type {
+  TranscriptionResponse,
+  TokenAnalysis,
+  VttSegment,
+} from "$lib/types";
 
-export type TokenAnalysis = {
-  text: string;
-  lemma: string;
-  pos: string;
-  is_stop: boolean;
-  whitespace?: string;
-  translation?: string;
-  isKnown?: boolean;
-};
-
-export type VttSegment = {
-  start: number;
-  end: number;
-  text: string;
-  tokens: TokenAnalysis[];
-  translation?: string;
-  classification?: string;
-};
+export type { TokenAnalysis, VttSegment };
 
 export function mapAnalysisToSegments(
   transcription: TranscriptionResponse,

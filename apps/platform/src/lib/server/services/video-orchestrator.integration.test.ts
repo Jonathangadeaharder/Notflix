@@ -74,7 +74,13 @@ describe("Video Pipeline Integration", () => {
   });
 
   it("should process a video through the full pipeline and persist results", async () => {
-    await processVideo(testVideoId, "es", "en", "test-user-id", db);
+    await processVideo({
+      videoId: testVideoId,
+      targetLang: "es",
+      nativeLang: "en",
+      userId: "test-user-id",
+      db,
+    });
 
     const processingRecord = await db
       .select()

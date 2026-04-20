@@ -4,6 +4,8 @@ import { ProcessingStatus } from "$lib/server/infrastructure/config";
 import {
   computeComprehensionPercent,
   getDashboardStatusLabel,
+  pickFeaturedVideo,
+  type DashboardVideo,
 } from "$lib/server/services/dashboard-metrics";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
 import {
@@ -17,7 +19,6 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 const DASHBOARD_VIDEO_LIMIT = 12;
 const DEFAULT_TARGET_LANGUAGE = "es";
 const DEFAULT_PROGRESS_STAGE = "QUEUED";
-const MAX_PERCENT = 100;
 
 type DashboardRow = {
   id: string;
@@ -37,23 +38,6 @@ type SavedProgress = {
   currentTime: number;
   duration: number;
   progressPercent: number;
-};
-
-type DashboardVideo = {
-  id: string;
-  title: string;
-  thumbnailPath: string;
-  createdAt: Date;
-  views: number;
-  targetLang: string;
-  status: string;
-  statusLabel: string;
-  progressStage: string;
-  processingPercent: number;
-  watchPercent: number;
-  watchSeconds: number;
-  watchDuration: number;
-  comprehensionPercent: number | null;
 };
 
 async function fetchDashboardRows(): Promise<DashboardRow[]> {
@@ -137,28 +121,6 @@ function getProcessingState(row: DashboardRow, watchPercent: number) {
     statusLabel: getDashboardStatusLabel(row.status, watchPercent),
     progressStage: row.progressStage || DEFAULT_PROGRESS_STAGE,
     processingPercent: row.progressPercent ?? 0,
-  };
-}
-
-function isContinueWatching(videoItem: DashboardVideo) {
-  return videoItem.watchPercent > 0 && videoItem.watchPercent < MAX_PERCENT;
-}
-
-function pickFeaturedVideo(videos: DashboardVideo[]) {
-  let firstCompleted: DashboardVideo | null = null;
-
-  for (const videoItem of videos) {
-    if (isContinueWatching(videoItem)) {
-      return { featuredVideo: videoItem, continueWatching: videoItem };
-    }
-    if (!firstCompleted && videoItem.status === ProcessingStatus.COMPLETED) {
-      firstCompleted = videoItem;
-    }
-  }
-
-  return {
-    featuredVideo: firstCompleted ?? videos[0] ?? null,
-    continueWatching: null,
   };
 }
 

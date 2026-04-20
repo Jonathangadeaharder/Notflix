@@ -52,12 +52,12 @@ type UploadDependencies = {
   saveFileToStorage: (file: File, filePath: string) => Promise<void>;
   insertVideo: (record: NewVideo) => Promise<unknown>;
   queueTask: (name: string, task: Promise<unknown>) => void;
-  processVideo: (
-    videoId: string,
-    targetLang: string,
-    nativeLang: string,
-    userId: string,
-  ) => Promise<unknown>;
+  processVideo: (opts: {
+    videoId: string;
+    targetLang: string;
+    nativeLang: string;
+    userId: string;
+  }) => Promise<unknown>;
 };
 
 const defaultDependencies: UploadDependencies = {
@@ -101,12 +101,12 @@ export async function handleVideoUpload(
 
   dependencies.queueTask(
     `processVideo:${videoId}`,
-    dependencies.processVideo(
+    dependencies.processVideo({
       videoId,
-      validation.data.targetLang,
-      user.nativeLang || dependencies.defaultNativeLang,
-      user.id,
-    ),
+      targetLang: validation.data.targetLang,
+      nativeLang: user.nativeLang || dependencies.defaultNativeLang,
+      userId: user.id,
+    }),
   );
 
   return {

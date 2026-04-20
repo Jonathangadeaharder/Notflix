@@ -7,10 +7,7 @@ const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_OK = 200;
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const session = await locals.auth();
-  if (!session) {
-    return json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = (await locals.auth())!;
   const userId = session.user.id;
   let body;
   try {

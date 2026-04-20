@@ -8,6 +8,56 @@ const COMPREHENSION_WEIGHTS: Record<string, number> = {
 };
 const MAX_PERCENT = 100;
 
+export interface DashboardVideo {
+  id: string;
+  title: string;
+  thumbnailPath: string;
+  createdAt: Date;
+  views: number;
+  targetLang: string;
+  status: string;
+  statusLabel: string;
+  progressStage: string;
+  processingPercent: number;
+  watchPercent: number;
+  watchSeconds: number;
+  watchDuration: number;
+  comprehensionPercent: number | null;
+}
+
+export function isContinueWatching(video: DashboardVideo): boolean {
+  return (
+    video.status === ProcessingStatus.COMPLETED &&
+    video.watchPercent > 0 &&
+    video.watchPercent < MAX_PERCENT
+  );
+}
+
+export interface FeaturedVideoResult {
+  featuredVideo: DashboardVideo | null;
+  continueWatching: DashboardVideo | null;
+}
+
+export function pickFeaturedVideo(
+  videos: DashboardVideo[],
+): FeaturedVideoResult {
+  let firstCompleted: DashboardVideo | null = null;
+
+  for (const videoItem of videos) {
+    if (isContinueWatching(videoItem)) {
+      return { featuredVideo: videoItem, continueWatching: videoItem };
+    }
+    if (!firstCompleted && videoItem.status === ProcessingStatus.COMPLETED) {
+      firstCompleted = videoItem;
+    }
+  }
+
+  return {
+    featuredVideo: firstCompleted ?? videos[0] ?? null,
+    continueWatching: null,
+  };
+}
+
 export function computeComprehensionPercent(
   vttJson: DbVttSegment[] | null,
 ): number | null {

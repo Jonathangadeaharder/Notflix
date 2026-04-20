@@ -5,8 +5,7 @@
   const video = {
     id: "mock-video-id",
     title: "Mock Video",
-    filePath:
-      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", // Reliable public test video
+    filePath: "/test-video.webm", // Local WebM (VP8/Vorbis) — works in all Chromium builds
     targetLang: "es",
     duration: 600,
     thumbnailPath: "",

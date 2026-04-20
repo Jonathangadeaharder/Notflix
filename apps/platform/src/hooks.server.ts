@@ -7,13 +7,10 @@ import { user as userTable, videoProcessing } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { json, redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
+import { resolveAuthRequirement } from "$lib/server/services/auth-routes";
 
 const E2E_USER_ID = "00000000-e2e0-4000-a000-000000000000";
 const SESSION_TTL_MS = 86400000;
-
-const PROTECTED_PAGE_ROUTES = ["/studio", "/profile", "/vocabulary"];
-const PROTECTED_API_PREFIX = "/api/";
-const AUTH_EXEMPT_API = new Set(["/api/health"]);
 
 async function resolveE2eSession(): Promise<Session | null> {
   const [existing] = await db
@@ -80,16 +77,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // Centralized auth guard
   const { pathname } = event.url;
-  const isProtectedPage = PROTECTED_PAGE_ROUTES.some((r) =>
-    pathname.startsWith(r),
-  );
-  const isProtectedApi =
-    pathname.startsWith(PROTECTED_API_PREFIX) && !AUTH_EXEMPT_API.has(pathname);
+  const { requiresAuth, responseKind } = resolveAuthRequirement(pathname);
 
-  if (isProtectedPage || isProtectedApi) {
+  if (requiresAuth) {
     const session = await event.locals.auth();
     if (!session) {
-      if (isProtectedApi) {
+      if (responseKind === "json401") {
         return json({ error: "Unauthorized" }, { status: 401 });
       }
       const next = encodeURIComponent(pathname);

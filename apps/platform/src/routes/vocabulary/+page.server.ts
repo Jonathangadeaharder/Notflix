@@ -3,8 +3,9 @@ import { vocabReference, user } from "$lib/server/db/schema";
 import { eq, and, sql, ilike } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { redirect } from "@sveltejs/kit";
+import { CefrLevels } from "$lib/types";
 
-const ALLOWED_LEVELS = new Set(["A1", "A2", "B1", "B2", "C1", "C2"]);
+const ALLOWED_LEVELS: Set<string> = new Set(CefrLevels);
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const session = await locals.auth();

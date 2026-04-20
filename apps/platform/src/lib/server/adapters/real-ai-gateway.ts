@@ -1,22 +1,17 @@
 import { CONFIG } from "../infrastructure/config";
 import { getRequestId } from "../request-context";
+import type {
+  TranscriptionResponse,
+  FilterResponse,
+  TranslationResponse,
+  ThumbnailResponse,
+} from "$lib/types";
 
-export type TranscriptionResponse = {
-  segments: Array<{ start: number; end: number; text: string }>;
-  language: string;
-  language_probability: number;
-};
-
-export type FilterResponse = {
-  results: any[][];
-};
-
-export type TranslationResponse = {
-  translations: string[];
-};
-
-export type ThumbnailResponse = {
-  thumbnail_path: string;
+export type {
+  TranscriptionResponse,
+  FilterResponse,
+  TranslationResponse,
+  ThumbnailResponse,
 };
 
 export class AiServiceError extends Error {

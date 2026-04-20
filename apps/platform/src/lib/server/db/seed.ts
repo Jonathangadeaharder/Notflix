@@ -15,7 +15,7 @@ const BATCH_SIZE = 500;
 
 // Each CSV has two columns: German_Lemma,Spanish_Translation
 // We extract the Spanish translation (column index 1) as the vocab lemma.
-function parseLemmasFromCsv(filePath: string): string[] {
+export function parseLemmasFromCsv(filePath: string): string[] {
   const lines = fs.readFileSync(filePath, "utf-8").split("\n");
   return lines
     .slice(1) // skip header row
@@ -30,7 +30,7 @@ function parseLemmasFromCsv(filePath: string): string[] {
     .filter((lemma): lemma is string => !!lemma);
 }
 
-function splitCsvLine(line: string): string[] {
+export function splitCsvLine(line: string): string[] {
   const cols: string[] = [];
   let current = "";
   let inQuotes = false;

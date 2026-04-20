@@ -10,6 +10,7 @@ export default defineConfig({
       "tests/e2e/**",
       "tests/integration/**",
       "node_modules/**",
+      ".stryker-tmp/**",
       "**/*.integration.test.ts",
       "**/*.spec.ts",
     ],

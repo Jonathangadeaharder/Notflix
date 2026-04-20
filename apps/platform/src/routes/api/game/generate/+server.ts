@@ -6,10 +6,7 @@ const DEFAULT_END_TIME = 600;
 const HTTP_STATUS_BAD_REQUEST = 400;
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-  const session = await locals.auth();
-  if (!session) {
-    return json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = (await locals.auth())!;
   const userId = session.user.id;
 
   const videoId = url.searchParams.get("videoId");
