@@ -14,7 +14,7 @@ const isDocker = env.RUNNING_IN_DOCKER === "true";
 
 export function resolveUploadDir(dir: string, docker: boolean): string {
   if (docker) return dir;
-  const isAbsolute = dir.startsWith("/") || dir.includes(":");
+  const isAbsolute = path.isAbsolute(dir) || /^[A-Za-z]:[\\/]/.test(dir);
   return isAbsolute ? dir : path.resolve(process.cwd(), "../../", dir);
 }
 

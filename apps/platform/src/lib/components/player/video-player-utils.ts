@@ -22,7 +22,7 @@ const ERROR_MESSAGES: Record<number, string> = {
 
 const DEFAULT_ERROR_MESSAGE = "Unknown error occurred";
 
-const AUDIO_EXTENSIONS = [".m4a", ".mp3"];
+const AUDIO_EXTENSIONS = [".m4a", ".mp3", ".wav"];
 
 const PROGRESS_REPORT_INTERVAL_SECONDS = 5;
 const PERCENTAGE_BASE = 100;
@@ -75,7 +75,7 @@ export function getNextSubtitleMode(current: SubtitleMode): SubtitleMode {
  * Returns true if the file path is an audio-only file (mp3/m4a).
  */
 export function isAudioFile(filePath: string): boolean {
-  const lower = filePath?.toLowerCase() ?? "";
+  const lower = (filePath ?? "").toLowerCase().split(/[?#]/, 1)[0];
   return AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 
@@ -156,9 +156,8 @@ export function calcProgressPercent(
   currentTime: number,
   duration: number,
 ): number {
-  const roundedCurrent = Math.round(currentTime);
   const roundedDuration = Math.round(duration);
   if (roundedDuration <= 0) return 0;
-  const percent = (roundedCurrent / roundedDuration) * PERCENTAGE_BASE;
+  const percent = (currentTime / duration) * PERCENTAGE_BASE;
   return Math.min(PERCENTAGE_BASE, Math.max(0, percent));
 }

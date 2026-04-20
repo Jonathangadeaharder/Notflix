@@ -189,8 +189,8 @@ describe("isAudioFile", () => {
     expect(isAudioFile("video.mp4")).toBe(false);
   });
 
-  it("WhenWav_ThenReturnsFalse", { timeout: TEST_TIMEOUT_MS }, () => {
-    expect(isAudioFile("audio.wav")).toBe(false);
+  it("WhenWav_ThenReturnsTrue", { timeout: TEST_TIMEOUT_MS }, () => {
+    expect(isAudioFile("audio.wav")).toBe(true);
   });
 
   it("WhenEmptyString_ThenReturnsFalse", { timeout: TEST_TIMEOUT_MS }, () => {
@@ -204,6 +204,15 @@ describe("isAudioFile", () => {
   it("WhenPathWithDirs_ThenReturnsTrue", { timeout: TEST_TIMEOUT_MS }, () => {
     expect(isAudioFile("/media/uploads/file.mp3")).toBe(true);
   });
+
+  it(
+    "WhenUrlWithQueryString_ThenDetectsAudio",
+    { timeout: TEST_TIMEOUT_MS },
+    () => {
+      expect(isAudioFile("track.mp3?token=abc")).toBe(true);
+      expect(isAudioFile("song.m4a#t=12")).toBe(true);
+    },
+  );
 });
 
 describe("calculateNextInterrupt", () => {
