@@ -1,9 +1,11 @@
+import { fail } from "@sveltejs/kit";
 import { db } from "$lib/server/infrastructure/database";
 import { video, videoProcessing } from "$lib/server/db/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { CONFIG, ProcessingStatus } from "$lib/server/infrastructure/config";
 import { processVideo } from "$lib/server/services/video-pipeline";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
+import { HTTP_STATUS } from "$lib/constants";
 
 export const load = async ({ depends, locals }) => {
   depends("app:videos");
@@ -69,7 +71,10 @@ export const actions = {
       session?.user.targetLang ||
       CONFIG.DEFAULT_TARGET_LANG;
 
-    if (!id || !session) return { success: false };
+    if (!session)
+      return fail(HTTP_STATUS.UNAUTHORIZED, { error: "Not authenticated" });
+    if (!id)
+      return fail(HTTP_STATUS.BAD_REQUEST, { error: "Video ID is required" });
 
     processVideo({
       videoId: id,
