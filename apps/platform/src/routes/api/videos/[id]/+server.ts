@@ -3,8 +3,18 @@ import { deleteVideoAndAssets } from "$lib/server/services/delete-video.service"
 import type { RequestHandler } from "./$types";
 import { HTTP_STATUS } from "$lib/constants";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const DELETE: RequestHandler = async ({ params }) => {
   const { id } = params;
+
+  if (!UUID_RE.test(id)) {
+    return json(
+      { error: "Invalid video ID: must be a valid UUID" },
+      { status: HTTP_STATUS.BAD_REQUEST },
+    );
+  }
 
   try {
     const result = await deleteVideoAndAssets(id);
