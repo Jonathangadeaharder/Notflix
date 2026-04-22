@@ -36,18 +36,9 @@ test.describe('Learner Journey: Interactive Video Player', () => {
             await route.fulfill({ status: 200, json: { success: true } });
         });
 
-        // 2. Navigate to studio and extract a real video ID
-        await page.goto('/studio');
-        await page.waitForLoadState('load');
-
-        const watchLink = page.locator('a[href^="/watch/"]').first();
-        await watchLink.waitFor({ state: 'visible', timeout: 30000 });
-        const watchHref = await watchLink.getAttribute('href');
-        expect(watchHref).toBeTruthy();
-
-        // 3. Navigate DIRECTLY to the watch page via page.goto()
-        //    Full page load → SSR + hydration (more reliable than client-side nav)
-        await page.goto(watchHref!);
+        // 2. Navigate directly to the seeded COMPLETED video
+        const E2E_VIDEO_1 = '00000000-e2e0-4000-b000-000000000001';
+        await page.goto(`/watch/${E2E_VIDEO_1}`);
         await page.waitForLoadState('load');
 
         await playerPage.waitForPlayback();

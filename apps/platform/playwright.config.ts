@@ -10,6 +10,9 @@ const config: PlaywrightTestConfig = {
   testDir: "tests/e2e",
   testMatch: ["**/*.spec.ts", "**/*.spec.js"],
 
+  globalSetup: "./tests/e2e/seed.ts",
+  globalTeardown: "./tests/e2e/teardown.ts",
+
   use: {
     baseURL: "http://localhost:5173",
     screenshot: "only-on-failure",
