@@ -10,6 +10,18 @@ const MIN_LANG_LEN = 2;
 const MAX_LANG_LEN = 5;
 const FALLBACK_FILE_EXTENSION = ".bin";
 const PLACEHOLDER_THUMBNAIL = "/placeholder.jpg";
+const DEFAULT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+const ALLOWED_EXTENSIONS = new Set([
+  "mp4",
+  "mp3",
+  "wav",
+  "webm",
+  "ogg",
+  "m4a",
+  "mkv",
+  "avi",
+  "mov",
+]);
 
 const uploadSchema = z.object({
   title: z.string().min(1, "Title is required").max(LIMITS.MAX_TITLE_LENGTH),
@@ -48,6 +60,7 @@ type UploadResult =
 type UploadDependencies = {
   uploadDir: string;
   defaultNativeLang: string;
+  maxFileSizeBytes?: number;
   createVideoId: () => string;
   saveFileToStorage: (file: File, filePath: string) => Promise<void>;
   insertVideo: (record: NewVideo) => Promise<unknown>;
@@ -76,7 +89,10 @@ export async function handleVideoUpload(
   overrides: Partial<UploadDependencies>,
 ): Promise<UploadResult> {
   const dependencies = { ...defaultDependencies, ...overrides };
-  const validation = validateUploadPayload(payload);
+  const validation = validateUploadPayload(
+    payload,
+    dependencies.maxFileSizeBytes,
+  );
   if (!validation.ok) {
     return validation;
   }
@@ -130,6 +146,7 @@ async function saveUploadedFileToDisk(
 
 function validateUploadPayload(
   payload: UploadPayload,
+  maxFileSizeBytes?: number,
 ):
   | { ok: true; data: { title: string; targetLang: string; file: File } }
   | { ok: false; value: UploadFailure } {
@@ -158,6 +175,37 @@ function validateUploadPayload(
           title: payload.title,
           targetLang: payload.targetLang,
         },
+      },
+    };
+  }
+
+  const maxFileSize = maxFileSizeBytes ?? DEFAULT_MAX_FILE_SIZE_BYTES;
+  if (payload.file.size > maxFileSize) {
+    return {
+      ok: false,
+      value: {
+        errors: {
+          file: [
+            `File exceeds maximum size of ${maxFileSize / (1024 * 1024)}MB`,
+          ],
+        },
+        data: { title: payload.title, targetLang: payload.targetLang },
+      },
+    };
+  }
+
+  const ext = payload.file.name.split(".").pop()?.toLowerCase();
+  if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
+    return {
+      ok: false,
+      value: {
+        errors: {
+          file: [
+            "File type not allowed. Accepted: " +
+              [...ALLOWED_EXTENSIONS].join(", "),
+          ],
+        },
+        data: { title: payload.title, targetLang: payload.targetLang },
       },
     };
   }
