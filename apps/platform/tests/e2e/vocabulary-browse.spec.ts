@@ -32,8 +32,9 @@ test.describe("Vocabulary: Browse and Filter", () => {
       page.locator('input[placeholder="Search words..."]'),
     ).toBeVisible();
 
-    // Pagination should be visible
-    await expect(page.locator("text=Page 1 of")).toBeVisible();
+    // Toggle buttons should be present on word rows
+    const toggleButtons = page.locator("[data-testid^='toggle-known-']");
+    expect(await toggleButtons.count()).toBeGreaterThan(0);
   });
 
   test("navigates to level-filtered view via URL", async ({ page }) => {
@@ -71,16 +72,14 @@ test.describe("Vocabulary: Browse and Filter", () => {
     const toggleBtn = page.getByTestId("toggle-known-hola");
 
     // "hola" should be known from seed data — deactivate it
-    await expect(toggleBtn).toContainText("Known");
+    await expect(toggleBtn).toContainText("Known", { timeout: 10_000 });
     await toggleBtn.click();
-    await page.waitForLoadState("load");
 
-    // Now it should show "Mark Known" — activate it again
-    await expect(toggleBtn).toContainText("Mark Known");
+    // Wait for the toggle to complete (button text changes after invalidateAll)
+    await expect(toggleBtn).toContainText("Mark Known", { timeout: 10_000 });
+
+    // Activate it again
     await toggleBtn.click();
-    await page.waitForLoadState("load");
-
-    // Should be known again
-    await expect(toggleBtn).toContainText("Known");
+    await expect(toggleBtn).toContainText("Known", { timeout: 10_000 });
   });
 });

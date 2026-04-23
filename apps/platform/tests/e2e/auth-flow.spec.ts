@@ -6,7 +6,7 @@ const TEST_PASSWORD = "TestPass123!";
 const TEST_NAME = "E2E Auth Test";
 
 test.describe("Auth Flow: Register → Login → Logout → Login", () => {
-  test.skip(() => process.env.PLAYWRIGHT_TEST === "true", "Skipped in PLAYWRIGHT_TEST mode");
+  test.skip((_fixtures, _testInfo) => process.env.PLAYWRIGHT_TEST === "true", "Skipped in PLAYWRIGHT_TEST mode");
 
   test("should complete full auth cycle", async ({ page }) => {
     test.setTimeout(120_000);
