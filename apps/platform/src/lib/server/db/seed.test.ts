@@ -1,7 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
 const mockReadFileSync =
   vi.fn<(filePath: string, encoding: string) => string>();
+
+afterEach(() => {
+  mockReadFileSync.mockClear();
+});
 
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<typeof import("node:fs")>("node:fs");

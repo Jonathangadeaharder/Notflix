@@ -4,6 +4,7 @@ import { vocabReference } from "./schema";
 import { parseLemmasFromCsv } from "./seed-csv";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -42,10 +43,14 @@ async function seed() {
   }
 
   console.log("\nSeeding complete!");
+  await client.end();
   process.exit(0);
 }
 
-seed().catch((err) => {
-  console.error("Seeding failed:", err);
-  process.exit(1);
-});
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  seed().catch((err) => {
+    console.error("Seeding failed:", err);
+    process.exit(1);
+  });
+}
