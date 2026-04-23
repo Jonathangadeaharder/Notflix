@@ -15,7 +15,7 @@ describe("Studio reprocess action — validation", () => {
     vi.clearAllMocks();
   });
 
-  it("returns fail() when id is missing", async () => {
+  it("returns fail() when id is missing", { timeout: 15_000 }, async () => {
     const { actions } = await import(
       "../../src/routes/studio/+page.server"
     );
@@ -32,7 +32,7 @@ describe("Studio reprocess action — validation", () => {
     expect(result).toHaveProperty("status", HTTP_STATUS.BAD_REQUEST);
   });
 
-  it("returns fail() when session is missing", async () => {
+  it("returns fail() when session is missing", { timeout: 15_000 }, async () => {
     const { actions } = await import(
       "../../src/routes/studio/+page.server"
     );

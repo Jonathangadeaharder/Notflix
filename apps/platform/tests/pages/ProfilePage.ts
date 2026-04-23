@@ -13,7 +13,7 @@ export class ProfilePage {
     this.heading = page.locator("h1");
     this.gameIntervalSelect = page.locator("select#gameInterval");
     this.saveButton = page.locator('button[type="submit"]');
-    this.successIndicator = page.locator("text=saved", { exact: false });
+    this.successIndicator = page.locator("text=saved");
   }
 
   async goto() {

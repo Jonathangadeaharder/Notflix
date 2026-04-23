@@ -14,10 +14,19 @@ test.describe("Video Player Component", () => {
         // Force video time to 2s and pause so subtitles are deterministic
         await page.evaluate(() => {
             const v = document.querySelector("video") as HTMLVideoElement;
-            if (v) {
-                v.pause();
-                v.currentTime = 2;
-            }
+            if (!v) return;
+            return new Promise<void>((resolve) => {
+                const seek = () => {
+                    v.pause();
+                    v.currentTime = 2;
+                    v.addEventListener("seeked", () => resolve(), { once: true });
+                };
+                if (v.readyState >= 1) {
+                    seek();
+                } else {
+                    v.addEventListener("loadedmetadata", () => seek(), { once: true });
+                }
+            });
         });
 
         // Check if subtitles appear

@@ -9,7 +9,7 @@ export class HomePage {
   constructor(page: Page) {
     this.page = page;
     this.heroSection = page.locator("section").first();
-    this.trendingSection = page.locator("text=Trending", { exact: false });
+    this.trendingSection = page.locator("text=Trending");
     this.navLinks = page.locator("nav a");
   }
 
