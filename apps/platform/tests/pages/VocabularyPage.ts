@@ -33,22 +33,31 @@ export class VocabularyPage {
 
   async search(term: string) {
     await this.searchInput.fill(term);
-    await this.searchButton.click();
-    await this.page.waitForLoadState("load");
+    await Promise.all([
+      this.page.waitForURL((url) =>
+        url.pathname === "/vocabulary" && url.searchParams.get("search") === term,
+      ),
+      this.searchButton.click(),
+    ]);
   }
 
   async clearSearch() {
     await this.clearSearchButton.click();
-    await this.page.waitForLoadState("load");
+    await this.page.waitForURL((url) =>
+      url.pathname === "/vocabulary" && !url.searchParams.has("search"),
+    );
   }
 
   async filterByLevel(level: string) {
-    // Level buttons contain text like "A1 (Beginner) 646"
     const badge = this.page
       .locator("button", { hasText: new RegExp(`^${level}\\b`) })
       .first();
-    await badge.click();
-    await this.page.waitForLoadState("load");
+    await Promise.all([
+      this.page.waitForURL((url) =>
+        url.pathname === "/vocabulary" && url.searchParams.get("level") === level,
+      ),
+      badge.click(),
+    ]);
   }
 
   async getVisibleWordTexts(): Promise<string[]> {
@@ -63,8 +72,13 @@ export class VocabularyPage {
     this.page.getByTestId(`toggle-known-${lemma}`);
 
   async toggleKnown(lemma: string): Promise<void> {
-    await this.toggleKnownButton(lemma).click();
-    await this.page.waitForLoadState("load");
+    await Promise.all([
+      this.page.waitForResponse((response) =>
+        response.url().includes("/api/words/known") &&
+        ["POST", "DELETE"].includes(response.request().method()),
+      ),
+      this.toggleKnownButton(lemma).click(),
+    ]);
   }
 
   async isWordKnown(lemma: string): Promise<boolean> {

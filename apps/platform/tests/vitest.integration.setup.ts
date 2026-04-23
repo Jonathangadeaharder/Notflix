@@ -135,38 +135,36 @@ async function setup() {
   }
 
   if (isDockerAvailable()) {
+    const candidates: { name: string; url: string; port: number; cleanup: string; created: boolean }[] = [];
+
     if (isContainerRunning(PROJECT_CONTAINER)) {
-      dbUrl = DEFAULT_LOCAL_URL;
-      console.log(`[Integration] Using running project container "${PROJECT_CONTAINER}"`);
+      candidates.push({ name: PROJECT_CONTAINER, url: DEFAULT_LOCAL_URL, port: PROJECT_PORT, cleanup: "", created: false });
     } else if (containerExists(PROJECT_CONTAINER) && startExisting(PROJECT_CONTAINER)) {
-      dbUrl = DEFAULT_LOCAL_URL;
-      console.log(`[Integration] Started existing project container "${PROJECT_CONTAINER}"`);
-      cleanupContainer = PROJECT_CONTAINER;
-    } else if (isContainerRunning(TEST_CONTAINER)) {
-      dbUrl = `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`;
-      console.log(`[Integration] Reusing test container "${TEST_CONTAINER}"`);
+      candidates.push({ name: PROJECT_CONTAINER, url: DEFAULT_LOCAL_URL, port: PROJECT_PORT, cleanup: PROJECT_CONTAINER, created: true });
+    }
+
+    if (isContainerRunning(TEST_CONTAINER)) {
+      candidates.push({ name: TEST_CONTAINER, url: `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`, port: TEST_PORT, cleanup: "", created: false });
     } else {
       removeContainer(TEST_CONTAINER);
       if (createTestContainer()) {
-        dbUrl = `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`;
-        cleanupContainer = TEST_CONTAINER;
-        console.log(`[Integration] Created test container "${TEST_CONTAINER}"`);
+        candidates.push({ name: TEST_CONTAINER, url: `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`, port: TEST_PORT, cleanup: TEST_CONTAINER, created: true });
       }
     }
 
-    if (dbUrl) {
-      const port = dbUrl.includes(`:${TEST_PORT}/`) ? TEST_PORT : PROJECT_PORT;
-      if (waitForPort(port)) {
-        process.env.DATABASE_URL = dbUrl;
+    for (const c of candidates) {
+      console.log(`[Integration] Trying "${c.name}" on port ${c.port}...`);
+      if (waitForPort(c.port)) {
+        process.env.DATABASE_URL = c.url;
+        cleanupContainer = c.cleanup;
         try {
-          pushSchema(dbUrl);
+          pushSchema(c.url);
         } catch {
-          console.warn("[Integration] Warning: could not push schema to Docker container.");
+          console.warn(`[Integration] Warning: could not push schema to "${c.name}".`);
         }
         return;
       }
-      console.warn("[Integration] Container started but port not reachable. Falling through.");
-      dbUrl = "";
+      console.warn(`[Integration] "${c.name}" started but port ${c.port} not reachable.`);
     }
   }
 
