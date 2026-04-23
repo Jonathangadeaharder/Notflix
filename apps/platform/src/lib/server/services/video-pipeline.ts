@@ -99,6 +99,38 @@ async function initProcessingRecord(
     });
 }
 
+function createProgressCallback(
+  db: typeof drizzleDb,
+  videoId: string,
+  targetLang: string,
+): (percent: number) => Promise<void> {
+  let lastPersistedPercent = 0;
+  let lastPersistedAt = 0;
+
+  return async (percent) => {
+    const clamped = Math.min(
+      TRANSCRIBE_PROGRESS_CAP_PERCENT,
+      Math.max(0, Math.round(percent)),
+    );
+    const now = Date.now();
+    if (
+      clamped <= lastPersistedPercent &&
+      now - lastPersistedAt < PROGRESS_DB_MIN_INTERVAL_MS
+    )
+      return;
+    lastPersistedPercent = clamped;
+    lastPersistedAt = now;
+    console.log(`[Pipeline] Transcription progress: ${clamped}%`);
+    await setStage(
+      db,
+      videoId,
+      targetLang,
+      ProgressStage.TRANSCRIBING,
+      clamped,
+    );
+  };
+}
+
 async function transcribeWithProgress(
   aiGateway: RealAiGateway,
   db: typeof drizzleDb,
@@ -116,34 +148,11 @@ async function transcribeWithProgress(
   const aiPath = toAiServicePath(record.filePath);
   console.log(`[Pipeline] Calling AI service for transcription: ${aiPath}`);
 
-  let lastPersistedPercent = 0;
-  let lastPersistedAt = 0;
-
+  const onProgress = createProgressCallback(db, videoId, targetLang);
   const transcription = await aiGateway.transcribeWithProgress(
     aiPath,
     targetLang,
-    async (percent) => {
-      const clamped = Math.min(
-        TRANSCRIBE_PROGRESS_CAP_PERCENT,
-        Math.max(0, Math.round(percent)),
-      );
-      const now = Date.now();
-      if (
-        clamped <= lastPersistedPercent &&
-        now - lastPersistedAt < PROGRESS_DB_MIN_INTERVAL_MS
-      )
-        return;
-      lastPersistedPercent = clamped;
-      lastPersistedAt = now;
-      console.log(`[Pipeline] Transcription progress: ${clamped}%`);
-      await setStage(
-        db,
-        videoId,
-        targetLang,
-        ProgressStage.TRANSCRIBING,
-        clamped,
-      );
-    },
+    onProgress,
   );
 
   await setStage(
