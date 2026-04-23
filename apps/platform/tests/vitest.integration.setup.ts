@@ -98,6 +98,13 @@ function pushSchema(dbUrl: string): void {
 }
 
 function skip(msg: string): never {
+  if (cleanupContainer) {
+    try {
+      docker(`stop ${cleanupContainer}`, 10_000);
+    } catch {
+      // best effort
+    }
+  }
   console.warn(`[Integration] ${msg}`);
   process.exit(0);
 }

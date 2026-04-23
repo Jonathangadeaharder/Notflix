@@ -4,11 +4,12 @@ const SENSITIVE_PATTERNS = [
   "secret",
   "authorization",
   "cookie",
+  "apikey",
 ];
 
 function isSensitiveKey(key: string): boolean {
-  const lower = key.toLowerCase();
-  return SENSITIVE_PATTERNS.some((p) => lower.includes(p));
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return SENSITIVE_PATTERNS.some((p) => normalized.includes(p));
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

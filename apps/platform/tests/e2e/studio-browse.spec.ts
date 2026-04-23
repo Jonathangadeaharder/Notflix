@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { StudioPage } from "../pages/StudioPage";
 
 test.describe("Studio: Video Browsing", () => {
-  test("displays seeded video cards with correct status badges", async ({
+  test("displays seeded video cards", async ({
     page,
   }) => {
     const studio = new StudioPage(page);

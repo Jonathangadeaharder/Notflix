@@ -18,17 +18,16 @@ test.describe("Profile: Settings", () => {
     const profile = new ProfilePage(page);
     await profile.goto();
 
-    // Change to "Every 5 Minutes"
+    const originalValue = await profile.gameIntervalSelect.inputValue();
+
     await profile.setGameInterval("5");
     await profile.save();
 
-    // After save, the page reloads — verify the value persisted
     await profile.goto();
     const value = await profile.gameIntervalSelect.inputValue();
     expect(value).toBe("5");
 
-    // Reset to original value to avoid test pollution
-    await profile.setGameInterval("10");
+    await profile.setGameInterval(originalValue);
     await profile.save();
   });
 });

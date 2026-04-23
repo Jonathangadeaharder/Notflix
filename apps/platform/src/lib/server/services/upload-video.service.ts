@@ -190,7 +190,7 @@ function validateUploadPayload(
             `File exceeds maximum size of ${maxFileSize / (1024 * 1024)}MB`,
           ],
         },
-        data: { title: payload.title, targetLang: payload.targetLang },
+        data: { title: parsed.data.title, targetLang: parsed.data.targetLang },
       },
     };
   }
@@ -209,7 +209,7 @@ function validateUploadPayload(
               [...ALLOWED_EXTENSIONS].join(", "),
           ],
         },
-        data: { title: payload.title, targetLang: payload.targetLang },
+        data: { title: parsed.data.title, targetLang: parsed.data.targetLang },
       },
     };
   }

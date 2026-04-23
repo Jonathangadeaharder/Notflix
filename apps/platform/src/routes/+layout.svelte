@@ -69,7 +69,10 @@
             <button
               data-testid="logout-btn"
               class="flex items-center gap-2 text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-full text-sm font-medium transition-all cursor-pointer"
-              onclick={() => signOut()}
+              onclick={async () => {
+                const { error } = await signOut();
+                if (error) console.error("Logout failed:", error);
+              }}
             >
               <LogOut class="h-4 w-4" />
               Log Out
@@ -152,9 +155,10 @@
           <button
             data-testid="logout-btn-mobile"
             class="flex items-center gap-3 text-zinc-300 hover:text-white hover:bg-white/5 px-3 py-3 rounded-lg text-sm font-medium transition-all w-full text-left cursor-pointer"
-            onclick={() => {
+            onclick={async () => {
               mobileMenuOpen = false;
-              signOut();
+              const { error } = await signOut();
+              if (error) console.error("Logout failed:", error);
             }}
           >
             <LogOut class="h-5 w-5" />
