@@ -20,7 +20,7 @@
     const interval = setInterval(() => {
       if (
         document.visibilityState !== "visible" &&
-        !(window as Record<string, unknown>).__e2e
+        !(window as unknown as Record<string, unknown>).__e2e
       )
         return;
 

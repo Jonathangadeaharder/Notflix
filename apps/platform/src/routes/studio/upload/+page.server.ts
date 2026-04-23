@@ -34,17 +34,14 @@ function parseUploadForm(formData: FormData) {
   const title = formData.get("title") as string;
   const targetLang = formData.get("targetLang") as string;
   const nativeLang = formData.get("nativeLang") as string;
-  const file = formData.get("file") as File;
+  const file = formData.get("file") as File | null;
   const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
   return { title, targetLang, nativeLang, file, result };
 }
 
 function validateUploadForm(
-  file: File,
-  result: z.SafeParseReturnType<
-    { title: string; targetLang: string; nativeLang: string },
-    { title: string; targetLang: string; nativeLang: string }
-  >,
+  file: File | null,
+  result: ReturnType<typeof uploadSchema.safeParse>,
   title: string,
   targetLang: string,
   nativeLang: string,
@@ -78,8 +75,11 @@ export const actions = {
     );
     if (validationFailure) return validationFailure;
 
+    if (!result.success) return validationFailure;
+    const validatedFile = file as File;
+
     const videoId = crypto.randomUUID();
-    const filePath = await saveUploadedFile(file, videoId);
+    const filePath = await saveUploadedFile(validatedFile, videoId);
 
     await db.insert(video).values({
       id: videoId,

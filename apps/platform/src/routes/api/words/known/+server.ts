@@ -15,12 +15,17 @@ const knownWordSchema = z.object({
     .regex(/^[a-z]{2,5}$/i, "lang must be a 2-5 letter language code"),
 });
 
-async function parseKnownWordRequest(request: Request) {
+type ParseResult =
+  | { ok: false; errorResponse: Response }
+  | { ok: true; lemma: string; lang: string };
+
+async function parseKnownWordRequest(request: Request): Promise<ParseResult> {
   let body;
   try {
     body = await request.json();
   } catch {
     return {
+      ok: false,
       errorResponse: json(
         { error: "Invalid JSON" },
         { status: HTTP_STATUS.BAD_REQUEST },
@@ -31,6 +36,7 @@ async function parseKnownWordRequest(request: Request) {
   const { lemma, lang } = body;
   if (!lemma || !lang) {
     return {
+      ok: false,
       errorResponse: json(
         { error: "Missing lemma or lang" },
         { status: HTTP_STATUS.BAD_REQUEST },
@@ -41,6 +47,7 @@ async function parseKnownWordRequest(request: Request) {
   const parsed = knownWordSchema.safeParse({ lemma, lang });
   if (!parsed.success) {
     return {
+      ok: false,
       errorResponse: json(
         { error: parsed.error.issues.map((i) => i.message).join(", ") },
         { status: HTTP_STATUS.BAD_REQUEST },
@@ -48,7 +55,7 @@ async function parseKnownWordRequest(request: Request) {
     };
   }
 
-  return { lemma, lang };
+  return { ok: true, lemma, lang };
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -61,7 +68,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   }
 
   const parsed = await parseKnownWordRequest(request);
-  if ("errorResponse" in parsed) return parsed.errorResponse;
+  if (!parsed.ok) return parsed.errorResponse;
 
   try {
     await db
@@ -94,7 +101,7 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
   }
 
   const parsed = await parseKnownWordRequest(request);
-  if ("errorResponse" in parsed) return parsed.errorResponse;
+  if (!parsed.ok) return parsed.errorResponse;
 
   try {
     const result = await db

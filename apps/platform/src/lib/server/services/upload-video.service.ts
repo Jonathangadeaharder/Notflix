@@ -169,12 +169,11 @@ function extractFileExtension(filename: string): string | null {
     : null;
 }
 
+type SchemaResult = ReturnType<typeof uploadSchema.safeParse>;
+
 function validateSchemaAndFile(
   payload: UploadPayload,
-  parsed: z.SafeParseReturnType<
-    { title: string; targetLang: string },
-    { title: string; targetLang: string }
-  >,
+  parsed: SchemaResult,
 ): { ok: false; value: UploadFailure } | null {
   if (parsed.success && payload.file && payload.file.size !== 0) return null;
   const fieldErrors = parsed.success ? {} : parsed.error.flatten().fieldErrors;
@@ -184,6 +183,37 @@ function validateSchemaAndFile(
     { ...fieldErrors, file: fileErrors },
     payload.title,
     payload.targetLang,
+  );
+}
+
+function validateFileSize(
+  file: File,
+  maxFileSizeBytes: number | undefined,
+  parsed: SchemaResult,
+): { ok: false; value: UploadFailure } | null {
+  if (!parsed.success) return null;
+  const maxFileSize = maxFileSizeBytes ?? DEFAULT_MAX_FILE_SIZE_BYTES;
+  if (file.size <= maxFileSize) return null;
+  return makeValidationFailure(
+    {
+      file: [`File exceeds maximum size of ${maxFileSize / BYTES_PER_MB}MB`],
+    },
+    parsed.data.title,
+    parsed.data.targetLang,
+  );
+}
+
+function validateFileType(
+  file: File,
+  parsed: SchemaResult,
+): { ok: false; value: UploadFailure } | null {
+  if (!parsed.success) return null;
+  const ext = extractFileExtension(file.name);
+  if (ext && ALLOWED_EXTENSIONS.has(ext)) return null;
+  return makeValidationFailure(
+    { file: [FILE_TYPE_NOT_ALLOWED_MSG] },
+    parsed.data.title,
+    parsed.data.targetLang,
   );
 }
 
@@ -201,32 +231,27 @@ function validateUploadPayload(
   const schemaFailure = validateSchemaAndFile(payload, parsed);
   if (schemaFailure) return schemaFailure;
 
-  const maxFileSize = maxFileSizeBytes ?? DEFAULT_MAX_FILE_SIZE_BYTES;
-  if (payload.file.size > maxFileSize) {
+  if (!parsed.success || !payload.file) {
     return makeValidationFailure(
-      {
-        file: [`File exceeds maximum size of ${maxFileSize / BYTES_PER_MB}MB`],
-      },
-      parsed.data.title,
-      parsed.data.targetLang,
+      { file: ["File is required"] },
+      payload.title,
+      payload.targetLang,
     );
   }
+  const file = payload.file;
 
-  const ext = extractFileExtension(payload.file.name);
-  if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
-    return makeValidationFailure(
-      { file: [FILE_TYPE_NOT_ALLOWED_MSG] },
-      parsed.data.title,
-      parsed.data.targetLang,
-    );
-  }
+  const sizeFailure = validateFileSize(file, maxFileSizeBytes, parsed);
+  if (sizeFailure) return sizeFailure;
+
+  const typeFailure = validateFileType(file, parsed);
+  if (typeFailure) return typeFailure;
 
   return {
     ok: true,
     data: {
       title: parsed.data.title,
       targetLang: parsed.data.targetLang,
-      file: payload.file,
+      file,
     },
   };
 }
