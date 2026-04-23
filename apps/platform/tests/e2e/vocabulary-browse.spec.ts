@@ -67,19 +67,28 @@ test.describe("Vocabulary: Browse and Filter", () => {
 
   test("toggles word known status via button", async ({ page }) => {
     await page.goto("/vocabulary?search=hola&page=1");
-    await page.waitForLoadState("load");
+    await page.waitForLoadState("networkidle");
 
     const toggleBtn = page.getByTestId("toggle-known-hola");
 
-    // "hola" should be known from seed data — deactivate it
     await expect(toggleBtn).toContainText("Known", { timeout: 10_000 });
-    await toggleBtn.click();
 
-    // Wait for the toggle to complete (button text changes after invalidateAll)
-    await expect(toggleBtn).toContainText("Mark Known", { timeout: 10_000 });
-
-    // Activate it again
+    const deleteResponse = page.waitForResponse(
+      (resp) => resp.url().includes("/api/words/known") && resp.request().method() === "DELETE",
+    );
     await toggleBtn.click();
-    await expect(toggleBtn).toContainText("Known", { timeout: 10_000 });
+    const delResp = await deleteResponse;
+    expect(delResp.ok()).toBeTruthy();
+
+    await expect(toggleBtn).toContainText("Mark Known", { timeout: 15_000 });
+
+    const postResponse = page.waitForResponse(
+      (resp) => resp.url().includes("/api/words/known") && resp.request().method() === "POST",
+    );
+    await toggleBtn.click();
+    const postResp = await postResponse;
+    expect(postResp.ok()).toBeTruthy();
+
+    await expect(toggleBtn).toContainText("Known", { timeout: 15_000 });
   });
 });

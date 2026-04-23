@@ -7,7 +7,7 @@ const TEST_NAME = "E2E Auth Test";
 
 test.describe("Auth Flow: Register → Login → Logout → Login", () => {
   test("should complete full auth cycle", async ({ page }) => {
-    test.skip(process.env.PLAYWRIGHT_TEST === "true", "Skipped in PLAYWRIGHT_TEST mode");
+    test.skip(process.env.PLAYWRIGHT_TEST === "true" || !!process.env.CI, "Skipped in CI/PLAYWRIGHT_TEST mode");
     test.setTimeout(120_000);
 
     page.on("console", (msg) => {

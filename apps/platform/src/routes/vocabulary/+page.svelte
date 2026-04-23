@@ -7,13 +7,14 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invalidateAll } from "$app/navigation";
+  import { SvelteSet } from "svelte/reactivity";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
 
   let searchInput = $derived(data.filters.search ?? "");
 
-  const togglingWords = $state<Set<string>>(new Set());
+  const togglingWords = new SvelteSet<string>();
 
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2", "untracked"] as const;
 
@@ -75,7 +76,11 @@
       });
       if (res.ok) {
         await invalidateAll();
+      } else {
+        console.error("Toggle known failed:", res.status, await res.text());
       }
+    } catch (e) {
+      console.error("Toggle known error:", e);
     } finally {
       togglingWords.delete(lemma);
     }
