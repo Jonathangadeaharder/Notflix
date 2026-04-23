@@ -1,11 +1,13 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "packageManager": "pnpm",
-  "plugins": ["@stryker-mutator/vitest-runner"],
+  "plugins": ["@stryker-mutator/vitest-runner", "@stryker-mutator/typescript-checker"],
   "reporters": ["html", "clear-text", "progress"],
   "testRunner": "vitest",
   "testRunner_comment": "vitest config is auto-discovered from vite.config.ts",
   "coverageAnalysis": "perTest",
+  "checkers": ["typescript"],
+  "tsconfigFile": "./tsconfig.json",
   "mutate": [
     "src/lib/components/player/subtitle-mapper.ts",
     "src/lib/components/player/video-player-utils.ts",
