@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "../../src/routes/api/game/generate/+server";
 import { HTTP_STATUS } from "$lib/constants";
+import { generateDeck } from "$lib/server/services/chunker.service";
 
 vi.mock("$lib/server/services/chunker.service", () => ({
   generateDeck: vi.fn(),
@@ -22,5 +23,6 @@ describe("GET /api/game/generate — videoId validation", () => {
     } as never);
 
     expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+    expect(generateDeck).not.toHaveBeenCalled();
   });
 });

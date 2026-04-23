@@ -39,7 +39,7 @@ test.describe("Navigation and Layout", () => {
     expect(title.toLowerCase()).not.toContain("untitled");
   });
 
-  test("authenticated pages redirect to login when not authenticated", async ({
+  test("authenticated pages load under E2E user when PLAYWRIGHT_TEST=true", async ({
     page,
   }) => {
     // Note: In PLAYWRIGHT_TEST=true mode, all requests are auto-authenticated.

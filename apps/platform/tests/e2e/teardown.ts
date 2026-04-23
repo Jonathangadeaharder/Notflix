@@ -23,9 +23,12 @@ const E2E_VIDEO_IDS = [
 
 export default async function globalTeardown() {
   const databaseUrl =
-    process.env.E2E_DATABASE_URL ||
-    process.env.DATABASE_URL ||
-    "postgres://postgres:password@127.0.0.1:5432/postgres";
+    process.env.E2E_DATABASE_URL || process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error(
+      "E2E_DATABASE_URL or DATABASE_URL must be set for Playwright teardown",
+    );
+  }
 
   console.log("[E2E Teardown] Connecting to database...");
   const client = postgres(databaseUrl);

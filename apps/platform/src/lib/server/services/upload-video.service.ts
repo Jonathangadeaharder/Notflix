@@ -194,7 +194,10 @@ function validateUploadPayload(
     };
   }
 
-  const ext = payload.file.name.split(".").pop()?.toLowerCase();
+  const filename = payload.file.name;
+  const lastDotIndex = filename.lastIndexOf(".");
+  const ext =
+    lastDotIndex > 0 ? filename.slice(lastDotIndex + 1).toLowerCase() : null;
   if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
     return {
       ok: false,

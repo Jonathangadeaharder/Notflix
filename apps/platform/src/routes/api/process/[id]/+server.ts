@@ -42,10 +42,23 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     }
     const body = parsed as ProcessRequest;
 
+    if (
+      (body.targetLang !== undefined && typeof body.targetLang !== "string") ||
+      (body.nativeLang !== undefined && typeof body.nativeLang !== "string")
+    ) {
+      return json(
+        { error: "Invalid language fields" },
+        { status: HTTP_STATUS_BAD_REQUEST },
+      );
+    }
+
+    const targetLang = body.targetLang?.trim() || "es";
+    const nativeLang = body.nativeLang?.trim() || "en";
+
     processVideo({
       videoId,
-      targetLang: body.targetLang || "es",
-      nativeLang: body.nativeLang || "en",
+      targetLang,
+      nativeLang,
       userId: session.user.id,
     }).catch((err) =>
       console.error(`[Pipeline] Background error for ${videoId}:`, err),

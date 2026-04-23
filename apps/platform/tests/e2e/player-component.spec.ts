@@ -16,10 +16,15 @@ test.describe("Video Player Component", () => {
             const v = document.querySelector("video") as HTMLVideoElement;
             if (!v) return;
             return new Promise<void>((resolve) => {
+                const targetTime = 2;
                 const seek = () => {
                     v.pause();
-                    v.currentTime = 2;
+                    if (Math.abs(v.currentTime - targetTime) < 0.01) {
+                        resolve();
+                        return;
+                    }
                     v.addEventListener("seeked", () => resolve(), { once: true });
+                    v.currentTime = targetTime;
                 };
                 if (v.readyState >= 1) {
                     seek();

@@ -27,7 +27,7 @@ export class ProfilePage {
 
   async save() {
     await this.saveButton.click();
-    await this.page.waitForLoadState("load");
+    await expect(this.successIndicator).toBeVisible();
   }
 
   async expectHeadingVisible() {

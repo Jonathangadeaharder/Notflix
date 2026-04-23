@@ -30,7 +30,7 @@ function waitForPort(port: number, maxMs = 20_000): boolean {
       );
       return true;
     } catch {
-      execSync("sleep 1", { stdio: "pipe" });
+      execSync('node -e "setTimeout(() => {}, 1000)"', { stdio: "pipe", timeout: 2_000 });
     }
   }
   return false;
@@ -151,7 +151,11 @@ async function setup() {
       const port = dbUrl.includes(`:${TEST_PORT}/`) ? TEST_PORT : PROJECT_PORT;
       if (waitForPort(port)) {
         process.env.DATABASE_URL = dbUrl;
-        pushSchema(dbUrl);
+        try {
+          pushSchema(dbUrl);
+        } catch {
+          console.warn("[Integration] Warning: could not push schema to Docker container.");
+        }
         return;
       }
       console.warn("[Integration] Container started but port not reachable. Falling through.");

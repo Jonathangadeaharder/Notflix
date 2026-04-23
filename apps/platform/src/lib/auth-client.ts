@@ -29,11 +29,13 @@ export async function signInEmail(
   return {};
 }
 
-export async function signOut(callbackUrl = "/"): Promise<void> {
+export async function signOut(callbackUrl = "/"): Promise<{ error?: string }> {
   const supabase = await getSupabaseClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) return { error: error.message };
   // eslint-disable-next-line svelte/no-navigation-without-resolve
   await goto(callbackUrl);
+  return {};
 }
 
 export async function signUpEmail(

@@ -79,6 +79,7 @@ test.describe("Vocabulary: Browse and Filter", () => {
     await toggleBtn.click();
     const delResp = await deleteResponse;
     expect(delResp.ok()).toBeTruthy();
+    await expect(toggleBtn).toBeEnabled({ timeout: 10_000 });
 
     await expect(toggleBtn).toContainText("Mark Known", { timeout: 15_000 });
 
@@ -88,6 +89,7 @@ test.describe("Vocabulary: Browse and Filter", () => {
     await toggleBtn.click();
     const postResp = await postResponse;
     expect(postResp.ok()).toBeTruthy();
+    await expect(toggleBtn).toBeEnabled({ timeout: 10_000 });
 
     await expect(toggleBtn).toContainText("Known", { timeout: 15_000 });
   });

@@ -99,9 +99,12 @@ const KNOWN_WORDS_SEED = [
 
 export default async function globalSetup() {
   const databaseUrl =
-    process.env.E2E_DATABASE_URL ||
-    process.env.DATABASE_URL ||
-    "postgres://postgres:password@127.0.0.1:5432/postgres";
+    process.env.E2E_DATABASE_URL || process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error(
+      "E2E_DATABASE_URL or DATABASE_URL must be set for Playwright globalSetup",
+    );
+  }
 
   console.log("[E2E Seed] Connecting to database...");
   const client = postgres(databaseUrl);
