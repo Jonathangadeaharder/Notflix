@@ -63,4 +63,24 @@ test.describe("Vocabulary: Browse and Filter", () => {
     );
     await expect(searchInput).toHaveValue("hola");
   });
+
+  test("toggles word known status via button", async ({ page }) => {
+    await page.goto("/vocabulary?search=hola&page=1");
+    await page.waitForLoadState("load");
+
+    const toggleBtn = page.getByTestId("toggle-known-hola");
+
+    // "hola" should be known from seed data — deactivate it
+    await expect(toggleBtn).toContainText("Known");
+    await toggleBtn.click();
+    await page.waitForLoadState("load");
+
+    // Now it should show "Mark Known" — activate it again
+    await expect(toggleBtn).toContainText("Mark Known");
+    await toggleBtn.click();
+    await page.waitForLoadState("load");
+
+    // Should be known again
+    await expect(toggleBtn).toContainText("Known");
+  });
 });

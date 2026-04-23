@@ -1,6 +1,6 @@
 import { db } from "$lib/server/infrastructure/database";
-import { vocabReference, user } from "$lib/server/db/schema";
-import { eq, and, sql, ilike } from "drizzle-orm";
+import { vocabReference, user, knownWords } from "$lib/server/db/schema";
+import { eq, and, sql, ilike, inArray } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { redirect } from "@sveltejs/kit";
 import { CefrLevels } from "$lib/types";
@@ -31,8 +31,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     fetchLevelCounts(lang),
   ]);
 
+  const knownSet = await fetchKnownWords(
+    userId,
+    lang,
+    words.map((w) => w.lemma),
+  );
+  const wordsWithKnown = words.map((w) => ({
+    ...w,
+    isKnown: knownSet.has(w.lemma),
+  }));
+
   return {
-    words,
+    words: wordsWithKnown,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     filters: {
       lang,
@@ -132,4 +142,23 @@ async function fetchLevelCounts(lang: string): Promise<Record<string, number>> {
     countsMap[row.level ?? "untracked"] = row.count;
   }
   return countsMap;
+}
+
+async function fetchKnownWords(
+  userId: string,
+  lang: string,
+  lemmas: string[],
+): Promise<Set<string>> {
+  if (lemmas.length === 0) return new Set();
+  const rows = await db
+    .select({ lemma: knownWords.lemma })
+    .from(knownWords)
+    .where(
+      and(
+        eq(knownWords.userId, userId),
+        eq(knownWords.lang, lang),
+        inArray(knownWords.lemma, lemmas),
+      ),
+    );
+  return new Set(rows.map((r) => r.lemma));
 }

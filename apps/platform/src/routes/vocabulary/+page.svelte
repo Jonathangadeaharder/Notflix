@@ -6,11 +6,14 @@
   import { Search, ChevronLeft, ChevronRight, BookOpen } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
+  import { invalidateAll } from "$app/navigation";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
 
   let searchInput = $derived(data.filters.search ?? "");
+
+  const togglingWords = $state<Set<string>>(new Set());
 
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2", "untracked"] as const;
 
@@ -59,6 +62,23 @@
 
   function goToPage(newPage: number) {
     setFilter("page", newPage.toString());
+  }
+
+  async function toggleKnown(lemma: string, isKnown: boolean) {
+    togglingWords.add(lemma);
+    const method = isKnown ? "DELETE" : "POST";
+    try {
+      const res = await fetch("/api/words/known", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lemma, lang: data.filters.lang }),
+      });
+      if (res.ok) {
+        await invalidateAll();
+      }
+    } finally {
+      togglingWords.delete(lemma);
+    }
   }
 </script>
 
@@ -197,13 +217,31 @@
                       </Badge>
                     {/if}
                   </div>
-                  <Badge
-                    class="{levelColors[
-                      word.level ?? 'untracked'
-                    ]} text-white text-xs"
-                  >
-                    {word.level ?? "Untracked"}
-                  </Badge>
+                  <div class="flex items-center gap-2">
+                    <button
+                      data-testid="toggle-known-{word.lemma}"
+                      onclick={() => toggleKnown(word.lemma, word.isKnown)}
+                      disabled={togglingWords.has(word.lemma)}
+                      class="px-2 py-1 rounded text-xs font-medium transition-colors {word.isKnown
+                        ? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
+                        : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-white'}"
+                    >
+                      {#if togglingWords.has(word.lemma)}
+                        ...
+                      {:else if word.isKnown}
+                        Known ✕
+                      {:else}
+                        Mark Known
+                      {/if}
+                    </button>
+                    <Badge
+                      class="{levelColors[
+                        word.level ?? 'untracked'
+                      ]} text-white text-xs"
+                    >
+                      {word.level ?? "Untracked"}
+                    </Badge>
+                  </div>
                 </div>
               {/each}
             </div>

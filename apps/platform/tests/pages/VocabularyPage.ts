@@ -58,4 +58,18 @@ export class VocabularyPage {
     const texts = await wordSpans.allTextContents();
     return texts.map((t) => t.trim()).filter(Boolean);
   }
+
+  readonly toggleKnownButton = (lemma: string): Locator =>
+    this.page.getByTestId(`toggle-known-${lemma}`);
+
+  async toggleKnown(lemma: string): Promise<void> {
+    await this.toggleKnownButton(lemma).click();
+    await this.page.waitForLoadState("load");
+  }
+
+  async isWordKnown(lemma: string): Promise<boolean> {
+    const btn = this.toggleKnownButton(lemma);
+    const text = await btn.textContent();
+    return text?.includes("Known") ?? false;
+  }
 }

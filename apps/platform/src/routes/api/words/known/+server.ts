@@ -3,10 +3,12 @@ import { db } from "$lib/server/infrastructure/database";
 import { knownWords } from "$lib/server/db/schema";
 import type { RequestHandler } from "./$types";
 import { z } from "zod";
+import { eq, and } from "drizzle-orm";
 
 const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_OK = 200;
 const HTTP_STATUS_UNAUTHORIZED = 401;
+const HTTP_STATUS_NOT_FOUND = 404;
 
 const knownWordSchema = z.object({
   lemma: z.string().min(1).max(200),
@@ -62,6 +64,65 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     return json({ success: true }, { status: HTTP_STATUS_OK });
   } catch (e) {
     console.error("Failed to save known word:", e);
+    return json({ error: "Database error" }, { status: 500 });
+  }
+};
+
+export const DELETE: RequestHandler = async ({ request, locals }) => {
+  const session = await locals.auth();
+  if (!session?.user) {
+    return json(
+      { error: "Unauthorized" },
+      { status: HTTP_STATUS_UNAUTHORIZED },
+    );
+  }
+  const userId = session.user.id;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Invalid JSON" }, { status: HTTP_STATUS_BAD_REQUEST });
+  }
+
+  const { lemma, lang } = body;
+
+  if (!lemma || !lang) {
+    return json(
+      { error: "Missing lemma or lang" },
+      { status: HTTP_STATUS_BAD_REQUEST },
+    );
+  }
+
+  const parsed = knownWordSchema.safeParse({ lemma, lang });
+  if (!parsed.success) {
+    return json(
+      { error: parsed.error.issues.map((i) => i.message).join(", ") },
+      { status: HTTP_STATUS_BAD_REQUEST },
+    );
+  }
+
+  try {
+    const result = await db
+      .delete(knownWords)
+      .where(
+        and(
+          eq(knownWords.userId, userId),
+          eq(knownWords.lemma, lemma),
+          eq(knownWords.lang, lang),
+        ),
+      )
+      .returning();
+
+    if (result.length === 0) {
+      return json(
+        { error: "Word not found in known_words" },
+        { status: HTTP_STATUS_NOT_FOUND },
+      );
+    }
+
+    return json({ success: true }, { status: HTTP_STATUS_OK });
+  } catch (e) {
+    console.error("Failed to delete known word:", e);
     return json({ error: "Database error" }, { status: 500 });
   }
 };
