@@ -1,4 +1,7 @@
 import path from "path";
+
+const CHUNK_OVERLAP_SECONDS = 0.5;
+const MIN_CHUNK_DURATION_SECONDS = 1.0;
 import { CONFIG } from "../infrastructure/config";
 
 /**
@@ -46,13 +49,13 @@ export function calculateChunks(
     chunks.push({ start: currentStart, end: currentEnd });
 
     // Small overlap to prevent cutting off words
-    currentStart = currentEnd - 0.5;
+    currentStart = currentEnd - CHUNK_OVERLAP_SECONDS;
   }
 
   // Clean up last chunk if it's too small
   if (chunks.length > 1) {
     const last = chunks[chunks.length - 1];
-    if (last.end - last.start < 1.0) {
+    if (last.end - last.start < MIN_CHUNK_DURATION_SECONDS) {
       chunks.pop();
       chunks[chunks.length - 1].end = durationSeconds;
     }

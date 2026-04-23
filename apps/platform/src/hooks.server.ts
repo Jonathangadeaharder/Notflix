@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { json, redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
 import { resolveAuthRequirement } from "$lib/server/services/auth-routes";
+import { HTTP_STATUS, INDICES } from "$lib/constants";
 
 const E2E_USER_ID = "00000000-e2e0-4000-a000-000000000000";
 const SESSION_TTL_MS = 86400000;
@@ -36,7 +37,7 @@ async function resolveE2eSession(): Promise<Session | null> {
         })
         .onConflictDoNothing()
         .returning()
-    )[0];
+    )[INDICES.FIRST];
   if (!testUser) return null;
   return {
     user: testUser,
@@ -83,10 +84,13 @@ export const handle: Handle = async ({ event, resolve }) => {
     const session = await event.locals.auth();
     if (!session) {
       if (responseKind === "json401") {
-        return json({ error: "Unauthorized" }, { status: 401 });
+        return json(
+          { error: "Unauthorized" },
+          { status: HTTP_STATUS.UNAUTHORIZED },
+        );
       }
       const next = encodeURIComponent(pathname);
-      return redirect(303, `/login?next=${next}`);
+      return redirect(HTTP_STATUS.SEE_OTHER, `/login?next=${next}`);
     }
   }
 

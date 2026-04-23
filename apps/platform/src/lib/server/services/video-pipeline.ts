@@ -17,6 +17,9 @@ import type {
 import { ProgressStage } from "$lib/types";
 
 const PROGRESS_DB_MIN_INTERVAL_MS = 2000;
+const TRANSCRIBE_PROGRESS_CAP_PERCENT = 80;
+const ANALYZE_START_PERCENT = 85;
+const TRANSLATE_START_PERCENT = 93;
 
 interface ProcessVideoOptions {
   videoId: string;
@@ -120,7 +123,10 @@ async function transcribeWithProgress(
     aiPath,
     targetLang,
     async (percent) => {
-      const clamped = Math.min(80, Math.max(0, Math.round(percent)));
+      const clamped = Math.min(
+        TRANSCRIBE_PROGRESS_CAP_PERCENT,
+        Math.max(0, Math.round(percent)),
+      );
       const now = Date.now();
       if (
         clamped <= lastPersistedPercent &&
@@ -140,7 +146,13 @@ async function transcribeWithProgress(
     },
   );
 
-  await setStage(db, videoId, targetLang, ProgressStage.TRANSCRIBING, 80);
+  await setStage(
+    db,
+    videoId,
+    targetLang,
+    ProgressStage.TRANSCRIBING,
+    TRANSCRIBE_PROGRESS_CAP_PERCENT,
+  );
   return { record, data: transcription };
 }
 
@@ -170,7 +182,13 @@ async function analyzeSegments(
   targetLang: string,
   transcription: TranscriptionResponse,
 ): Promise<VttSegment[]> {
-  await setStage(db, videoId, targetLang, ProgressStage.ANALYZING, 85);
+  await setStage(
+    db,
+    videoId,
+    targetLang,
+    ProgressStage.ANALYZING,
+    ANALYZE_START_PERCENT,
+  );
   console.log(`[Pipeline] Starting Analysis.`);
   const segmentTexts = transcription.segments.map((s) => s.text);
   const batchAnalysis = await aiGateway.analyzeBatch(segmentTexts, targetLang);
@@ -187,7 +205,13 @@ async function translateAndFilter(
   userId: string,
   finalSegments: VttSegment[],
 ): Promise<VttSegment[]> {
-  await setStage(db, videoId, targetLang, ProgressStage.TRANSLATING, 93);
+  await setStage(
+    db,
+    videoId,
+    targetLang,
+    ProgressStage.TRANSLATING,
+    TRANSLATE_START_PERCENT,
+  );
   console.log(`[Pipeline] Starting Translation.`);
 
   const segmentsTokens = finalSegments.map((s) => s.tokens);

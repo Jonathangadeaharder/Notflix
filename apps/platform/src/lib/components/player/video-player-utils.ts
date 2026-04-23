@@ -1,4 +1,5 @@
 import type { SubtitleMode, Subtitle } from "./types";
+import { INDICES } from "$lib/constants";
 
 const SECONDS_IN_MINUTE = 60;
 const SECONDS_IN_HOUR = 3600;
@@ -75,7 +76,7 @@ export function getNextSubtitleMode(current: SubtitleMode): SubtitleMode {
  * Returns true if the file path is an audio-only file (mp3/m4a).
  */
 export function isAudioFile(filePath: string): boolean {
-  const lower = (filePath ?? "").toLowerCase().split(/[?#]/, 1)[0];
+  const lower = (filePath ?? "").toLowerCase().split(/[?#]/, 1)[INDICES.FIRST];
   return AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 

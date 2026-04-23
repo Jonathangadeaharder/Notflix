@@ -7,7 +7,6 @@ import { HTTP_STATUS } from "$lib/constants";
 import { ProgressStage } from "$lib/types";
 
 const MAX_PROGRESS_PERCENT = 100;
-const HTTP_STATUS_UNAUTHORIZED = 401;
 
 async function validateRequest(
   locals: RequestEvent["locals"],
@@ -27,7 +26,7 @@ async function validateRequest(
     return {
       errorResponse: json(
         { error: "Unauthorized" },
-        { status: HTTP_STATUS_UNAUTHORIZED },
+        { status: HTTP_STATUS.UNAUTHORIZED },
       ),
     };
   }
@@ -85,11 +84,43 @@ export const POST = async ({ params, request, locals }: RequestEvent) => {
   const { session, id, errorResponse } = await validateRequest(locals, params);
   if (errorResponse) return errorResponse;
 
+  const body = await parseProgressBody(request);
+  if ("errorResponse" in body) return body.errorResponse;
+
+  await db
+    .insert(watchProgress)
+    .values({
+      userId: session.user.id,
+      videoId: id,
+      currentTime: Math.max(0, Math.round(body.currentTime)),
+      duration: Math.max(0, Math.round(body.duration)),
+      progressPercent: body.progressPercent,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [watchProgress.userId, watchProgress.videoId],
+      set: {
+        currentTime: Math.max(0, Math.round(body.currentTime)),
+        duration: Math.max(0, Math.round(body.duration)),
+        progressPercent: body.progressPercent,
+        updatedAt: new Date(),
+      },
+    });
+
+  return json({ success: true });
+};
+
+async function parseProgressBody(request: Request) {
   let body;
   try {
     body = await request.json();
   } catch {
-    return json({ error: "Invalid JSON" }, { status: HTTP_STATUS.BAD_REQUEST });
+    return {
+      errorResponse: json(
+        { error: "Invalid JSON" },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      ),
+    };
   }
 
   const currentTime = Number(body.currentTime ?? 0);
@@ -107,31 +138,13 @@ export const POST = async ({ params, request, locals }: RequestEvent) => {
     Number.isNaN(duration) ||
     Number.isNaN(progressPercent)
   ) {
-    return json(
-      { error: "Invalid progress payload" },
-      { status: HTTP_STATUS.BAD_REQUEST },
-    );
+    return {
+      errorResponse: json(
+        { error: "Invalid progress payload" },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      ),
+    };
   }
 
-  await db
-    .insert(watchProgress)
-    .values({
-      userId: session.user.id,
-      videoId: id,
-      currentTime: Math.max(0, Math.round(currentTime)),
-      duration: Math.max(0, Math.round(duration)),
-      progressPercent,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [watchProgress.userId, watchProgress.videoId],
-      set: {
-        currentTime: Math.max(0, Math.round(currentTime)),
-        duration: Math.max(0, Math.round(duration)),
-        progressPercent,
-        updatedAt: new Date(),
-      },
-    });
-
-  return json({ success: true });
-};
+  return { currentTime, duration, progressPercent };
+}

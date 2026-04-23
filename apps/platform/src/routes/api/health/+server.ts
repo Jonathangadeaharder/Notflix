@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/infrastructure/database";
 import { sql } from "drizzle-orm";
+import { HTTP_STATUS } from "$lib/constants";
 
 export const GET: RequestHandler = async () => {
   try {
@@ -22,7 +23,7 @@ export const GET: RequestHandler = async () => {
         timestamp: Date.now(),
         error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 503 },
+      { status: HTTP_STATUS.SERVICE_UNAVAILABLE },
     );
   }
 };

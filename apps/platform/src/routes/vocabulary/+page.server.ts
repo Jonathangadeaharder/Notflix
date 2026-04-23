@@ -1,16 +1,17 @@
 import { db } from "$lib/server/infrastructure/database";
 import { vocabReference, user, knownWords } from "$lib/server/db/schema";
-import { eq, and, sql, ilike, inArray } from "drizzle-orm";
+import { eq, and, sql, ilike, inArray, type SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { redirect } from "@sveltejs/kit";
 import { CefrLevels } from "$lib/types";
+import { HTTP_STATUS } from "$lib/constants";
 
 const ALLOWED_LEVELS: Set<string> = new Set(CefrLevels);
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(303, "/login?next=/vocabulary");
+    throw redirect(HTTP_STATUS.SEE_OTHER, "/login?next=/vocabulary");
   }
   const userId = session.user.id;
 
@@ -72,7 +73,7 @@ function buildFilterConditions(
   lang: string,
   level: string | null,
   search: string | null,
-) {
+): (SQL | undefined)[] {
   const conditions = [eq(vocabReference.lang, lang)];
 
   if (level) {
@@ -96,7 +97,7 @@ function buildFilterConditions(
 }
 
 async function fetchVocabWords(
-  conditions: any[],
+  conditions: (SQL | undefined)[],
   limit: number,
   offset: number,
 ) {
@@ -114,7 +115,9 @@ async function fetchVocabWords(
     .offset(offset);
 }
 
-async function fetchVocabCount(conditions: any[]): Promise<number> {
+async function fetchVocabCount(
+  conditions: (SQL | undefined)[],
+): Promise<number> {
   const [result] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(vocabReference)

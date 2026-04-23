@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { vocabReference } from "./schema";
 import { parseLemmasFromCsv } from "./seed-csv";
+import { INDICES } from "$lib/constants";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,7 +47,10 @@ async function seed() {
 }
 
 const __filename = fileURLToPath(import.meta.url);
-if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+if (
+  process.argv[INDICES.SECOND] &&
+  path.resolve(process.argv[INDICES.SECOND]) === __filename
+) {
   (async () => {
     try {
       await seed();

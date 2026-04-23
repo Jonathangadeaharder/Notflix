@@ -1,4 +1,3 @@
-/* eslint-disable sonarjs/no-duplicate-string */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../infrastructure/database";
 import {

@@ -30,33 +30,53 @@ export const load = async () => {
   };
 };
 
+function parseUploadForm(formData: FormData) {
+  const title = formData.get("title") as string;
+  const targetLang = formData.get("targetLang") as string;
+  const nativeLang = formData.get("nativeLang") as string;
+  const file = formData.get("file") as File;
+  const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
+  return { title, targetLang, nativeLang, file, result };
+}
+
+function validateUploadForm(
+  file: File,
+  result: z.SafeParseReturnType<
+    { title: string; targetLang: string; nativeLang: string },
+    { title: string; targetLang: string; nativeLang: string }
+  >,
+  title: string,
+  targetLang: string,
+  nativeLang: string,
+) {
+  if (result.success && file && file.size !== 0) return null;
+  const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
+  const fileErrors = !file || file.size === 0 ? ["File is required"] : [];
+  return fail(HTTP_STATUS.BAD_REQUEST, {
+    errors: {
+      ...fieldErrors,
+      file: fileErrors.length > 0 ? fileErrors : undefined,
+    },
+    data: { title, targetLang, nativeLang },
+  });
+}
+
 export const actions = {
   upload: async ({ request, locals }) => {
     const session = await locals.auth();
     if (!session) throw redirect(HTTP_STATUS.SEE_OTHER, "/login");
     const formData = await request.formData();
 
-    const title = formData.get("title") as string;
-    const targetLang = formData.get("targetLang") as string;
-    const nativeLang = formData.get("nativeLang") as string;
-    const file = formData.get("file") as File;
-
-    const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
-
-    if (!result.success || !file || file.size === 0) {
-      const fieldErrors = result.success
-        ? {}
-        : result.error.flatten().fieldErrors;
-      const fileErrors = !file || file.size === 0 ? ["File is required"] : [];
-
-      return fail(HTTP_STATUS.BAD_REQUEST, {
-        errors: {
-          ...fieldErrors,
-          file: fileErrors.length > 0 ? fileErrors : undefined,
-        },
-        data: { title, targetLang, nativeLang },
-      });
-    }
+    const { title, targetLang, nativeLang, file, result } =
+      parseUploadForm(formData);
+    const validationFailure = validateUploadForm(
+      file,
+      result,
+      title,
+      targetLang,
+      nativeLang,
+    );
+    if (validationFailure) return validationFailure;
 
     const videoId = crypto.randomUUID();
     const filePath = await saveUploadedFile(file, videoId);
@@ -82,7 +102,7 @@ export const actions = {
       console.error(`[Pipeline] Background error for ${videoId}:`, err),
     );
 
-    throw redirect(HTTP_STATUS.SEE_OTHER, "/studio"); // 303 is standard for redirects after post
+    throw redirect(HTTP_STATUS.SEE_OTHER, "/studio");
   },
 };
 

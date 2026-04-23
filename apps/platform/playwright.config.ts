@@ -1,10 +1,13 @@
 import { type PlaywrightTestConfig } from "@playwright/test";
 
 const MOCK_AI_PORT = "8001";
+const E2E_SERVER_TIMEOUT_SEC = 120;
+const MS_PER_SEC = 1000;
+const CI_RETRIES = 1;
 
 const config: PlaywrightTestConfig = {
   timeout: 60000,
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env.CI ? CI_RETRIES : 0,
   workers: 1,
 
   testDir: "tests/e2e",
@@ -35,7 +38,7 @@ const config: PlaywrightTestConfig = {
       command: "pnpm run test:e2e:server",
       url: "http://localhost:5173",
       reuseExistingServer: false,
-      timeout: 120 * 1000,
+      timeout: E2E_SERVER_TIMEOUT_SEC * MS_PER_SEC,
       env: {
         ...process.env,
         PORT: "5173",

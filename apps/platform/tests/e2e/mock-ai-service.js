@@ -7,7 +7,6 @@
  * Usage: node tests/e2e/mock-ai-service.js [port]
  * Default port: 8001 (avoids conflict with Docker AI service on 8000)
  */
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck — lightweight test utility; JSDoc annotations not required
 
 import http from "http";

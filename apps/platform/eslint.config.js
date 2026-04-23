@@ -11,6 +11,9 @@ import globals from "globals";
 const MAX_COGNITIVE_COMPLEXITY = 15;
 const MAX_CYCLOMATIC_COMPLEXITY = 10;
 
+const TEST_FILES = "**/*.test.ts";
+const SPEC_FILES = "**/*.spec.ts";
+
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -23,7 +26,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.test.ts"],
+    files: [TEST_FILES],
     rules: {
       ...vitest.configs.recommended.rules,
       "vitest/no-focused-tests": "error",
@@ -39,7 +42,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.test.ts", "**/*.spec.ts"],
+    files: [TEST_FILES, SPEC_FILES],
     rules: {
       ...testingLibrary.configs.svelte.rules,
 
@@ -80,7 +83,7 @@ export default tseslint.config(
       "svelte/no-useless-children-snippet": "off",
       complexity: ["warn", MAX_CYCLOMATIC_COMPLEXITY],
       "max-lines-per-function": "warn",
-      "no-magic-numbers": "warn",
+      "no-magic-numbers": ["warn", { ignore: [0, 1, -1] }],
     },
   },
   {
@@ -93,7 +96,7 @@ export default tseslint.config(
     ],
   },
   {
-    files: ["**/*.test.ts", "**/*.spec.ts", "tests/**/*.ts", "src/**/*.test.ts"],
+    files: ["**/*.test.ts", "**/*.spec.ts", "tests/**/*.ts", "tests/**/*.js", "src/**/*.test.ts", "playwright.config.ts"],
     rules: {
       "no-magic-numbers": "off",
       "@typescript-eslint/no-explicit-any": "off",
@@ -101,7 +104,11 @@ export default tseslint.config(
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "sonarjs/no-unused-vars": "off",
-      "sonarjs/no-dead-store": "off"
+      "sonarjs/no-dead-store": "off",
+      "sonarjs/no-duplicate-string": "off",
+      "sonarjs/cognitive-complexity": "off",
+      complexity: "off",
+      "testing-library/no-node-access": "off",
     },
   }
 );

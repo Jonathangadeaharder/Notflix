@@ -6,11 +6,14 @@ import { mkdir, writeFile } from "fs/promises";
 import { dirname, extname, join } from "path";
 import { z } from "zod";
 
+const BYTES_PER_KB = 1024;
+const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB;
 const MIN_LANG_LEN = 2;
 const MAX_LANG_LEN = 5;
 const FALLBACK_FILE_EXTENSION = ".bin";
 const PLACEHOLDER_THUMBNAIL = "/placeholder.jpg";
-const DEFAULT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+const DEFAULT_MAX_FILE_SIZE_MB = 500;
+const DEFAULT_MAX_FILE_SIZE_BYTES = DEFAULT_MAX_FILE_SIZE_MB * BYTES_PER_MB;
 const ALLOWED_EXTENSIONS = new Set([
   "mp4",
   "mp3",
@@ -145,6 +148,45 @@ async function saveUploadedFileToDisk(
   await writeFile(filePath, Buffer.from(arrayBuffer));
 }
 
+const FILE_TYPE_NOT_ALLOWED_MSG =
+  "File type not allowed. Accepted: " + [...ALLOWED_EXTENSIONS].join(", ");
+
+function makeValidationFailure(
+  errors: UploadErrors,
+  title: string,
+  targetLang: string,
+): { ok: false; value: UploadFailure } {
+  return {
+    ok: false,
+    value: { errors, data: { title, targetLang } },
+  };
+}
+
+function extractFileExtension(filename: string): string | null {
+  const lastDotIndex = filename.lastIndexOf(".");
+  return lastDotIndex > 0
+    ? filename.slice(lastDotIndex + 1).toLowerCase()
+    : null;
+}
+
+function validateSchemaAndFile(
+  payload: UploadPayload,
+  parsed: z.SafeParseReturnType<
+    { title: string; targetLang: string },
+    { title: string; targetLang: string }
+  >,
+): { ok: false; value: UploadFailure } | null {
+  if (parsed.success && payload.file && payload.file.size !== 0) return null;
+  const fieldErrors = parsed.success ? {} : parsed.error.flatten().fieldErrors;
+  const fileErrors =
+    !payload.file || payload.file.size === 0 ? ["File is required"] : undefined;
+  return makeValidationFailure(
+    { ...fieldErrors, file: fileErrors },
+    payload.title,
+    payload.targetLang,
+  );
+}
+
 function validateUploadPayload(
   payload: UploadPayload,
   maxFileSizeBytes?: number,
@@ -156,62 +198,27 @@ function validateUploadPayload(
     targetLang: payload.targetLang,
   });
 
-  if (!parsed.success || !payload.file || payload.file.size === 0) {
-    const fieldErrors = parsed.success
-      ? {}
-      : parsed.error.flatten().fieldErrors;
-    const fileErrors =
-      !payload.file || payload.file.size === 0
-        ? ["File is required"]
-        : undefined;
-
-    return {
-      ok: false,
-      value: {
-        errors: {
-          ...fieldErrors,
-          file: fileErrors,
-        },
-        data: {
-          title: payload.title,
-          targetLang: payload.targetLang,
-        },
-      },
-    };
-  }
+  const schemaFailure = validateSchemaAndFile(payload, parsed);
+  if (schemaFailure) return schemaFailure;
 
   const maxFileSize = maxFileSizeBytes ?? DEFAULT_MAX_FILE_SIZE_BYTES;
   if (payload.file.size > maxFileSize) {
-    return {
-      ok: false,
-      value: {
-        errors: {
-          file: [
-            `File exceeds maximum size of ${maxFileSize / (1024 * 1024)}MB`,
-          ],
-        },
-        data: { title: parsed.data.title, targetLang: parsed.data.targetLang },
+    return makeValidationFailure(
+      {
+        file: [`File exceeds maximum size of ${maxFileSize / BYTES_PER_MB}MB`],
       },
-    };
+      parsed.data.title,
+      parsed.data.targetLang,
+    );
   }
 
-  const filename = payload.file.name;
-  const lastDotIndex = filename.lastIndexOf(".");
-  const ext =
-    lastDotIndex > 0 ? filename.slice(lastDotIndex + 1).toLowerCase() : null;
+  const ext = extractFileExtension(payload.file.name);
   if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
-    return {
-      ok: false,
-      value: {
-        errors: {
-          file: [
-            "File type not allowed. Accepted: " +
-              [...ALLOWED_EXTENSIONS].join(", "),
-          ],
-        },
-        data: { title: parsed.data.title, targetLang: parsed.data.targetLang },
-      },
-    };
+    return makeValidationFailure(
+      { file: [FILE_TYPE_NOT_ALLOWED_MSG] },
+      parsed.data.title,
+      parsed.data.targetLang,
+    );
   }
 
   return {

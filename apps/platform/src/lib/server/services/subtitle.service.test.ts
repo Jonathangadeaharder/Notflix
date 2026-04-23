@@ -56,7 +56,6 @@ const MOCK_VTT_SEGMENTS = [
   },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createMockDb(records: unknown[]): any {
   return {
     select: vi.fn().mockReturnThis(),

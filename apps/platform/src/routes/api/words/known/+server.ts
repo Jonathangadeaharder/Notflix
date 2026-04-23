@@ -4,67 +4,83 @@ import { knownWords } from "$lib/server/db/schema";
 import type { RequestHandler } from "./$types";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
+import { HTTP_STATUS } from "$lib/constants";
 
-const HTTP_STATUS_BAD_REQUEST = 400;
-const HTTP_STATUS_OK = 200;
-const HTTP_STATUS_UNAUTHORIZED = 401;
-const HTTP_STATUS_NOT_FOUND = 404;
+const MAX_LEMMA_LENGTH = 200;
 
 const knownWordSchema = z.object({
-  lemma: z.string().min(1).max(200),
+  lemma: z.string().min(1).max(MAX_LEMMA_LENGTH),
   lang: z
     .string()
     .regex(/^[a-z]{2,5}$/i, "lang must be a 2-5 letter language code"),
 });
+
+async function parseKnownWordRequest(request: Request) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return {
+      errorResponse: json(
+        { error: "Invalid JSON" },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      ),
+    };
+  }
+
+  const { lemma, lang } = body;
+  if (!lemma || !lang) {
+    return {
+      errorResponse: json(
+        { error: "Missing lemma or lang" },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      ),
+    };
+  }
+
+  const parsed = knownWordSchema.safeParse({ lemma, lang });
+  if (!parsed.success) {
+    return {
+      errorResponse: json(
+        { error: parsed.error.issues.map((i) => i.message).join(", ") },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      ),
+    };
+  }
+
+  return { lemma, lang };
+}
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   const session = await locals.auth();
   if (!session?.user) {
     return json(
       { error: "Unauthorized" },
-      { status: HTTP_STATUS_UNAUTHORIZED },
-    );
-  }
-  const userId = session.user.id;
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "Invalid JSON" }, { status: HTTP_STATUS_BAD_REQUEST });
-  }
-
-  const { lemma, lang } = body;
-
-  if (!lemma || !lang) {
-    return json(
-      { error: "Missing lemma or lang" },
-      { status: HTTP_STATUS_BAD_REQUEST },
+      { status: HTTP_STATUS.UNAUTHORIZED },
     );
   }
 
-  const parsed = knownWordSchema.safeParse({ lemma, lang });
-  if (!parsed.success) {
-    return json(
-      { error: parsed.error.issues.map((i) => i.message).join(", ") },
-      { status: HTTP_STATUS_BAD_REQUEST },
-    );
-  }
+  const parsed = await parseKnownWordRequest(request);
+  if ("errorResponse" in parsed) return parsed.errorResponse;
 
   try {
     await db
       .insert(knownWords)
       .values({
-        userId,
-        lemma,
-        lang,
-        level: null, // User-defined/manual
+        userId: session.user.id,
+        lemma: parsed.lemma,
+        lang: parsed.lang,
+        level: null,
       })
-      .onConflictDoNothing(); // If already known, do nothing
+      .onConflictDoNothing();
 
-    return json({ success: true }, { status: HTTP_STATUS_OK });
+    return json({ success: true }, { status: HTTP_STATUS.OK });
   } catch (e) {
     console.error("Failed to save known word:", e);
-    return json({ error: "Database error" }, { status: 500 });
+    return json(
+      { error: "Database error" },
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
+    );
   }
 };
 
@@ -73,42 +89,21 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
   if (!session?.user) {
     return json(
       { error: "Unauthorized" },
-      { status: HTTP_STATUS_UNAUTHORIZED },
-    );
-  }
-  const userId = session.user.id;
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "Invalid JSON" }, { status: HTTP_STATUS_BAD_REQUEST });
-  }
-
-  const { lemma, lang } = body;
-
-  if (!lemma || !lang) {
-    return json(
-      { error: "Missing lemma or lang" },
-      { status: HTTP_STATUS_BAD_REQUEST },
+      { status: HTTP_STATUS.UNAUTHORIZED },
     );
   }
 
-  const parsed = knownWordSchema.safeParse({ lemma, lang });
-  if (!parsed.success) {
-    return json(
-      { error: parsed.error.issues.map((i) => i.message).join(", ") },
-      { status: HTTP_STATUS_BAD_REQUEST },
-    );
-  }
+  const parsed = await parseKnownWordRequest(request);
+  if ("errorResponse" in parsed) return parsed.errorResponse;
 
   try {
     const result = await db
       .delete(knownWords)
       .where(
         and(
-          eq(knownWords.userId, userId),
-          eq(knownWords.lemma, lemma),
-          eq(knownWords.lang, lang),
+          eq(knownWords.userId, session.user.id),
+          eq(knownWords.lemma, parsed.lemma),
+          eq(knownWords.lang, parsed.lang),
         ),
       )
       .returning();
@@ -116,13 +111,16 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
     if (result.length === 0) {
       return json(
         { error: "Word not found in known_words" },
-        { status: HTTP_STATUS_NOT_FOUND },
+        { status: HTTP_STATUS.NOT_FOUND },
       );
     }
 
-    return json({ success: true }, { status: HTTP_STATUS_OK });
+    return json({ success: true }, { status: HTTP_STATUS.OK });
   } catch (e) {
     console.error("Failed to delete known word:", e);
-    return json({ error: "Database error" }, { status: 500 });
+    return json(
+      { error: "Database error" },
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
+    );
   }
 };

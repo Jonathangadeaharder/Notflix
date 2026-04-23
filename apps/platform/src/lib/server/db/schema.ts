@@ -12,6 +12,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 
+const DEFAULT_GAME_INTERVAL_MINUTES = 10;
+
 // --- AUTHENTICATION (Better Auth Standard) ---
 export const user = pgTable("user", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -23,7 +25,9 @@ export const user = pgTable("user", {
   targetLang: text("target_lang").default("es"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-  gameIntervalMinutes: integer("game_interval_minutes").default(10), // Game & Watch specific
+  gameIntervalMinutes: integer("game_interval_minutes").default(
+    DEFAULT_GAME_INTERVAL_MINUTES,
+  ),
 });
 
 export type User = InferSelectModel<typeof user>;

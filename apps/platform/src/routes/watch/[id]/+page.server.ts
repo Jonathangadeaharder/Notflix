@@ -8,10 +8,23 @@ import {
 import { eq, and } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
+import type { Session } from "$lib/server/infrastructure/auth";
+import type { InferSelectModel } from "drizzle-orm";
 
 const DEFAULT_GAME_INTERVAL = 10;
 
 type HeatmapSegment = { start: number; end: number; type: string };
+type User = InferSelectModel<typeof user>;
+
+function emptyVideoResponse(session: Session | null) {
+  return {
+    video: null,
+    heatmap: [],
+    profile: null,
+    user: session?.user ?? null,
+    session,
+  };
+}
 
 function generateHeatmap(vttJson: unknown): HeatmapSegment[] {
   const heatmap: HeatmapSegment[] = [];
@@ -22,7 +35,7 @@ function generateHeatmap(vttJson: unknown): HeatmapSegment[] {
         heatmap.push({
           start: seg.start,
           end: seg.end,
-          type: seg.classification, // EASY, LEARNING, HARD
+          type: seg.classification,
         });
       }
     }
@@ -39,10 +52,28 @@ async function fetchUserProfile(userId: string) {
   return profile || null;
 }
 
-import type { Session } from "$lib/server/infrastructure/auth";
-
-import type { InferSelectModel } from "drizzle-orm";
-type User = InferSelectModel<typeof user>;
+async function fetchVideoWithProcessing(videoId: string, targetLang: string) {
+  try {
+    const [result] = await db
+      .select({
+        video: video,
+        processing: videoProcessing,
+      })
+      .from(video)
+      .leftJoin(
+        videoProcessing,
+        and(
+          eq(video.id, videoProcessing.videoId),
+          eq(videoProcessing.targetLang, targetLang),
+        ),
+      )
+      .where(eq(video.id, videoId))
+      .limit(1);
+    return result ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function getGameInterval(
   session: Session | null,
@@ -68,46 +99,11 @@ async function getGameInterval(
 }
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
-  const videoId = params.id;
   const session = await locals.auth();
   const targetLang = url.searchParams.get("lang") || "es";
 
-  let result;
-  try {
-    [result] = await db
-      .select({
-        video: video,
-        processing: videoProcessing,
-      })
-      .from(video)
-      .leftJoin(
-        videoProcessing,
-        and(
-          eq(video.id, videoProcessing.videoId),
-          eq(videoProcessing.targetLang, targetLang),
-        ),
-      )
-      .where(eq(video.id, videoId))
-      .limit(1);
-  } catch {
-    return {
-      video: null,
-      heatmap: [],
-      profile: null,
-      user: session?.user ?? null,
-      session,
-    };
-  }
-
-  if (!result || !result.video) {
-    return {
-      video: null,
-      heatmap: [],
-      profile: null,
-      user: session?.user ?? null,
-      session,
-    };
-  }
+  const result = await fetchVideoWithProcessing(params.id, targetLang);
+  if (!result?.video) return emptyVideoResponse(session);
 
   const vid = result.video;
   vid.filePath = toMediaUrl(vid.filePath);

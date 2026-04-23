@@ -5,6 +5,7 @@
   import { ChevronLeft, UploadCloud } from "lucide-svelte";
   import { enhance } from "$app/forms";
   import type { PageData, ActionData } from "./$types";
+  import { INDICES } from "$lib/constants";
 
   interface Props {
     data: PageData & {
@@ -78,7 +79,7 @@
           data-testid="title-input"
         />
         {#if form?.errors?.title}<p class="text-sm text-magenta-500">
-            {form.errors.title[0]}
+            {form.errors.title[INDICES.FIRST]}
           </p>{/if}
       </div>
 
@@ -99,7 +100,7 @@
             <option value="fr">French (FR)</option>
           </select>
           {#if form?.errors?.targetLang}<p class="text-sm text-magenta-500">
-              {form.errors.targetLang[0]}
+              {form.errors.targetLang[INDICES.FIRST]}
             </p>{/if}
         </div>
 
@@ -119,7 +120,7 @@
             <option value="fr">French (FR)</option>
           </select>
           {#if form?.errors?.nativeLang}<p class="text-sm text-magenta-500">
-              {form.errors.nativeLang[0]}
+              {form.errors.nativeLang[INDICES.FIRST]}
             </p>{/if}
         </div>
       </div>
@@ -163,7 +164,7 @@
           </div>
         </div>
         {#if form?.errors?.file}<p class="text-sm text-magenta-500">
-            {form.errors.file[0]}
+            {form.errors.file[INDICES.FIRST]}
           </p>{/if}
         {#if fileError}<p class="text-sm text-magenta-500">{fileError}</p>{/if}
       </div>

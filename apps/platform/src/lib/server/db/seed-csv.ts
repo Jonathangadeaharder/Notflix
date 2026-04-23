@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { INDICES } from "$lib/constants";
 
 export function parseLemmasFromCsv(filePath: string): string[] {
   const lines = fs.readFileSync(filePath, "utf-8").split("\n");
@@ -6,7 +7,7 @@ export function parseLemmasFromCsv(filePath: string): string[] {
     .slice(1) // skip header row
     .map((line) => {
       const cols = splitCsvLine(line);
-      let lemma = cols[1]?.trim();
+      let lemma = cols[INDICES.SECOND]?.trim();
       if (lemma?.startsWith('"') && lemma?.endsWith('"')) {
         lemma = lemma.slice(1, -1).replace(/""/g, '"');
       }

@@ -1,4 +1,5 @@
 import path from "path";
+import { HTTP_STATUS } from "$lib/constants";
 
 const CONTENT_TYPE_MAP: Record<string, string> = {
   ".mp4": "video/mp4",
@@ -37,7 +38,7 @@ export function resolveMediaPath(
   mediaRoot: string,
 ): ResolvedMediaPath {
   if (!filePath) {
-    throw new MediaPathError(400, "Missing file path");
+    throw new MediaPathError(HTTP_STATUS.BAD_REQUEST, "Missing file path");
   }
 
   const resolvedMediaRoot = path.resolve(mediaRoot);
@@ -50,7 +51,7 @@ export function resolveMediaPath(
     relativePath.startsWith(`..${path.sep}`) ||
     path.isAbsolute(relativePath)
   ) {
-    throw new MediaPathError(403, "Forbidden");
+    throw new MediaPathError(HTTP_STATUS.FORBIDDEN, "Forbidden");
   }
 
   const ext = path.extname(fullPath).toLowerCase();

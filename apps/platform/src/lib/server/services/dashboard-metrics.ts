@@ -1,5 +1,6 @@
 import type { DbVttSegment } from "$lib/server/db/schema";
 import { ProcessingStatus } from "../infrastructure/config";
+import { INDICES } from "$lib/constants";
 
 const COMPREHENSION_WEIGHTS: Record<string, number> = {
   EASY: 1,
@@ -53,7 +54,7 @@ export function pickFeaturedVideo(
   }
 
   return {
-    featuredVideo: firstCompleted ?? videos[0] ?? null,
+    featuredVideo: firstCompleted ?? videos[INDICES.FIRST] ?? null,
     continueWatching: null,
   };
 }
