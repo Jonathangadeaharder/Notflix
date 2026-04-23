@@ -5,11 +5,9 @@ const TEST_EMAIL = `e2e-auth-${Date.now()}@test.local`;
 const TEST_PASSWORD = "TestPass123!";
 const TEST_NAME = "E2E Auth Test";
 
-test.describe("Auth Flow: Register → Login → Logout → Login", () => {
-  test.beforeEach(async ({ page: _p }) => {
-    test.skip(process.env.PLAYWRIGHT_TEST === "true", "Skipped in PLAYWRIGHT_TEST mode");
-  });
+const describe_ = process.env.PLAYWRIGHT_TEST === "true" ? test.describe.skip : test.describe;
 
+describe_("Auth Flow: Register → Login → Logout → Login", () => {
   test("should complete full auth cycle", async ({ page }) => {
     test.setTimeout(120_000);
 
