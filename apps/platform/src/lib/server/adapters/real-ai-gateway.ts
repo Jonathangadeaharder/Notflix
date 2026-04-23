@@ -45,11 +45,11 @@ function applyInfoEvent(
   state.duration = (parsed.duration as number) ?? state.duration;
 }
 
-function applySegmentEvent(
+async function applySegmentEvent(
   parsed: Record<string, unknown>,
   state: SSEStreamState,
   onProgress: (percent: number) => void | Promise<void>,
-): void {
+): Promise<void> {
   state.segments.push({
     start: parsed.start as number,
     end: parsed.end as number,
@@ -60,16 +60,16 @@ function applySegmentEvent(
       ((parsed.end as number) / state.duration) *
         TRANSCRIBE_PROGRESS_CAP_PERCENT,
     );
-    onProgress(Math.min(rawPercent, TRANSCRIBE_PROGRESS_CAP_PERCENT));
+    await onProgress(Math.min(rawPercent, TRANSCRIBE_PROGRESS_CAP_PERCENT));
   }
 }
 
-function processSSELine(
+async function processSSELine(
   line: string,
   currentEvent: string,
   state: SSEStreamState,
   onProgress: (percent: number) => void | Promise<void>,
-): string {
+): Promise<string> {
   if (line.startsWith("event:")) {
     return line.slice(SSE_EVENT_PREFIX.length).trim();
   }
@@ -81,7 +81,7 @@ function processSSELine(
     if (currentEvent === "info" || parsed.type === "info") {
       applyInfoEvent(parsed, state);
     } else {
-      applySegmentEvent(parsed, state, onProgress);
+      await applySegmentEvent(parsed, state, onProgress);
     }
   } catch {
     /* skip */
@@ -107,8 +107,16 @@ async function readSSEStream(
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
       for (const line of lines) {
-        currentEvent = processSSELine(line, currentEvent, state, onProgress);
+        currentEvent = await processSSELine(
+          line,
+          currentEvent,
+          state,
+          onProgress,
+        );
       }
+    }
+    if (buffer.trim().length > 0) {
+      await processSSELine(buffer, currentEvent, state, onProgress);
     }
   } finally {
     reader.releaseLock();

@@ -1,11 +1,12 @@
 <script lang="ts">
   import VideoPlayer from "$lib/components/player/VideoPlayer.svelte";
   import type { Subtitle } from "$lib/components/player/types";
+  import { base } from "$app/paths";
 
   const video = {
     id: "mock-video-id",
     title: "Mock Video",
-    filePath: "/test-video.webm", // Local WebM (VP8/Vorbis) — works in all Chromium builds
+    filePath: `${base}/test-video.webm`,
     targetLang: "es",
     duration: 600,
     thumbnailPath: "",

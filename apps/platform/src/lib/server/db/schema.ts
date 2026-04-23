@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 
-const DEFAULT_GAME_INTERVAL_MINUTES = 10;
+export const DEFAULT_GAME_INTERVAL_MINUTES = 10;
 
 // --- AUTHENTICATION (Better Auth Standard) ---
 export const user = pgTable("user", {

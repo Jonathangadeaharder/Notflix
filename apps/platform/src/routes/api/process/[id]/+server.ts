@@ -30,7 +30,7 @@ function handleProcessError(err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
   console.error("Processing API Error:", message);
   return json(
-    { error: message },
+    { error: "Internal server error" },
     { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
   );
 }

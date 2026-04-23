@@ -31,10 +31,16 @@ export const load = async () => {
 };
 
 function parseUploadForm(formData: FormData) {
-  const title = formData.get("title") as string;
-  const targetLang = formData.get("targetLang") as string;
-  const nativeLang = formData.get("nativeLang") as string;
-  const file = formData.get("file") as File | null;
+  const rawTitle = formData.get("title");
+  const rawTargetLang = formData.get("targetLang");
+  const rawNativeLang = formData.get("nativeLang");
+  const rawFile = formData.get("file");
+
+  const title = typeof rawTitle === "string" ? rawTitle : "";
+  const targetLang = typeof rawTargetLang === "string" ? rawTargetLang : "";
+  const nativeLang = typeof rawNativeLang === "string" ? rawNativeLang : "";
+  const file = rawFile instanceof File ? rawFile : null;
+
   const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
   return { title, targetLang, nativeLang, file, result };
 }

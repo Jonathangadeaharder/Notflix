@@ -14,6 +14,7 @@ import {
   vocabReference,
   knownWords,
   watchProgress,
+  DEFAULT_GAME_INTERVAL_MINUTES,
 } from "../../src/lib/server/db/schema";
 import { copyFileSync, mkdirSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
@@ -219,7 +220,7 @@ export default async function globalSetup() {
         emailVerified: true,
         nativeLang: "en",
         targetLang: "es",
-        gameIntervalMinutes: 10,
+        gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
         createdAt: now,
         updatedAt: now,
       })

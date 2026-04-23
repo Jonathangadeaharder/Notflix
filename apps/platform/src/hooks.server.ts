@@ -3,7 +3,11 @@ import type { Session } from "$lib/server/infrastructure/auth";
 import { building } from "$app/environment";
 import { randomUUID } from "crypto";
 import { db } from "$lib/server/infrastructure/database";
-import { user as userTable, videoProcessing } from "$lib/server/db/schema";
+import {
+  user as userTable,
+  videoProcessing,
+  DEFAULT_GAME_INTERVAL_MINUTES,
+} from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { json, redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
@@ -31,7 +35,7 @@ async function resolveE2eSession(): Promise<Session | null> {
           emailVerified: true,
           nativeLang: "en",
           targetLang: "es",
-          gameIntervalMinutes: 10,
+          gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -77,7 +81,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   };
 
   // Centralized auth guard
-  const { pathname } = event.url;
+  const { pathname, search } = event.url;
   const { requiresAuth, responseKind } = resolveAuthRequirement(pathname);
 
   if (requiresAuth) {
@@ -89,7 +93,7 @@ export const handle: Handle = async ({ event, resolve }) => {
           { status: HTTP_STATUS.UNAUTHORIZED },
         );
       }
-      const next = encodeURIComponent(pathname);
+      const next = encodeURIComponent(pathname + search);
       return redirect(HTTP_STATUS.SEE_OTHER, `/login?next=${next}`);
     }
   }

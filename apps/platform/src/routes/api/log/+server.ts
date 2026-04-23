@@ -2,39 +2,12 @@ import { json } from "@sveltejs/kit";
 import { logger } from "$lib/logger";
 import type { RequestHandler } from "./$types";
 import { HTTP_STATUS } from "$lib/constants";
+import { redact } from "$lib/server/utils/redact";
 
 interface LogRequest {
   level?: string;
   message: string;
   [key: string]: unknown;
-}
-
-const SENSITIVE_KEYS = [
-  "token",
-  "password",
-  "secret",
-  "authorization",
-  "cookie",
-];
-
-const REDACTED = "[REDACTED]";
-
-function redact(obj: Record<string, unknown>): Record<string, unknown> {
-  const newObj: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
-      newObj[key] = REDACTED;
-    } else if (
-      value !== null &&
-      typeof value === "object" &&
-      !Array.isArray(value)
-    ) {
-      newObj[key] = redact(value as Record<string, unknown>);
-    } else {
-      newObj[key] = value;
-    }
-  }
-  return newObj;
 }
 
 const LOG_MAP: Record<string, (obj: object, msg: string) => void> = {

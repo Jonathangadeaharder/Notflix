@@ -28,7 +28,7 @@
 
 ### 2. Hardcoded Demo Credentials in Client-Side Code
 - **Where:** `src/routes/login/+page.svelte:59-70`
-- **Details:** Demo login embeds `test@example.com` / `password123` in client-side JavaScript. Anyone viewing page source can see these credentials.
+- **Details:** Demo login embeds `[test credentials]` in client-side JavaScript. Anyone viewing page source can see these credentials.
 - **Impact:** If a real user registers that email, their account is compromised. The credentials are publicly exposed.
 - **Category:** Security
 

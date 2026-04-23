@@ -22,11 +22,17 @@ export const GET: RequestHandler = async ({ params }) => {
     throw error(HTTP_STATUS.INTERNAL_SERVER_ERROR, "Internal error");
   }
 
-  if (!fs.existsSync(resolved.fullPath)) {
-    throw error(HTTP_STATUS.NOT_FOUND, "File not found");
+  let stat: fs.Stats;
+  try {
+    stat = await fs.promises.stat(resolved.fullPath);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      throw error(HTTP_STATUS.NOT_FOUND, "File not found");
+    }
+    throw error(HTTP_STATUS.INTERNAL_SERVER_ERROR, "Internal error");
   }
 
-  const stat = fs.statSync(resolved.fullPath);
   const fileStream = fs.createReadStream(resolved.fullPath);
 
   // @ts-expect-error - ReadableStream type mismatch in some environments

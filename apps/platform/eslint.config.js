@@ -26,7 +26,7 @@ export default tseslint.config(
     },
   },
   {
-    files: [TEST_FILES],
+    files: [TEST_FILES, SPEC_FILES],
     rules: {
       ...vitest.configs.recommended.rules,
       "vitest/no-focused-tests": "error",

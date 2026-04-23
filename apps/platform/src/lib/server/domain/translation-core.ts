@@ -55,7 +55,7 @@ export function mapTranslationsToSegments(
     translation: sentenceTranslations[i],
     tokens: seg.tokens.map((t) => ({
       ...t,
-      translation: lemmaMap.get(t.lemma) || t.translation,
+      translation: lemmaMap.get(t.lemma) ?? t.translation,
     })),
   }));
 }

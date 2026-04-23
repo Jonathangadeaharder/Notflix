@@ -4,14 +4,13 @@ import {
   user,
   videoProcessing,
   type DbVttSegment,
+  DEFAULT_GAME_INTERVAL_MINUTES,
 } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
 import type { Session } from "$lib/server/infrastructure/auth";
 import type { InferSelectModel } from "drizzle-orm";
-
-const DEFAULT_GAME_INTERVAL = 10;
 
 type HeatmapSegment = { start: number; end: number; type: string };
 type User = InferSelectModel<typeof user>;
@@ -21,6 +20,7 @@ function emptyVideoResponse(session: Session | null) {
     video: null,
     heatmap: [],
     profile: null,
+    gameInterval: DEFAULT_GAME_INTERVAL_MINUTES,
     user: session?.user ?? null,
     session,
   };
@@ -53,32 +53,29 @@ async function fetchUserProfile(userId: string) {
 }
 
 async function fetchVideoWithProcessing(videoId: string, targetLang: string) {
-  try {
-    const [result] = await db
-      .select({
-        video: video,
-        processing: videoProcessing,
-      })
-      .from(video)
-      .leftJoin(
-        videoProcessing,
-        and(
-          eq(video.id, videoProcessing.videoId),
-          eq(videoProcessing.targetLang, targetLang),
-        ),
-      )
-      .where(eq(video.id, videoId))
-      .limit(1);
-    return result ?? null;
-  } catch {
-    return null;
-  }
+  const [result] = await db
+    .select({
+      video: video,
+      processing: videoProcessing,
+    })
+    .from(video)
+    .leftJoin(
+      videoProcessing,
+      and(
+        eq(video.id, videoProcessing.videoId),
+        eq(videoProcessing.targetLang, targetLang),
+      ),
+    )
+    .where(eq(video.id, videoId))
+    .limit(1);
+  return result ?? null;
 }
 
 async function getGameInterval(
   session: Session | null,
 ): Promise<{ profile: User | null; interval: number }> {
-  if (!session) return { profile: null, interval: DEFAULT_GAME_INTERVAL };
+  if (!session)
+    return { profile: null, interval: DEFAULT_GAME_INTERVAL_MINUTES };
 
   const userProfile = await fetchUserProfile(session.user.id);
 
@@ -94,7 +91,7 @@ async function getGameInterval(
 
   return {
     profile: userProfile,
-    interval: userProfile?.gameIntervalMinutes ?? DEFAULT_GAME_INTERVAL,
+    interval: userProfile?.gameIntervalMinutes ?? DEFAULT_GAME_INTERVAL_MINUTES,
   };
 }
 

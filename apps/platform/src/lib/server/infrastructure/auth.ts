@@ -4,7 +4,10 @@ import { env } from "$env/dynamic/private";
 import { env as publicEnv } from "$env/dynamic/public";
 import type { RequestEvent } from "@sveltejs/kit";
 import { db } from "./database";
-import { user as userTable } from "$lib/server/db/schema";
+import {
+  user as userTable,
+  DEFAULT_GAME_INTERVAL_MINUTES,
+} from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import type { User as DbUser } from "$lib/server/db/schema";
 import { INDICES } from "$lib/constants";
@@ -40,7 +43,7 @@ function createDockerAwareFetch(
   return (input, init) => {
     const url = extractRequestUrl(input);
     const rewritten =
-      internalUrl && internalUrl !== publicUrl
+      publicUrl && internalUrl && internalUrl !== publicUrl
         ? url.replace(publicUrl, internalUrl)
         : url;
     const request = buildRewrittenRequest(input, rewritten);
@@ -106,7 +109,7 @@ async function upsertProfile(authUser: SupabaseAuthUser): Promise<User | null> {
       emailVerified: authUser.email_confirmed_at != null,
       nativeLang: "en",
       targetLang: "es",
-      gameIntervalMinutes: 10,
+      gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
       createdAt: new Date(),
       updatedAt: new Date(),
     })

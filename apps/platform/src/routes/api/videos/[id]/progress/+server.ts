@@ -123,6 +123,15 @@ async function parseProgressBody(request: Request) {
     };
   }
 
+  if (!body || typeof body !== "object") {
+    return {
+      errorResponse: json(
+        { error: "Invalid JSON body" },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      ),
+    };
+  }
+
   const currentTime = Number(body.currentTime ?? 0);
   const duration = Number(body.duration ?? 0);
   const progressPercent = Math.max(
@@ -134,9 +143,9 @@ async function parseProgressBody(request: Request) {
   );
 
   if (
-    Number.isNaN(currentTime) ||
-    Number.isNaN(duration) ||
-    Number.isNaN(progressPercent)
+    !Number.isFinite(currentTime) ||
+    !Number.isFinite(duration) ||
+    !Number.isFinite(progressPercent)
   ) {
     return {
       errorResponse: json(

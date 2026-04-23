@@ -7,6 +7,14 @@ import { env } from "$env/dynamic/private";
 const DEFAULT_AI_TIMEOUT_MS = 15_000;
 const DEFAULT_AI_TRANSCRIBE_TIMEOUT_MS = 300_000;
 
+function parsePositiveTimeout(
+  raw: string | undefined,
+  fallback: number,
+): number {
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 // The AI service container always mounts media at this path, regardless of host layout.
 const AI_MEDIA_PATH = "/app/media/uploads";
 
@@ -33,11 +41,14 @@ export const CONFIG = {
   },
   AI_SERVICE_URL: env.AI_SERVICE_URL || "http://127.0.0.1:8000",
   AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || "dev_secret_key",
-  AI_SERVICE_TIMEOUT_MS:
-    Number(env.AI_SERVICE_TIMEOUT_MS) || DEFAULT_AI_TIMEOUT_MS,
-  AI_SERVICE_TRANSCRIBE_TIMEOUT_MS:
-    Number(env.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS) ||
+  AI_SERVICE_TIMEOUT_MS: parsePositiveTimeout(
+    env.AI_SERVICE_TIMEOUT_MS,
+    DEFAULT_AI_TIMEOUT_MS,
+  ),
+  AI_SERVICE_TRANSCRIBE_TIMEOUT_MS: parsePositiveTimeout(
+    env.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS,
     DEFAULT_AI_TRANSCRIBE_TIMEOUT_MS,
+  ),
   UPLOAD_DIR: uploadDir,
   RESOLVED_UPLOAD_DIR: resolvedUploadDir,
   MEDIA_ROOT: resolvedUploadDir,

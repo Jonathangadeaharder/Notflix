@@ -20,14 +20,16 @@ test.describe("Profile: Settings", () => {
 
     const originalValue = await profile.gameIntervalSelect.inputValue();
 
-    await profile.setGameInterval("5");
-    await profile.save();
+    try {
+      await profile.setGameInterval("5");
+      await profile.save();
 
-    await profile.goto();
-    const value = await profile.gameIntervalSelect.inputValue();
-    expect(value).toBe("5");
-
-    await profile.setGameInterval(originalValue);
-    await profile.save();
+      await profile.goto();
+      const value = await profile.gameIntervalSelect.inputValue();
+      expect(value).toBe("5");
+    } finally {
+      await profile.setGameInterval(originalValue);
+      await profile.save();
+    }
   });
 });

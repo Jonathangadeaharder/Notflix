@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import { HTTP_STATUS } from "$lib/constants";
 
 const CONTENT_TYPE_MAP: Record<string, string> = {
@@ -44,7 +45,19 @@ export function resolveMediaPath(
   const resolvedMediaRoot = path.resolve(mediaRoot);
   const fullPath = path.resolve(resolvedMediaRoot, filePath);
 
-  const relativePath = path.relative(resolvedMediaRoot, fullPath);
+  const canonicalRoot = fs.realpathSync(resolvedMediaRoot);
+  let canonicalPath: string;
+  try {
+    canonicalPath = fs.realpathSync(fullPath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      canonicalPath = path.resolve(fullPath);
+    } else {
+      throw new MediaPathError(HTTP_STATUS.NOT_FOUND, "File not found");
+    }
+  }
+
+  const relativePath = path.relative(canonicalRoot, canonicalPath);
   if (
     relativePath === ".." ||
     relativePath.startsWith(`${path.sep}..`) ||

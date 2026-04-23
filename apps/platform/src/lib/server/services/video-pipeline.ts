@@ -113,11 +113,8 @@ function createProgressCallback(
       Math.max(0, Math.round(percent)),
     );
     const now = Date.now();
-    if (
-      clamped <= lastPersistedPercent &&
-      now - lastPersistedAt < PROGRESS_DB_MIN_INTERVAL_MS
-    )
-      return;
+    if (clamped <= lastPersistedPercent) return;
+    if (now - lastPersistedAt < PROGRESS_DB_MIN_INTERVAL_MS) return;
     lastPersistedPercent = clamped;
     lastPersistedAt = now;
     console.log(`[Pipeline] Transcription progress: ${clamped}%`);

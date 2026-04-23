@@ -33,8 +33,18 @@ async function parseKnownWordRequest(request: Request): Promise<ParseResult> {
     };
   }
 
-  const { lemma, lang } = body;
-  if (!lemma || !lang) {
+  if (!body || typeof body !== "object") {
+    return {
+      ok: false,
+      errorResponse: json(
+        { error: "Invalid JSON body" },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      ),
+    };
+  }
+
+  const { lemma, lang } = body as Record<string, unknown>;
+  if (typeof lemma !== "string" || typeof lang !== "string") {
     return {
       ok: false,
       errorResponse: json(
