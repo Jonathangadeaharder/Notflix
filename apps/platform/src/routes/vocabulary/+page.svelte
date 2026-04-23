@@ -227,12 +227,15 @@
                       data-testid="toggle-known-{word.lemma}"
                       onclick={() => toggleKnown(word.lemma, word.isKnown)}
                       disabled={togglingWords.has(word.lemma)}
+                      aria-pressed={word.isKnown}
+                      aria-busy={togglingWords.has(word.lemma)}
+                      aria-label={`Toggle known status for ${word.lemma}`}
                       class="px-2 py-1 rounded text-xs font-medium transition-colors {word.isKnown
                         ? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
                         : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-white'}"
                     >
                       {#if togglingWords.has(word.lemma)}
-                        ...
+                        Saving…
                       {:else if word.isKnown}
                         Known ✕
                       {:else}

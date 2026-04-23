@@ -164,6 +164,13 @@ async function setup() {
         }
         return;
       }
+      if (c.cleanup) {
+        try {
+          docker(`stop ${c.cleanup}`, 10_000);
+        } catch {
+          // best effort
+        }
+      }
       console.warn(`[Integration] "${c.name}" started but port ${c.port} not reachable.`);
     }
   }

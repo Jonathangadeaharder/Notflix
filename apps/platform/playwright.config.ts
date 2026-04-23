@@ -28,13 +28,13 @@ const config: PlaywrightTestConfig = {
       // Mock AI service — lightweight Node server with canned responses
       command: `node tests/e2e/mock-ai-service.js ${MOCK_AI_PORT}`,
       port: Number(MOCK_AI_PORT),
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 10_000,
     },
     {
       command: "pnpm run test:e2e:server",
       url: "http://localhost:5173",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120 * 1000,
       env: {
         ...process.env,
