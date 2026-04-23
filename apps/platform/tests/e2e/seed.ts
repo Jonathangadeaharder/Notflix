@@ -137,7 +137,9 @@ export default async function globalSetup() {
       copyFileSync(sourceVideoPath, videoFilePath);
       console.log(`[E2E Seed] Copied test video to ${videoFilePath}`);
     } else {
-      console.warn(`[E2E Seed] Warning: test video not found at ${sourceVideoPath}`);
+      throw new Error(
+        `[E2E Seed] Required test video not found at ${sourceVideoPath}`,
+      );
     }
 
     // ─── Insert videos ───

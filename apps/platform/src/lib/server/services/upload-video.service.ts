@@ -18,6 +18,7 @@ const ALLOWED_EXTENSIONS = new Set([
   "webm",
   "ogg",
   "m4a",
+  "aac",
   "mkv",
   "avi",
   "mov",

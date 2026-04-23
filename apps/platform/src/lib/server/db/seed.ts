@@ -43,14 +43,19 @@ async function seed() {
   }
 
   console.log("\nSeeding complete!");
-  await client.end();
-  process.exit(0);
 }
 
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
-  seed().catch((err) => {
-    console.error("Seeding failed:", err);
-    process.exit(1);
-  });
+  seed()
+    .then(() => {
+      process.exitCode = 0;
+    })
+    .catch((err) => {
+      console.error("Seeding failed:", err);
+      process.exitCode = 1;
+    })
+    .finally(() => {
+      client.end();
+    });
 }

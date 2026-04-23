@@ -16,7 +16,7 @@ describe("POST /api/words/known — input validation", () => {
   });
 
   it("returns 400 when lemma exceeds max length", async () => {
-    const longLemma = "a".repeat(300);
+    const longLemma = "a".repeat(201);
     const request = new Request(WORDS_KNOWN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
