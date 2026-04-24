@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "schedule": ["before 5am on monday"],
+  "packageRules": [
+    {
+      "description": "Group all npm/pnpm dependencies into a single PR",
+      "matchManagers": ["npm"],
+      "groupName": "npm dependencies",
+      "groupSlug": "npm-and-pnpm"
+    },
+    {
+      "description": "Ignore Python versions >= 3.14 for ai-service",
+      "matchManagers": ["pip_requirements", "dockerfile"],
+      "matchPackageNames": ["python"],
+      "matchFileNames": ["apps/ai-service/**"],
+      "allowedVersions": "< 3.14"
+    }
+  ],
+  "pip_requirements": {
+    "fileMatch": ["apps/ai-service/requirements\\.txt$"]
+  },
+  "dockerfile": {
+    "enabled": true
+  },
+  "docker-compose": {
+    "enabled": true,
+    "fileMatch": ["docker-compose.*\\.ya?ml$"]
+  },
+  "github-actions": {
+    "enabled": true
+  }
+}
