@@ -11,7 +11,8 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
-import { ProgressStage } from "$lib/types";
+
+const PROGRESS_STAGE_QUEUED = "QUEUED";
 
 export const DEFAULT_GAME_INTERVAL_MINUTES = 10;
 
@@ -116,7 +117,7 @@ export const videoProcessing = pgTable(
       .notNull(), // Fixed reference to singular 'video' table
     targetLang: text("target_lang").notNull(), // "es"
     status: text("status").notNull(), // "PENDING", "COMPLETED", "ERROR"
-    progressStage: text("progress_stage").default(ProgressStage.QUEUED),
+    progressStage: text("progress_stage").default(PROGRESS_STAGE_QUEUED),
     progressPercent: integer("progress_percent").default(0).notNull(),
     vttJson: jsonb("vtt_json").$type<DbVttSegment[]>(), // The full subtitles with timestamps
     createdAt: timestamp("created_at").defaultNow(),
