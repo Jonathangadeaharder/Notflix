@@ -33,7 +33,7 @@
 
 - [ ] **Step 1: Update `resolveMediaPath` to use canonical path check**
 
-In `media-path-security.ts`, replace the `path.join` + `startsWith` logic with `path.resolve` + `path.relative`:
+In `media-path-security.ts`, replace the `path.join` + `startsWith` logic with `fs.realpathSync` canonical path check:
 
 ```typescript
 export function resolveMediaPath(
@@ -41,21 +41,43 @@ export function resolveMediaPath(
   mediaRoot: string,
 ): ResolvedMediaPath {
   if (!filePath) {
-    throw new MediaPathError(400, "Missing file path");
+    throw new MediaPathError(HTTP_STATUS.BAD_REQUEST, "Missing file path");
   }
 
   const resolvedMediaRoot = path.resolve(mediaRoot);
   const fullPath = path.resolve(resolvedMediaRoot, filePath);
 
-  const relativePath = path.relative(resolvedMediaRoot, fullPath);
-  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
-    throw new MediaPathError(403, "Forbidden");
+  const canonicalRoot = fs.realpathSync(resolvedMediaRoot);
+  let canonicalPath: string;
+  try {
+    canonicalPath = fs.realpathSync(fullPath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw new MediaPathError(HTTP_STATUS.NOT_FOUND, "File not found");
+    }
+    try {
+      const parentDir = path.dirname(fullPath);
+      const canonicalParent = fs.realpathSync(parentDir);
+      canonicalPath = path.join(canonicalParent, path.basename(fullPath));
+    } catch {
+      canonicalPath = path.resolve(fullPath);
+    }
+  }
+
+  const relativePath = path.relative(canonicalRoot, canonicalPath);
+  if (
+    relativePath === ".." ||
+    relativePath.startsWith(`${path.sep}..`) ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw new MediaPathError(HTTP_STATUS.FORBIDDEN, "Forbidden");
   }
 
   const ext = path.extname(fullPath).toLowerCase();
   const contentType = CONTENT_TYPE_MAP[ext] || DEFAULT_CONTENT_TYPE;
 
-  return { fullPath, contentType };
+  return { fullPath: canonicalPath, contentType };
 }
 ```
 

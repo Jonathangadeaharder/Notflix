@@ -38,9 +38,14 @@ function handleProcessError(err: unknown) {
 function validateLanguageFields(
   body: ProcessRequest,
 ): { targetLang: string; nativeLang: string } | Response {
-  const targetLang = body.targetLang?.trim() || "es";
-  const nativeLang = body.nativeLang?.trim() || "en";
-  if (targetLang.length === 0 || nativeLang.length === 0) {
+  const targetLang = body.targetLang?.trim();
+  const nativeLang = body.nativeLang?.trim();
+  if (
+    !targetLang ||
+    targetLang.length === 0 ||
+    !nativeLang ||
+    nativeLang.length === 0
+  ) {
     return json(
       { error: "Invalid language code" },
       { status: HTTP_STATUS.BAD_REQUEST },

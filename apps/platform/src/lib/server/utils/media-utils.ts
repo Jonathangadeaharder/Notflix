@@ -30,11 +30,18 @@ export function toMediaUrl(absolutePath: string | null | undefined): string {
 
 export type ITimeSpan = { start: number; end: number };
 
+const MIN_STEP_SECONDS = 0.1;
+
 export function calculateChunks(
   durationSeconds: number,
   maxChunkSize: number,
 ): ITimeSpan[] {
   if (durationSeconds <= 0 || maxChunkSize <= 0) return [];
+
+  const effectiveStep = Math.max(
+    maxChunkSize - CHUNK_OVERLAP_SECONDS,
+    MIN_STEP_SECONDS,
+  );
 
   const chunks: ITimeSpan[] = [];
   let currentStart = 0;
@@ -48,8 +55,7 @@ export function calculateChunks(
 
     chunks.push({ start: currentStart, end: currentEnd });
 
-    // Small overlap to prevent cutting off words
-    currentStart = currentEnd - CHUNK_OVERLAP_SECONDS;
+    currentStart = currentStart + effectiveStep;
   }
 
   // Clean up last chunk if it's too small

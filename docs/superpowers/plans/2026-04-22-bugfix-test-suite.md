@@ -71,8 +71,8 @@ The `handleVideoUpload` function must validate:
 In `src/lib/server/services/upload-video.service.ts`, add validation inside `handleVideoUpload` after the null-file check and before saving:
 
 ```ts
-const ALLOWED_EXTENSIONS = new Set(["mp4", "mp3", "wav", "webm", "ogg", "m4a", "mkv", "avi", "mov"]);
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
+const ALLOWED_EXTENSIONS = new Set(["mp4", "mp3", "wav", "webm", "ogg", "m4a", "aac", "mkv", "avi", "mov"]);
+const DEFAULT_MAX_FILE_SIZE_BYTES = (deps.maxFileSizeBytes ?? 500) * 1024 * 1024;
 ```
 
 Add checks for extension and size, returning `{ ok: false, value: { errors: { file: [...] } } }` when they fail. Check extension via `file.name.split(".").pop()?.toLowerCase()`.

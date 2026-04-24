@@ -39,7 +39,9 @@ export const POST: RequestHandler = async ({ request }) => {
       );
     }
 
-    const logFn = LOG_MAP[level || "info"] || LOG_MAP.info;
+    const normalizedLevel =
+      typeof level === "string" ? level.toLowerCase() : "info";
+    const logFn = LOG_MAP[normalizedLevel] ?? LOG_MAP.info;
     logFn(redact(rest), message);
 
     return json({ success: true });
