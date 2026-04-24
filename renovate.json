@@ -9,17 +9,17 @@
       "description": "Group all npm/pnpm dependencies into a single PR",
       "matchManagers": ["npm"],
       "groupName": "npm dependencies",
-      "groupSlug": "npm-and-yarn"
+      "groupSlug": "npm-and-pnpm"
     },
     {
       "description": "Ignore Python versions >= 3.14 for ai-service",
-      "matchManagers": ["pip-requirements", "dockerfile"],
+      "matchManagers": ["pip_requirements", "dockerfile"],
       "matchPackageNames": ["python"],
       "matchFileNames": ["apps/ai-service/**"],
       "allowedVersions": "< 3.14"
     }
   ],
-  "pip-requirements": {
+  "pip_requirements": {
     "fileMatch": ["apps/ai-service/requirements\\.txt$"]
   },
   "dockerfile": {
