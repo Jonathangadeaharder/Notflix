@@ -34,7 +34,7 @@ export function splitCsvLine(line: string): string[] {
   }
   cols.push(current);
   if (inQuotes) {
-    return [line];
+    throw new Error(`Malformed CSV line with unmatched quote: ${line}`);
   }
   return cols;
 }

@@ -1,4 +1,4 @@
-# Notflix Application & UI Issues Report
+# Notflix Application & UI/UX Issues Report
 
 During the attempt to start the Notflix server and access the UI to perform a UX audit, multiple critical infrastructure and build failures were encountered. These deployment blockers currently prevent the server from starting. Once these are resolved and the application is accessible, the browser UI tests can be performed.
 
@@ -23,7 +23,7 @@ During the attempt to start the Notflix server and access the UI to perform a UX
 ---
 
 ### Next Steps Recommendation
-Before the UI UX can be reviewed:
+Before the UI/UX can be reviewed:
 1. Refactor `start.bat` and CLI paths so the application can run properly on Windows natively via a Node dev server without requiring WSL Docker, **or** setup a proper `docker-compose.yml` override that prevents `BuildKit` from calling system credential helpers in WSL.
 2. Fix the extremely slow docker pull speeds affecting WSL on this machine.
 3. Once the server backend successfully binds to `http://localhost:5173`, the UI testing suite and visual exploration can be resumed.

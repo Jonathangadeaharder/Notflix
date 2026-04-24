@@ -142,7 +142,7 @@
 
 ### 22. `ilike` Search Not Escaped for `%` and `_` Wildcards
 - **Where:** `src/routes/vocabulary/+page.server.ts:81-83`
-- **Details:** User search is interpolated into `` ilike(vocabReference.lemma, `%${search}%`) `` without escaping SQL LIKE wildcards. Searching for `%` returns all rows.
+- **Details:** User search is interpolated into ``ilike(vocabReference.lemma, `%${search}%`)`` without escaping SQL LIKE wildcards. Searching for `%` returns all rows.
 - **Category:** Functionality
 
 ### 23. Startup Cleanup Marks ALL Pending Processing as ERROR (Race Condition)

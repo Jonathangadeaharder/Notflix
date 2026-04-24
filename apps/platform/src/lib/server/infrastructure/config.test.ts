@@ -62,6 +62,16 @@ describe("toAiServicePath", () => {
   );
 
   it(
+    "WhenDockerWithCustomMediaRootTrailingSlash_ThenNoDoubleSlash",
+    { timeout: TEST_TIMEOUT_MS },
+    () => {
+      expect(
+        toAiServicePath("/local/path/audio.mp3", true, "/custom/media/"),
+      ).toBe("/custom/media/audio.mp3");
+    },
+  );
+
+  it(
     "WhenWindowsPathInDocker_ThenExtractsFilename",
     { timeout: TEST_TIMEOUT_MS },
     () => {

@@ -1,3 +1,35 @@
+[project]
+name = "notflix-ai-service"
+version = "0.0.1"
+description = "AI service for Notflix — transcription, filtering, translation"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "faster-whisper",
+    "spacy>=3.8,<3.9",
+    "transformers",
+    "sentencepiece",
+    "sacremoses",
+    "torch",
+    "torchaudio",
+    "python-multipart",
+    "sse-starlette",
+    "pydantic",
+    "structlog",
+    "protobuf",
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "es-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+    "ruff",
+]
+
 [tool.ruff.lint]
 select = ["E", "F", "B", "S"]
 ignore = ["E501"] # Ignore Line too long

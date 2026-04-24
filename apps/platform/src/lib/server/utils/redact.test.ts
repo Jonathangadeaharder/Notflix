@@ -132,4 +132,17 @@ describe("redact", () => {
       expect(result).toEqual({});
     },
   );
+
+  it("WhenCalled_ThenDoesNotMutateInput", { timeout: TEST_TIMEOUT_MS }, () => {
+    const input = {
+      password: "secret",
+      nested: { token: "abc", safe: "ok" },
+      items: [{ authorization: "Bearer x" }],
+    };
+    const snapshot = structuredClone(input);
+
+    redact(input);
+
+    expect(input).toEqual(snapshot);
+  });
 });

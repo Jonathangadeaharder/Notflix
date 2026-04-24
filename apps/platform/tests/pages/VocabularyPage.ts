@@ -84,6 +84,6 @@ export class VocabularyPage {
   async isWordKnown(lemma: string): Promise<boolean> {
     const btn = this.toggleKnownButton(lemma);
     const text = (await btn.textContent())?.trim() ?? "";
-    return text.startsWith("Known");
+    return text === "Known ✕" || (text.startsWith("Known") && !text.includes("Mark"));
   }
 }

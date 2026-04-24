@@ -4,6 +4,8 @@ import type { RequestHandler } from "./$types";
 import { HTTP_STATUS } from "$lib/constants";
 import { redact } from "$lib/server/utils/redact";
 
+const INVALID_LOG_FORMAT = "Invalid log format";
+
 interface LogRequest {
   level?: string;
   message: string;
@@ -22,7 +24,20 @@ const LOG_MAP: Record<string, (obj: object, msg: string) => void> = {
 export const POST: RequestHandler = async ({ request }) => {
   try {
     const body = (await request.json()) as LogRequest;
+    if (!body || typeof body !== "object") {
+      return json(
+        { success: false, error: INVALID_LOG_FORMAT },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      );
+    }
     const { level, message, ...rest } = body;
+
+    if (typeof message !== "string" || message.trim().length === 0) {
+      return json(
+        { success: false, error: INVALID_LOG_FORMAT },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      );
+    }
 
     const logFn = LOG_MAP[level || "info"] || LOG_MAP.info;
     logFn(redact(rest), message);
@@ -31,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
   } catch (err) {
     console.error("Failed to process client log", err);
     return json(
-      { success: false, error: "Invalid log format" },
+      { success: false, error: INVALID_LOG_FORMAT },
       { status: HTTP_STATUS.BAD_REQUEST },
     );
   }

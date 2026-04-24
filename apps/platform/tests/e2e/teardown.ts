@@ -23,7 +23,8 @@ const E2E_VIDEO_IDS = [
 
 export default async function globalTeardown() {
   const databaseUrl =
-    process.env.E2E_DATABASE_URL || process.env.DATABASE_URL;
+    process.env.E2E_DATABASE_URL ||
+    (process.env.PLAYWRIGHT_TEST ? process.env.DATABASE_URL : undefined);
   if (!databaseUrl) {
     console.log(
       "[E2E Teardown] No database URL configured (E2E_DATABASE_URL or DATABASE_URL). Skipping teardown.",

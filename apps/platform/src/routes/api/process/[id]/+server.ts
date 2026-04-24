@@ -35,6 +35,20 @@ function handleProcessError(err: unknown) {
   );
 }
 
+function validateLanguageFields(
+  body: ProcessRequest,
+): { targetLang: string; nativeLang: string } | Response {
+  const targetLang = body.targetLang?.trim() || "es";
+  const nativeLang = body.nativeLang?.trim() || "en";
+  if (targetLang.length === 0 || nativeLang.length === 0) {
+    return json(
+      { error: "Invalid language code" },
+      { status: HTTP_STATUS.BAD_REQUEST },
+    );
+  }
+  return { targetLang, nativeLang };
+}
+
 export const POST: RequestHandler = async ({ params, request, locals }) => {
   const session = await locals.auth();
   if (!session?.user) {
@@ -65,10 +79,13 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     );
   }
 
+  const langs = validateLanguageFields(body);
+  if (langs instanceof Response) return langs;
+
   processVideo({
     videoId: params.id,
-    targetLang: body.targetLang?.trim() || "es",
-    nativeLang: body.nativeLang?.trim() || "en",
+    targetLang: langs.targetLang,
+    nativeLang: langs.nativeLang,
     userId: session.user.id,
   }).catch((err) =>
     console.error(`[Pipeline] Background error for ${params.id}:`, err),

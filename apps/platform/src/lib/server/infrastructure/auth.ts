@@ -42,10 +42,24 @@ function createDockerAwareFetch(
 ): typeof fetch {
   return (input, init) => {
     const url = extractRequestUrl(input);
-    const rewritten =
-      publicUrl && internalUrl && internalUrl !== publicUrl
-        ? url.replace(publicUrl, internalUrl)
-        : url;
+    let rewritten = url;
+    if (publicUrl && internalUrl && internalUrl !== publicUrl) {
+      try {
+        const parsed = new URL(url);
+        const publicParsed = new URL(publicUrl);
+        if (
+          parsed.origin === publicParsed.origin &&
+          parsed.pathname.startsWith(publicParsed.pathname)
+        ) {
+          const internalParsed = new URL(internalUrl);
+          parsed.protocol = internalParsed.protocol;
+          parsed.host = internalParsed.host;
+          rewritten = parsed.href;
+        }
+      } catch {
+        rewritten = url;
+      }
+    }
     const request = buildRewrittenRequest(input, rewritten);
     return fetch(request, init);
   };

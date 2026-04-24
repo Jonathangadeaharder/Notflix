@@ -89,6 +89,20 @@ describe("parseLemmasFromCsv", () => {
   );
 
   it(
+    "WhenRowHasUnbalancedQuotes_ThenThrows",
+    () => {
+      mockReadFileSync.mockReturnValue(
+        'German_Lemma,Spanish_Translation\nHaus,"casa\nBuch,libro\n',
+      );
+
+      expect(() => parseLemmasFromCsv("/fake/path.csv")).toThrow(
+        /Malformed CSV line with unmatched quote/,
+      );
+    },
+    CSV_TIMEOUT_MS,
+  );
+
+  it(
     "WhenEmptyLinesAndMissingTranslations_ThenFiltersThemOut",
     () => {
       mockReadFileSync.mockReturnValue(

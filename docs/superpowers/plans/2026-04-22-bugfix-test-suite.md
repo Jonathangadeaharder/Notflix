@@ -10,13 +10,13 @@
 
 ---
 
-### Task 1: UUID Validation on DELETE /api/videos/[id]
+## Task 1: UUID Validation on DELETE /api/videos/[id]
 
 **Files:**
 - Modify: `src/routes/api/videos/[id]/+server.ts`
 - Test: `tests/api/videos-id-uuid-validation.test.ts` (already written, 3 tests, 2 failing)
 
-The DELETE handler must validate that `params.id` is a valid UUID v4 before calling `deleteVideoAndAssets`. Non-UUID strings currently cause a raw Postgres error (500).
+The DELETE handler must validate that `params.id` is a valid UUID before calling `deleteVideoAndAssets`. Non-UUID strings currently cause a raw Postgres error (500).
 
 - [ ] **Step 1: Add UUID validation to DELETE handler**
 
@@ -55,7 +55,7 @@ git commit -m "fix: validate UUID on DELETE /api/videos/[id]"
 
 ---
 
-### Task 2: File Size and Type Validation in Upload Service
+## Task 2: File Size and Type Validation in Upload Service
 
 **Files:**
 - Modify: `src/lib/server/services/upload-video.service.ts`
@@ -91,7 +91,7 @@ git commit -m "fix: add file size and type validation to upload service"
 
 ---
 
-### Task 3: Input Validation on POST /api/words/known
+## Task 3: Input Validation on POST /api/words/known
 
 **Files:**
 - Modify: `src/routes/api/words/known/+server.ts`
@@ -130,7 +130,7 @@ git commit -m "fix: add input validation to POST /api/words/known"
 
 ---
 
-### Task 4: Reprocess Action Uses fail() for Invalid Input
+## Task 4: Reprocess Action Uses fail() for Invalid Input
 
 **Files:**
 - Modify: `src/routes/studio/+page.server.ts`
@@ -167,7 +167,7 @@ git commit -m "fix: use fail() in reprocess action for proper HTTP status codes"
 
 ---
 
-### Task 5: UUID Validation on GET /api/game/generate
+## Task 5: UUID Validation on GET /api/game/generate
 
 **Files:**
 - Modify: `src/routes/api/game/generate/+server.ts`

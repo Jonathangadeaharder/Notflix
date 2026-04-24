@@ -81,5 +81,9 @@ export function toAiServicePath(
   // Split on both / and \ so Windows paths (stored from local uploads)
   // work correctly when the pipeline runs inside the Linux Docker container.
   const filename = localPath.split(/[/\\]/).pop() || path.basename(localPath);
-  return `${mediaRootInternal}/${filename}`;
+  let normalizedRoot = mediaRootInternal;
+  while (normalizedRoot.endsWith("/") || normalizedRoot.endsWith("\\")) {
+    normalizedRoot = normalizedRoot.slice(0, -1);
+  }
+  return `${normalizedRoot}/${filename}`;
 }

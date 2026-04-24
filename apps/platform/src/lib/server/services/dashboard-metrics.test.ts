@@ -171,6 +171,7 @@ describe("pickFeaturedVideo", () => {
     ];
     const result = pickFeaturedVideo(videos);
     expect(result.featuredVideo?.id).toBe("first");
+    expect(result.continueWatching).toBeNull();
   });
 
   it("returns null for empty list", () => {

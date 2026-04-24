@@ -50,10 +50,15 @@ export function resolveMediaPath(
   try {
     canonicalPath = fs.realpathSync(fullPath);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      canonicalPath = path.resolve(fullPath);
-    } else {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
       throw new MediaPathError(HTTP_STATUS.NOT_FOUND, "File not found");
+    }
+    try {
+      const parentDir = path.dirname(fullPath);
+      const canonicalParent = fs.realpathSync(parentDir);
+      canonicalPath = path.join(canonicalParent, path.basename(fullPath));
+    } catch {
+      canonicalPath = path.resolve(fullPath);
     }
   }
 
@@ -70,5 +75,5 @@ export function resolveMediaPath(
   const ext = path.extname(fullPath).toLowerCase();
   const contentType = CONTENT_TYPE_MAP[ext] || DEFAULT_CONTENT_TYPE;
 
-  return { fullPath, contentType };
+  return { fullPath: canonicalPath, contentType };
 }

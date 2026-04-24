@@ -6,6 +6,15 @@ import os from "os";
 
 const TEST_TIMEOUT_MS = 5000;
 
+function captureMediaPathError(fn: () => void): MediaPathError | undefined {
+  try {
+    fn();
+    return undefined;
+  } catch (err) {
+    return err as MediaPathError;
+  }
+}
+
 describe("resolveMediaPath", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "media-test-"));
   const mediaRoot = path.join(tmpDir, "media");
@@ -20,9 +29,8 @@ describe("resolveMediaPath", () => {
     { timeout: TEST_TIMEOUT_MS },
     () => {
       const result = resolveMediaPath("uploads/video.mp4", mediaRoot);
-      expect(result.fullPath).toBe(
-        path.join(mediaRoot, "uploads", "video.mp4"),
-      );
+      expect(result.fullPath).toContain("uploads/video.mp4");
+      expect(path.isAbsolute(result.fullPath)).toBe(true);
       expect(result.contentType).toBe("video/mp4");
     },
   );
@@ -31,12 +39,9 @@ describe("resolveMediaPath", () => {
     "WhenPathTraversalWithDotDot_ThenRejected",
     { timeout: TEST_TIMEOUT_MS },
     () => {
-      let caught: MediaPathError | undefined;
-      try {
-        resolveMediaPath("../../../etc/passwd", mediaRoot);
-      } catch (err) {
-        caught = err as MediaPathError;
-      }
+      const caught = captureMediaPathError(() =>
+        resolveMediaPath("../../../etc/passwd", mediaRoot),
+      );
       expect(caught).toBeInstanceOf(MediaPathError);
       expect(caught?.statusCode).toBe(403);
     },
@@ -46,24 +51,18 @@ describe("resolveMediaPath", () => {
     "WhenSiblingPrefixTraversal_ThenRejected",
     { timeout: TEST_TIMEOUT_MS },
     () => {
-      let caught: MediaPathError | undefined;
-      try {
-        resolveMediaPath("../media-evil/file.mp4", mediaRoot);
-      } catch (err) {
-        caught = err as MediaPathError;
-      }
+      const caught = captureMediaPathError(() =>
+        resolveMediaPath("../media-evil/file.mp4", mediaRoot),
+      );
       expect(caught).toBeInstanceOf(MediaPathError);
       expect(caught?.statusCode).toBe(403);
     },
   );
 
   it("WhenUndefinedPath_ThenRejected", { timeout: TEST_TIMEOUT_MS }, () => {
-    let caught: MediaPathError | undefined;
-    try {
-      resolveMediaPath(undefined, mediaRoot);
-    } catch (err) {
-      caught = err as MediaPathError;
-    }
+    const caught = captureMediaPathError(() =>
+      resolveMediaPath(undefined, mediaRoot),
+    );
     expect(caught).toBeInstanceOf(MediaPathError);
     expect(caught?.statusCode).toBe(400);
   });
@@ -93,6 +92,9 @@ describe("resolveMediaPath", () => {
         ["file.m4a", "audio/mp4"],
         ["file.aac", "audio/aac"],
         ["file.ogg", "audio/ogg"],
+        ["file.mkv", "video/x-matroska"],
+        ["file.avi", "video/x-msvideo"],
+        ["file.mov", "video/quicktime"],
         ["file.xyz", "application/octet-stream"],
       ];
       for (const [filename, expectedType] of cases) {

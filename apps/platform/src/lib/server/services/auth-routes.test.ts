@@ -24,6 +24,10 @@ describe("Auth Route Decision", () => {
     expect(resolveAuthRequirement("/api/health").requiresAuth).toBe(false);
   });
 
+  it("WhenHealthEndpointWithTrailingSlash_ThenNoAuthRequired", () => {
+    expect(resolveAuthRequirement("/api/health/").requiresAuth).toBe(false);
+  });
+
   it("WhenLoginPage_ThenNoAuthRequired", () => {
     expect(resolveAuthRequirement("/login").requiresAuth).toBe(false);
   });
