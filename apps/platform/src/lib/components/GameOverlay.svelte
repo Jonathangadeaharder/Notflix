@@ -376,35 +376,36 @@
         <!-- Hidden test affordances — keep parity with old swipe-based testid hooks
              so existing playwright/vitest checks for swipe-left / swipe-right
               still resolve to a clickable element. -->
-        {#if import.meta.env.DEV || (window as unknown as Record<string, unknown>).__e2e}
-          <div
-            class="fixed bottom-4 right-4 flex gap-2 z-[60]"
-            style:opacity="0.01"
+        <div
+          class="fixed bottom-4 right-4 flex gap-2 z-[60]"
+          style:opacity="0.01"
+          aria-hidden="true"
+        >
+          <button
+            tabindex="-1"
+            data-testid="swipe-left"
+            onclick={() => {
+              if (flipped) {
+                rate(ratings[AGAIN_IDX]);
+              } else {
+                flipped = true;
+                rate(ratings[AGAIN_IDX]);
+              }
+            }}>Unknown</button
           >
-            <button
-              data-testid="swipe-left"
-              onclick={() => {
-                if (flipped) {
-                  rate(ratings[AGAIN_IDX]);
-                } else {
-                  flipped = true;
-                  rate(ratings[AGAIN_IDX]);
-                }
-              }}>Unknown</button
-            >
-            <button
-              data-testid="swipe-right"
-              onclick={() => {
-                if (flipped) {
-                  rate(ratings[EASY_IDX]);
-                } else {
-                  flipped = true;
-                  rate(ratings[EASY_IDX]);
-                }
-              }}>Known</button
-            >
-          </div>
-        {/if}
+          <button
+            tabindex="-1"
+            data-testid="swipe-right"
+            onclick={() => {
+              if (flipped) {
+                rate(ratings[EASY_IDX]);
+              } else {
+                flipped = true;
+                rate(ratings[EASY_IDX]);
+              }
+            }}>Known</button
+          >
+        </div>
       {/if}
     </div>
   </div>
