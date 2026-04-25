@@ -15,6 +15,7 @@ import {
   watchProgress,
 } from "$lib/server/db/schema";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { getKnowledgeGapStats } from "$lib/server/services/knowledge-stats.service";
 
 const DASHBOARD_VIDEO_LIMIT = 12;
 const DEFAULT_TARGET_LANGUAGE = "es";
@@ -134,10 +135,16 @@ export const load = async ({ locals }: RequestEvent) => {
   const videos = rows.map((row) => buildDashboardVideo(row, progressMap));
   const { featuredVideo, continueWatching } = pickFeaturedVideo(videos);
 
+  const knowledgeGap = await getKnowledgeGapStats(
+    session?.user.id,
+    featuredVideo?.targetLang || DEFAULT_TARGET_LANGUAGE,
+  );
+
   return {
     session,
     continueWatching,
     featuredVideo,
     videos,
+    knowledgeGap,
   };
 };

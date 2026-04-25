@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import * as Card from "$lib/components/ui/card";
-  import { CheckCircle2 } from "lucide-svelte";
+  import CheckCircle2 from "lucide-svelte/icons/check-circle-2";
   import { enhance } from "$app/forms";
   import type { PageData, ActionData } from "./$types";
+
   interface Props {
     data: PageData & { initialData: { gameInterval: string } };
     form: ActionData & { errors?: Record<string, string[]> };
@@ -11,26 +10,194 @@
 
   let { data, form }: Props = $props();
 
-  // Writable derived: stays in sync with server data while remaining bindable
   let gameInterval = $derived.by(() => data.initialData.gameInterval);
   let isSubmitting = $state(false);
+
+  // Pre-defined interrupt presets — design uses 5/10/15/Off
+  const intervalPresets: { v: string; label: string }[] = [
+    { v: "5", label: "5 min" },
+    { v: "10", label: "10 min" },
+    { v: "15", label: "15 min" },
+    { v: "20", label: "20 min" },
+    { v: "0", label: "Off" },
+  ];
+
+  // Display data — derive from session.user where possible
+  const displayName = $derived.by(() => {
+    return (
+      data.user?.name ||
+      data.profile?.name ||
+      data.user?.email?.split("@")[0] ||
+      "Notflix user"
+    );
+  });
+  const displayEmail = $derived.by(() => data.user?.email || "");
+  const memberSince = $derived.by(() => {
+    const created = (data.profile as unknown as { createdAt?: Date | string })
+      ?.createdAt;
+    if (!created) return "—";
+    return new Date(created).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+    });
+  });
+  const initials = $derived.by(() => {
+    const n = displayName.trim();
+    if (!n) return "··";
+    const parts = n.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "··";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  });
 </script>
 
-<div class="max-w-4xl mx-auto p-8">
-  <h1 class="text-3xl font-bold text-white mb-8">User Profile</h1>
+<svelte:head>
+  <title>Profile · Notflix</title>
+</svelte:head>
 
-  <Card.Root class="bg-zinc-900 border-zinc-800 shadow-xl">
-    <Card.Header>
-      <Card.Title class="text-xl text-zinc-100 flex items-center gap-2">
-        <span class="w-1 h-6 bg-magenta-600 rounded-full"></span>
-        Game Settings
-      </Card.Title>
-      <Card.Description>
-        Control how often interactive learning challenges appear during
-        playback.
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
+<div class="min-h-screen" style:background="var(--bg)">
+  <div class="max-w-4xl mx-auto" style:padding="40px 60px">
+    <div class="mb-8">
+      <div
+        class="font-mono uppercase"
+        style:font-size="11px"
+        style:color="var(--fg-3)"
+        style:letter-spacing="0.1em"
+      >
+        Account
+      </div>
+      <h1
+        class="font-display"
+        style:font-size="36px"
+        style:font-weight="800"
+        style:letter-spacing="-0.035em"
+        style:margin="6px 0 6px"
+      >
+        Profile & preferences
+      </h1>
+    </div>
+
+    <!-- Identity card -->
+    <div
+      class="rounded-[14px] flex items-center gap-5 mb-5 flex-wrap"
+      style:padding="24px"
+      style:background="var(--surface)"
+      style:border="1px solid var(--line)"
+    >
+      <div
+        class="w-[72px] h-[72px] rounded-full grid place-items-center font-bold text-white shrink-0"
+        style:background="linear-gradient(135deg, var(--brand-hi), var(--brand))"
+        style:font-size="24px"
+      >
+        {initials}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div
+          class="font-display font-bold truncate"
+          style:font-size="22px"
+          style:letter-spacing="-0.02em"
+        >
+          {displayName}
+        </div>
+        <div class="text-[13px] mt-0.5" style:color="var(--fg-2)">
+          {displayEmail} · member since {memberSince}
+        </div>
+        <div class="flex gap-5 mt-3 flex-wrap">
+          <div>
+            <div
+              class="font-mono uppercase"
+              style:font-size="9px"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.1em"
+            >
+              Target language
+            </div>
+            <div
+              class="font-display font-bold mt-0.5"
+              style:font-size="18px"
+              style:letter-spacing="-0.02em"
+            >
+              {(
+                data.profile as unknown as { targetLang?: string }
+              )?.targetLang?.toUpperCase() || "ES"}
+            </div>
+          </div>
+          <div>
+            <div
+              class="font-mono uppercase"
+              style:font-size="9px"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.1em"
+            >
+              Native
+            </div>
+            <div
+              class="font-display font-bold mt-0.5"
+              style:font-size="18px"
+              style:letter-spacing="-0.02em"
+            >
+              {(
+                data.profile as unknown as { nativeLang?: string }
+              )?.nativeLang?.toUpperCase() || "EN"}
+            </div>
+          </div>
+          <div>
+            <div
+              class="font-mono uppercase"
+              style:font-size="9px"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.1em"
+            >
+              Check interval
+            </div>
+            <div
+              class="font-display font-bold mt-0.5"
+              style:font-size="18px"
+              style:letter-spacing="-0.02em"
+              style:color="var(--learn-hi)"
+            >
+              {gameInterval === "0" ? "Off" : `${gameInterval}m`}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game & Watch settings -->
+    <div
+      class="rounded-[14px] mb-4"
+      style:padding="24px"
+      style:background="var(--surface)"
+      style:border="1px solid var(--line)"
+    >
+      <div class="flex items-start gap-3 mb-4">
+        <div
+          style:width="3px"
+          style:height="22px"
+          style:background="var(--brand)"
+          style:border-radius="2px"
+          style:margin-top="2px"
+        ></div>
+        <div>
+          <h3
+            class="font-display font-bold"
+            style:font-size="18px"
+            style:letter-spacing="-0.015em"
+            style:margin="0"
+          >
+            Game & Watch
+          </h3>
+          <p
+            class="text-[13px]"
+            style:color="var(--fg-2)"
+            style:margin="4px 0 0"
+          >
+            Control how often interactive learning challenges interrupt
+            playback. Set to <em>Off</em> for pure cinema mode.
+          </p>
+        </div>
+      </div>
+
       <form
         method="POST"
         action="?/updateInterval"
@@ -41,47 +208,141 @@
             isSubmitting = false;
           };
         }}
-        class="space-y-6"
+        class="flex flex-col gap-4"
       >
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-zinc-300" for="gameInterval">
-            Game Interrupt Interval
-          </label>
-          <select
-            id="gameInterval"
-            name="gameInterval"
-            bind:value={gameInterval}
-            class="w-full max-w-xs bg-black/50 border border-zinc-700 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 appearance-none"
+        <div>
+          <label
+            for="gameInterval"
+            class="text-[12px] font-medium block mb-2"
+            style:color="var(--fg-2)"
           >
-            <option value="0">Off (Netflix Mode)</option>
-            <option value="5">Every 5 Minutes</option>
-            <option value="10">Every 10 Minutes</option>
-            <option value="20">Every 20 Minutes</option>
-          </select>
+            Interrupt interval
+          </label>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {#each intervalPresets as preset (preset.v)}
+              <button
+                type="button"
+                class="rounded-[10px] font-semibold transition-all"
+                style:padding="14px 10px"
+                style:background={gameInterval === preset.v
+                  ? "var(--learn-soft)"
+                  : "var(--bg)"}
+                style:border={gameInterval === preset.v
+                  ? "1px solid var(--learn)"
+                  : "1px solid var(--line-2)"}
+                style:color={gameInterval === preset.v
+                  ? "var(--learn-hi)"
+                  : "var(--fg)"}
+                style:font-size="14px"
+                onclick={() => (gameInterval = preset.v)}
+              >
+                {preset.label}
+              </button>
+            {/each}
+          </div>
+          <input type="hidden" name="gameInterval" value={gameInterval} />
           {#if form?.errors?.gameInterval}
-            <p class="text-sm text-magenta-500">
+            <p class="text-sm mt-2" style:color="var(--hard)">
               {form.errors.gameInterval[0]}
             </p>
           {/if}
         </div>
 
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          class="bg-magenta-600 hover:bg-magenta-700 text-white font-bold px-8"
-        >
-          {isSubmitting ? "Saving..." : "Save Settings"}
-        </Button>
-      </form>
-
-      {#if form?.success}
-        <div
-          class="mt-6 p-4 bg-green-900/20 border border-green-900/50 text-green-400 rounded-lg flex items-center gap-2"
-        >
-          <CheckCircle2 class="h-5 w-5" />
-          Settings saved successfully!
+        <div class="flex gap-3 items-center">
+          <button
+            type="submit"
+            class="nx-btn nx-btn-brand"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving…" : "Save settings"}
+          </button>
+          {#if form?.success}
+            <span
+              class="flex items-center gap-1.5 text-sm"
+              style:color="var(--known)"
+            >
+              <CheckCircle2 class="h-4 w-4" />
+              Saved
+            </span>
+          {/if}
         </div>
-      {/if}
-    </Card.Content>
-  </Card.Root>
+      </form>
+    </div>
+
+    <!-- Subtitle behavior -->
+    <div
+      class="rounded-[14px] mb-4"
+      style:padding="24px"
+      style:background="var(--surface)"
+      style:border="1px solid var(--line)"
+    >
+      <div class="flex items-start gap-3 mb-4">
+        <div
+          style:width="3px"
+          style:height="22px"
+          style:background="var(--brand)"
+          style:border-radius="2px"
+          style:margin-top="2px"
+        ></div>
+        <div>
+          <h3
+            class="font-display font-bold"
+            style:font-size="18px"
+            style:letter-spacing="-0.015em"
+            style:margin="0"
+          >
+            Subtitle behavior
+          </h3>
+          <p
+            class="text-[13px]"
+            style:color="var(--fg-2)"
+            style:margin="4px 0 0"
+          >
+            Defaults that make subtitles feel like part of the film, not a
+            heads-up display.
+          </p>
+        </div>
+      </div>
+
+      {#each [{ label: "Highlight learning words", desc: "Gold-amber pulse on target lemmas", on: true }, { label: "Dim known words", desc: "Reduce visual weight once acquired (Ambient mode)", on: true }, { label: "Hover to pause", desc: "Playback pauses while a word is focused", on: true }, { label: "Auto-translate full sentence", desc: "Display native gloss below foreign line", on: false }] as item, i (i)}
+        <div
+          class="flex items-center justify-between"
+          style:padding="12px 0"
+          style:border-bottom={i < 3 ? "1px solid var(--line)" : "none"}
+        >
+          <div>
+            <div class="text-sm font-medium">{item.label}</div>
+            <div class="text-[12px] mt-0.5" style:color="var(--fg-2)">
+              {item.desc}
+            </div>
+          </div>
+          <span
+            class="rounded-full inline-block relative transition-colors"
+            style:width="38px"
+            style:height="22px"
+            style:background={item.on ? "var(--brand)" : "var(--surface-2)"}
+          >
+            <span
+              class="absolute rounded-full bg-white transition-all"
+              style:top="2px"
+              style:left={item.on ? "18px" : "2px"}
+              style:width="18px"
+              style:height="18px"
+            ></span>
+          </span>
+        </div>
+      {/each}
+    </div>
+
+    <!-- About -->
+    <div
+      class="font-mono mt-8 text-center"
+      style:font-size="11px"
+      style:color="var(--fg-3)"
+      style:letter-spacing="0.06em"
+    >
+      Notflix runs entirely on your machine. No telemetry · no analytics ·
+      vocabulary stays local.
+    </div>
+  </div>
 </div>

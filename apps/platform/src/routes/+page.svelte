@@ -1,133 +1,517 @@
 <script lang="ts">
-  import { Play, Info, Plus } from "lucide-svelte";
-  import { base } from "$app/paths";
+  import { resolve } from "$app/paths";
+  import Play from "lucide-svelte/icons/play";
+  import Info from "lucide-svelte/icons/info";
+  import Plus from "lucide-svelte/icons/plus";
+  import ArrowRight from "lucide-svelte/icons/arrow-right";
+  import ComprehensionRing from "$lib/components/brand/ComprehensionRing.svelte";
+  import Poster from "$lib/components/brand/Poster.svelte";
+  import Chip from "$lib/components/brand/Chip.svelte";
+  import RailHeader from "$lib/components/brand/RailHeader.svelte";
+  import type { DashboardVideo } from "$lib/server/services/dashboard-metrics";
+  import type {
+    KnowledgeGapStats,
+    ReadyLemma,
+  } from "$lib/server/services/knowledge-stats.service";
 
-  // Placeholder data for the "Trending" section
-  const TRENDING = [
-    { title: "Cyber Dreams", category: "Sci-Fi", color: "bg-blue-500" },
-    {
-      title: "The Last Algorithm",
-      category: "Thriller",
-      color: "bg-purple-500",
-    },
-    { title: "Neon Nights", category: "Documentary", color: "bg-pink-500" },
-    { title: "Binary Love", category: "Romance", color: "bg-red-500" },
-    { title: "Zero Day", category: "Action", color: "bg-green-500" },
-    { title: "Cloud City", category: "Drama", color: "bg-yellow-500" },
-  ];
+  let { data } = $props<{
+    data: {
+      featuredVideo: DashboardVideo | null;
+      continueWatching: DashboardVideo | null;
+      videos: DashboardVideo[];
+      knowledgeGap: KnowledgeGapStats;
+    };
+  }>();
+
+  // Stable hue per video id (so the gradient feels intentional, not random)
+  function hueOf(id: string): number {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return h % 360;
+  }
+
+  function fmtTimeRemaining(v: DashboardVideo): string {
+    const totalMin = Math.max(1, Math.round((v.watchDuration || 0) / 60));
+    const watchedMin = Math.round((v.watchSeconds || 0) / 60);
+    const remaining = Math.max(0, totalMin - watchedMin);
+    return remaining > 0 ? `${remaining}m left` : `${totalMin}m`;
+  }
+
+  function fmtTimestamp(s: number): string {
+    const total = Math.max(0, Math.floor(s));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    return [h, m, sec].map((n) => n.toString().padStart(2, "0")).join(":");
+  }
+
+  function isReady(v: DashboardVideo): boolean {
+    return v.status === "COMPLETED" || v.status === "completed";
+  }
+
+  function variantFor(v: DashboardVideo, i: number): "art" | "placeholder" {
+    return (hueOf(v.id) + i) % 3 === 0 ? "art" : "placeholder";
+  }
+
+  const featured = $derived(data.featuredVideo ?? data.videos[0] ?? null);
+  const featuredHue = $derived(featured ? hueOf(featured.id) : 18);
+  const featuredComp = $derived(featured?.comprehensionPercent ?? 92);
+
+  // Rails — split videos into "keep going" (in-progress) and "fresh"
+  const keepGoing = $derived(
+    data.videos
+      .filter(
+        (v: DashboardVideo) =>
+          v.watchPercent > 0 && v.watchPercent < 100 && isReady(v),
+      )
+      .slice(0, 4),
+  );
+  const fresh = $derived(
+    data.videos
+      .filter((v: DashboardVideo) => v.watchPercent === 0 && isReady(v))
+      .slice(0, 5),
+  );
+  const showRailFallback = $derived(
+    keepGoing.length === 0 && fresh.length === 0,
+  );
+
+  const lemmaTrend = $derived(
+    data.knowledgeGap?.trend?.map((p: { count: number }) => p.count) || [],
+  );
+  const todaysLemmas = $derived<ReadyLemma[]>(
+    data.knowledgeGap?.readyLemmas || [],
+  );
+  const knownCount = $derived(data.knowledgeGap?.knownCount || 0);
+  const trendMax = $derived(Math.max(...lemmaTrend, 1));
 </script>
 
-<div class="relative min-h-[calc(100vh-4rem)] flex flex-col">
-  <!-- Hero Section -->
-  <section
-    class="relative h-[70vh] w-full flex items-center justify-center overflow-hidden pb-12 sm:pb-0"
-  >
-    <!-- Background Glow/Image Placeholder -->
-    <div
-      class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-transparent z-10"
-    ></div>
-    <div
-      class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-neutral-950 to-neutral-950 z-0"
-    ></div>
+<svelte:head>
+  <title>Notflix · Cinema for language learners</title>
+</svelte:head>
 
-    <!-- Hero Content -->
-    <div class="relative z-20 text-center max-w-4xl mx-auto px-4">
-      <span
-        class="inline-block py-1 px-3 rounded-full bg-red-500/10 text-red-500 text-xs font-bold tracking-wider mb-6 border border-red-500/20 uppercase"
-      >
-        AI-Generated Streaming
-      </span>
-      <h1
-        class="text-5xl md:text-7xl font-extrabold tracking-tighter text-white mb-6 leading-tight"
-      >
-        Unlimited Movies, <br />
-        <span
-          class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500"
-          >Zero Humans.</span
-        >
-      </h1>
-      <h3 class="sr-only">Notflix - AI-Powered Entertainment</h3>
-      <p class="text-lg md:text-xl text-zinc-400 mb-10 max-w-2xl mx-auto">
-        Experience the next generation of entertainment. Content generated
-        entirely by artificial intelligence, tailored just for you.
-      </p>
+<div class="relative min-h-[calc(100vh-60px)]" style:background="var(--bg)">
+  {#if featured}
+    <!-- ──────────────────────────────────────────────────────────────────
+         Hero band — gradient + glow + paused-at card + CTAs
+         ────────────────────────────────────────────────────────────────── -->
+    <section class="relative overflow-hidden" style:height="520px">
+      <div
+        class="absolute inset-0"
+        style:background={`linear-gradient(155deg, oklch(0.34 0.14 ${featuredHue}) 0%, oklch(0.16 0.08 ${featuredHue}) 60%, var(--bg) 100%)`}
+      ></div>
+      <div
+        class="absolute inset-0"
+        style:background="radial-gradient(ellipse at 70% 30%,
+        rgba(255,255,255,0.10), transparent 55%)"
+      ></div>
+      <div
+        class="absolute inset-0"
+        style:background="linear-gradient(180deg, transparent 0%, transparent
+        50%, var(--bg) 100%)"
+      ></div>
 
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <!-- eslint-disable svelte/no-navigation-without-resolve -->
-        <a
-          href="{base}/studio"
-          class="flex items-center gap-2 bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-zinc-200 transition-colors w-full sm:w-auto justify-center"
-        >
-          <Play class="h-5 w-5 fill-current" />
-          Start Watching
-        </a>
-        <!-- eslint-enable svelte/no-navigation-without-resolve -->
-        <button
-          onclick={() =>
-            document
-              .getElementById("trending")
-              ?.scrollIntoView({ behavior: "smooth" })}
-          class="flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-8 py-3 rounded-full font-bold hover:bg-white/20 transition-colors w-full sm:w-auto justify-center"
-        >
-          <Info class="h-5 w-5" />
-          More Info
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Trending Section -->
-  <section class="px-4 sm:px-6 lg:px-8 -mt-8 md:-mt-20 relative z-30 pb-20">
-    <h2 id="trending" class="text-2xl font-bold text-white mb-6">
-      Trending Now
-    </h2>
-
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      {#each TRENDING as item, i (item.title)}
-        <div
-          class="group relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-900 cursor-pointer border border-white/5 hover:border-white/20 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-red-900/20 hover:z-10"
-        >
-          <!-- Image Placeholder -->
-          <div
-            class="absolute inset-0 {item.color} opacity-20 group-hover:opacity-30 transition-opacity"
-          ></div>
-          <div class="absolute inset-0 flex items-center justify-center">
+      <div class="relative z-[2] px-6 lg:px-[60px] pt-20 max-w-[720px]">
+        <div class="flex items-center gap-2.5 mb-5">
+          {#if data.continueWatching}
+            <Chip variant="brand">Continue watching</Chip>
             <span
-              class="text-4xl font-black text-white/10 group-hover:text-white/30 transition-colors"
-              >{i + 1}</span
+              class="font-mono text-[11px] uppercase"
+              style:color="var(--fg-2)"
+              style:letter-spacing="0.08em"
             >
+              {fmtTimeRemaining(featured)}
+            </span>
+          {:else}
+            <Chip variant="brand">Featured tonight</Chip>
+            <span
+              class="font-mono text-[11px] uppercase"
+              style:color="var(--fg-2)"
+              style:letter-spacing="0.08em"
+            >
+              Curated for B1 Spanish
+            </span>
+          {/if}
+        </div>
+
+        <h1
+          class="font-display"
+          style:font-size="clamp(44px, 6vw, 68px)"
+          style:font-weight="800"
+          style:letter-spacing="-0.035em"
+          style:line-height="0.95"
+          style:margin="0"
+        >
+          {featured.title}
+        </h1>
+
+        <p
+          class="text-[17px] leading-[1.55] mt-5 max-w-[520px]"
+          style:color="var(--fg-2)"
+        >
+          A subtitled journey through {featured.targetLang?.toUpperCase() ||
+            "Spanish"} cinema — Notflix tracks every word you know and quietly fills
+          the gaps.
+        </p>
+
+        <!-- Comprehension card -->
+        <div
+          class="flex items-center gap-7 mt-7 max-w-[560px] rounded-[14px]"
+          style:padding="16px 20px"
+          style:background="rgba(0,0,0,0.40)"
+          style:backdrop-filter="blur(10px)"
+          style:border="1px solid var(--line)"
+        >
+          <ComprehensionRing value={featuredComp} size={56} stroke={4} pulse />
+          <div class="flex flex-col gap-1 flex-1 min-w-0">
+            <div
+              class="font-mono text-[10px] uppercase"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.1em"
+            >
+              Comprehension estimate
+            </div>
+            <div class="text-[15px]" style:color="var(--fg)">
+              <strong>{Math.round(featuredComp)}%</strong> of words are already known
+            </div>
+            <div class="text-xs" style:color="var(--fg-2)">
+              · {featured.targetLang?.toUpperCase() || "ES"} → EN ·
+              {data.continueWatching
+                ? "Resume where you paused"
+                : "Ready to play"}
+            </div>
           </div>
-
-          <!-- Hover Overlay -->
           <div
-            class="absolute inset-0 bg-gradient-to-t from-black via-black/0 to-transparent opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4"
-          >
-            <h3 class="font-bold text-white text-lg leading-none mb-1">
-              {item.title}
-            </h3>
-            <p class="text-xs text-zinc-300 flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-              {item.category}
-            </p>
-
-            <div class="flex items-center gap-2 mt-3">
-              <!-- eslint-disable svelte/no-navigation-without-resolve -->
-              <a
-                href="{base}/studio"
-                class="p-2 rounded-full bg-white text-black hover:bg-zinc-200 transition-colors inline-flex"
-              >
-                <Play class="h-3 w-3 fill-current" />
-              </a>
-              <!-- eslint-enable svelte/no-navigation-without-resolve -->
-              <button
-                class="p-2 rounded-full border border-zinc-500 text-white hover:bg-white/10 transition-colors"
-              >
-                <Plus class="h-3 w-3" />
-              </button>
+            style:width="1px"
+            style:height="40px"
+            style:background="var(--line-2)"
+          ></div>
+          <div class="hidden sm:block">
+            <div
+              class="font-mono text-[10px] uppercase"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.1em"
+            >
+              {data.continueWatching ? "Paused at" : "Runtime"}
+            </div>
+            <div class="font-mono text-xl font-semibold mt-0.5">
+              {fmtTimestamp(
+                featured.watchSeconds || featured.watchDuration || 0,
+              )}
             </div>
           </div>
         </div>
-      {/each}
-    </div>
-  </section>
+
+        <div class="flex gap-3 mt-7 flex-wrap">
+          <a
+            href={resolve("/watch/[id]", { id: featured.id })}
+            class="nx-btn nx-btn-primary"
+          >
+            <Play class="h-4 w-4 fill-current" />
+            {data.continueWatching ? "Resume watching" : "Start watching"}
+          </a>
+          <button class="nx-btn nx-btn-ghost">
+            <Info class="h-4 w-4" />
+            Episode details
+          </button>
+          <button
+            class="nx-btn nx-btn-ghost"
+            style:padding="10px 14px"
+            aria-label="Add to watchlist"
+          >
+            <Plus class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Corner poster -->
+      <div
+        class="hidden lg:block absolute right-[60px] top-[120px] w-[240px] h-[340px] rounded-xl overflow-hidden z-[2]"
+        style:box-shadow="var(--shadow-lg)"
+        style:border="1px solid var(--line)"
+      >
+        <Poster
+          title={featured.title}
+          id={featured.id}
+          hue={featuredHue}
+          variant="art"
+        />
+      </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────────────────────────────
+         Keep going rail
+         ────────────────────────────────────────────────────────────────── -->
+    {#if keepGoing.length > 0}
+      <section class="px-6 lg:px-[60px] pb-10">
+        <RailHeader title="Keep going" subtitle="Resume where you left off" />
+        <div
+          class="grid gap-4"
+          style:grid-template-columns="repeat(auto-fill, minmax(260px, 1fr))"
+        >
+          {#each keepGoing as v, i (v.id)}
+            <a
+              href={resolve("/watch/[id]", { id: v.id })}
+              class="group block rounded-xl overflow-hidden cursor-pointer transition-transform hover:-translate-y-0.5"
+              style:border="1px solid var(--line)"
+              style:background="var(--surface)"
+            >
+              <div class="relative aspect-video">
+                <Poster
+                  title={v.title}
+                  id={v.id}
+                  hue={hueOf(v.id)}
+                  variant={variantFor(v, i)}
+                />
+                <div
+                  class="absolute inset-0"
+                  style:background="linear-gradient(180deg, transparent 50%,
+                  rgba(0,0,0,0.85))"
+                ></div>
+                <div class="absolute left-3.5 right-3.5 bottom-2.5">
+                  <div
+                    class="font-bold text-[15px]"
+                    style:letter-spacing="-0.01em"
+                  >
+                    {v.title}
+                  </div>
+                  <div class="text-[11px] mt-0.5" style:color="var(--fg-2)">
+                    {v.targetLang?.toUpperCase() || "ES"} · {fmtTimeRemaining(
+                      v,
+                    )}
+                  </div>
+                </div>
+                <div class="absolute top-2.5 right-2.5">
+                  <ComprehensionRing
+                    value={v.comprehensionPercent ?? 0}
+                    size={34}
+                    stroke={2.5}
+                  />
+                </div>
+                <!-- progress bar -->
+                <div
+                  class="absolute bottom-0 left-0 right-0"
+                  style:height="3px"
+                  style:background="rgba(255,255,255,0.12)"
+                >
+                  <div
+                    class="h-full"
+                    style:background="var(--brand-hi)"
+                    style:width="{v.watchPercent}%"
+                  ></div>
+                </div>
+              </div>
+            </a>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    <!-- ──────────────────────────────────────────────────────────────────
+         Curated for your level (cozy 5/row)
+         ────────────────────────────────────────────────────────────────── -->
+    {#if fresh.length > 0}
+      <section class="px-6 lg:px-[60px] pb-14">
+        <RailHeader
+          title="Curated for your level"
+          subtitle={`${featured.targetLang?.toUpperCase() || "ES"} · gap-filled selections`}
+        />
+        <div
+          class="grid gap-3.5"
+          style:grid-template-columns="repeat(auto-fill, minmax(180px, 1fr))"
+        >
+          {#each fresh as v, i (v.id)}
+            <a
+              href={resolve("/watch/[id]", { id: v.id })}
+              class="block group cursor-pointer"
+            >
+              <div
+                class="relative rounded-[10px] overflow-hidden aspect-[2/3] transition-transform group-hover:-translate-y-0.5"
+                style:border="1px solid var(--line)"
+                style:background="var(--surface)"
+              >
+                <Poster
+                  title={v.title}
+                  id={v.id}
+                  hue={hueOf(v.id)}
+                  variant={variantFor(v, i)}
+                />
+                {#if v.comprehensionPercent !== null}
+                  <div class="absolute top-2 left-2">
+                    <span
+                      class="chip learn"
+                      style:padding="3px 7px"
+                      style:font-size="9px"
+                    >
+                      {Math.round(v.comprehensionPercent)}% comp
+                    </span>
+                  </div>
+                {/if}
+              </div>
+              <div class="mt-2.5">
+                <div class="text-[13px] font-semibold truncate">{v.title}</div>
+                <div class="text-[11px] mt-0.5" style:color="var(--fg-3)">
+                  {v.targetLang?.toUpperCase() || "ES"} · {v.views}
+                  {v.views === 1 ? "view" : "views"}
+                </div>
+              </div>
+            </a>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    {#if showRailFallback}
+      <section class="px-6 lg:px-[60px] pb-14">
+        <div
+          class="rounded-[14px] p-10 text-center"
+          style:background="var(--surface)"
+          style:border="1px solid var(--line)"
+        >
+          <div
+            class="font-mono text-[10px] uppercase mb-3"
+            style:color="var(--fg-3)"
+            style:letter-spacing="0.12em"
+          >
+            Your library is empty
+          </div>
+          <div class="font-display text-2xl font-bold mb-2">
+            Upload a video to begin
+          </div>
+          <p class="text-sm mb-5" style:color="var(--fg-2)">
+            Notflix transcribes, analyzes, and translates the words you don't
+            know — locally.
+          </p>
+          <a href={resolve("/studio/upload")} class="nx-btn nx-btn-brand">
+            Upload first video <ArrowRight class="h-4 w-4" />
+          </a>
+        </div>
+      </section>
+    {/if}
+
+    <!-- ──────────────────────────────────────────────────────────────────
+         Knowledge gap panel
+         ────────────────────────────────────────────────────────────────── -->
+    {#if todaysLemmas.length > 0 || lemmaTrend.length > 0}
+      <section class="px-6 lg:px-[60px] pb-20">
+        <RailHeader
+          title="Your knowledge gap · this week"
+          subtitle={`${todaysLemmas.filter((l) => l.state === "learn").length} learning · ${todaysLemmas.filter((l) => l.state === "hard").length} hard`}
+        />
+        <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-5">
+          <div
+            class="rounded-[14px] p-6"
+            style:background="var(--surface)"
+            style:border="1px solid var(--line)"
+          >
+            <div
+              class="font-mono text-[10px] uppercase"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.12em"
+            >
+              Lemma acquisition · last 14 days
+            </div>
+            {#if lemmaTrend.length > 0}
+              <div class="flex items-end gap-1 mt-4" style:height="90px">
+                {#each lemmaTrend as v, i (i)}
+                  <div
+                    class="flex-1 rounded-[2px]"
+                    style:height="{(v / trendMax) * 80}px"
+                    style:min-height="3px"
+                    style:background={i === lemmaTrend.length - 1
+                      ? "var(--brand-hi)"
+                      : "var(--surface-2)"}
+                  ></div>
+                {/each}
+              </div>
+              <div class="flex justify-between mt-3.5">
+                <span class="font-mono text-[10px]" style:color="var(--fg-3)"
+                  >14d ago</span
+                >
+                <span class="font-mono text-[10px]" style:color="var(--fg-3)"
+                  >today</span
+                >
+              </div>
+            {:else}
+              <div class="mt-4 text-sm" style:color="var(--fg-3)">
+                No processing activity yet — upload a video to start tracking.
+              </div>
+            {/if}
+          </div>
+
+          <div
+            class="rounded-[14px] p-6 flex flex-col gap-3.5"
+            style:background="var(--surface)"
+            style:border="1px solid var(--line)"
+          >
+            <div
+              class="font-mono text-[10px] uppercase"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.12em"
+            >
+              Today's ready lemmas
+            </div>
+            {#if todaysLemmas.length > 0}
+              <div class="flex flex-wrap gap-2">
+                {#each todaysLemmas as l (l.word)}
+                  <Chip
+                    variant={l.state === "hard" ? "hard" : "learn"}
+                    class="!normal-case !text-xs"
+                  >
+                    <span style:font-family="var(--font-sans)">{l.word}</span>
+                  </Chip>
+                {/each}
+              </div>
+            {:else}
+              <div class="text-sm" style:color="var(--fg-3)">
+                No new lemmas to review yet.
+              </div>
+            {/if}
+            <div class="mt-auto flex justify-between items-center">
+              <span class="text-xs" style:color="var(--fg-2)">
+                <strong style:color="var(--fg)">{knownCount}</strong> known ·
+                <strong style:color="var(--learn-hi)"
+                  >{todaysLemmas.length}</strong
+                > ready
+              </span>
+              <a
+                href={resolve("/vocabulary")}
+                class="nx-btn nx-btn-ghost"
+                style:padding="6px 12px"
+                style:font-size="12px"
+              >
+                Review <ArrowRight class="h-3 w-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    {/if}
+  {:else}
+    <!-- Empty library state -->
+    <section
+      class="min-h-[calc(100vh-60px)] flex items-center justify-center px-6 atmo-grid"
+    >
+      <div class="absolute inset-0 atmo-glow pointer-events-none"></div>
+      <div class="relative z-10 max-w-[520px] text-center">
+        <Chip variant="brand">Welcome to Notflix</Chip>
+        <h1
+          class="font-display mt-5 mb-4"
+          style:font-size="48px"
+          style:font-weight="800"
+          style:letter-spacing="-0.03em"
+          style:line-height="1.05"
+        >
+          Your library is empty —<br />
+          let's begin.
+        </h1>
+        <p class="text-base mb-7" style:color="var(--fg-2)">
+          Upload a video in any language and Notflix will transcribe it, find
+          your word gaps, and turn them into flashcards.
+        </p>
+        <a href={resolve("/studio/upload")} class="nx-btn nx-btn-brand">
+          Upload first video <ArrowRight class="h-4 w-4" />
+        </a>
+      </div>
+    </section>
+  {/if}
 </div>

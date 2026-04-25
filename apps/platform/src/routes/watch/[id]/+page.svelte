@@ -1,10 +1,16 @@
 <script lang="ts">
   import GameOverlay from "$lib/components/GameOverlay.svelte";
+  import SubtitleDisplay from "$lib/components/player/SubtitleDisplay.svelte";
+  import ComprehensionRing from "$lib/components/brand/ComprehensionRing.svelte";
+  import Chip from "$lib/components/brand/Chip.svelte";
   import { onMount } from "svelte";
-  import { base } from "$app/paths";
-  import { Button } from "$lib/components/ui/button";
-  import { ChevronLeft } from "lucide-svelte";
+  import { base, resolve } from "$app/paths";
+  import ChevronLeft from "lucide-svelte/icons/chevron-left";
+  import FileText from "lucide-svelte/icons/file-text";
+  import Settings from "lucide-svelte/icons/settings";
+  import Sparkles from "lucide-svelte/icons/sparkles";
   import { GAME } from "$lib/constants";
+  import type { Subtitle, SubtitleMode } from "$lib/components/player/types";
 
   type GameCard = {
     lemma: string;
@@ -18,11 +24,9 @@
 
   type HeatmapSegment = { start: number; end: number; type: string };
 
-  const HEATMAP_COLOR_EASY = "rgba(34, 197, 94, 0.5)";
-  const HEATMAP_COLOR_LEARNING = "rgba(234, 179, 8, 0.8)";
-  const HEATMAP_COLOR_HARD = "rgba(192, 38, 211, 0.5)"; // Magenta 600-ish
   const SECONDS_IN_MINUTE = 60;
   const PLAY_FAILED_MSG = "Play failed:";
+  const HEATMAP_SEGMENTS = 12;
 
   let { data } = $props();
 
@@ -32,6 +36,16 @@
   let chunkIndex = $state(0);
   let nextInterruptTime = $state(Infinity);
   let interruptInFlight = $state(false);
+  let currentTime = $state(0);
+  let duration = $state(1);
+  let subtitleMode = $state<SubtitleMode>("FILTERED");
+
+  const parsedSubtitles: Subtitle[] = data.subtitles || [];
+  const currentSubtitle = $derived(
+    parsedSubtitles.find(
+      (sub) => currentTime >= sub.start && currentTime < sub.end,
+    ) || null,
+  );
 
   const intervalSeconds = $derived(
     (data.gameInterval || GAME.DEFAULT_INTERVAL_MINUTES) * SECONDS_IN_MINUTE,
@@ -80,12 +94,7 @@
 
   onMount(() => {
     initNextInterrupt();
-    console.log(
-      `[Client] Inited. Interval: ${intervalSeconds}s, Next: ${nextInterruptTime}s`,
-    );
-
-    // E2E test hook: directly inject game overlay state to bypass
-    // Svelte 5's event system AND the fetch/route-interception chain
+    // E2E test hook
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__e2eTriggerGameInterrupt = (cards: GameCard[]) => {
       gameCards = cards;
@@ -95,18 +104,13 @@
   });
 
   async function handleTimeUpdate() {
-    if (
-      !videoElement ||
-      showOverlay ||
-      intervalSeconds === 0 ||
-      interruptInFlight
-    )
-      return;
-    if (videoElement.currentTime < nextInterruptTime) return;
+    if (!videoElement || showOverlay || interruptInFlight) return;
+    currentTime = videoElement.currentTime;
+    duration = videoElement.duration || 1;
 
-    console.log(
-      `[Client] Interrupt Triggered! Time: ${videoElement.currentTime} >= ${nextInterruptTime}`,
-    );
+    if (intervalSeconds === 0) return;
+    if (currentTime < nextInterruptTime) return;
+
     interruptInFlight = true;
     videoElement.pause();
     try {
@@ -129,10 +133,6 @@
     isKnown: boolean;
   }) {
     if (answer.isKnown) {
-      console.log(
-        "Marking word as known securely from root view layer:",
-        answer.lemma,
-      );
       fetch(`${base}/api/words/known`, {
         method: "POST",
         body: JSON.stringify({
@@ -143,64 +143,150 @@
     }
   }
 
-  function drawHeatmap(canvas: HTMLCanvasElement, heatmap: HeatmapSegment[]) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  // Build a 12-bucket heatmap from the raw segment list. Quantising to chunky
+  // segments reads as "chapters with personality" instead of pixel noise.
+  function buildHeatmapBuckets(
+    heatmap: HeatmapSegment[],
+    totalDuration: number,
+  ): Array<"easy" | "learn" | "hard" | "empty"> {
+    const buckets: Array<"easy" | "learn" | "hard" | "empty"> =
+      Array(HEATMAP_SEGMENTS).fill("empty");
+    if (!heatmap || heatmap.length === 0 || totalDuration <= 0) return buckets;
+    const bucketSize = totalDuration / HEATMAP_SEGMENTS;
 
-    const duration = data.video?.duration || 1;
-    const width = canvas.width;
-    const height = canvas.height;
-
-    ctx.clearRect(0, 0, width, height);
+    const counts: { easy: number; learn: number; hard: number }[] = Array.from(
+      { length: HEATMAP_SEGMENTS },
+      () => ({ easy: 0, learn: 0, hard: 0 }),
+    );
 
     for (const seg of heatmap) {
-      const startX = (seg.start / duration) * width;
-      const w = ((seg.end - seg.start) / duration) * width;
-
-      if (seg.type === "EASY") ctx.fillStyle = HEATMAP_COLOR_EASY;
-      else if (seg.type === "LEARNING") ctx.fillStyle = HEATMAP_COLOR_LEARNING;
-      else ctx.fillStyle = HEATMAP_COLOR_HARD;
-
-      ctx.fillRect(startX, 0, w, height);
+      const idx = Math.min(
+        HEATMAP_SEGMENTS - 1,
+        Math.floor(seg.start / bucketSize),
+      );
+      const weight = Math.max(0.1, seg.end - seg.start);
+      if (seg.type === "EASY") counts[idx].easy += weight;
+      else if (seg.type === "LEARNING") counts[idx].learn += weight;
+      else counts[idx].hard += weight;
     }
 
-    return {
-      update(newHeatmap: HeatmapSegment[]) {
-        drawHeatmap(canvas, newHeatmap);
-      },
-    };
+    for (let i = 0; i < HEATMAP_SEGMENTS; i++) {
+      const c = counts[i];
+      const max = Math.max(c.easy, c.learn, c.hard);
+      if (max === 0) buckets[i] = "empty";
+      else if (max === c.hard) buckets[i] = "hard";
+      else if (max === c.learn) buckets[i] = "learn";
+      else buckets[i] = "easy";
+    }
+    return buckets;
+  }
+
+  const totalDuration = $derived(
+    duration > 1 ? duration : data.video?.duration || 1,
+  );
+  const heatmapBuckets = $derived(
+    buildHeatmapBuckets(data.heatmap || [], totalDuration),
+  );
+  const playheadIdx = $derived(
+    Math.min(
+      HEATMAP_SEGMENTS - 1,
+      Math.floor((currentTime / totalDuration) * HEATMAP_SEGMENTS),
+    ),
+  );
+
+  // Comprehension estimate from heatmap composition
+  const comprehensionEstimate = $derived.by(() => {
+    if (!data.heatmap || data.heatmap.length === 0) return 0;
+    let easy = 0,
+      learn = 0,
+      hard = 0;
+    for (const s of data.heatmap) {
+      const w = s.end - s.start;
+      if (s.type === "EASY") easy += w;
+      else if (s.type === "LEARNING") learn += w;
+      else hard += w;
+    }
+    const total = easy + learn + hard;
+    if (total === 0) return 0;
+    return Math.round(((easy * 1 + learn * 0.7 + hard * 0.3) / total) * 100);
+  });
+
+  const nextInterruptCountdown = $derived.by(() => {
+    if (intervalSeconds === 0 || nextInterruptTime === Infinity) return null;
+    const remaining = Math.max(0, nextInterruptTime - currentTime);
+    const min = Math.floor(remaining / 60);
+    const sec = Math.floor(remaining % 60);
+    return `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+  });
+
+  function cycleSubtitleMode() {
+    const modes: SubtitleMode[] = ["OFF", "FILTERED", "DUAL", "ORIGINAL"];
+    const idx = modes.indexOf(subtitleMode);
+    subtitleMode = modes[(idx + 1) % modes.length];
   }
 </script>
 
-<div class="min-h-screen bg-black text-white pb-20">
-  <!-- Header/Nav -->
+<div class="min-h-screen pb-20" style:background="var(--bg)">
+  <!-- Header strip — minimal, sticky -->
   <div
-    class="p-4 flex items-center gap-4 border-b border-white/10 bg-zinc-950/50 sticky top-0 z-50 backdrop-blur-md"
+    class="sticky top-0 z-30 flex items-center gap-4 px-6 py-3.5"
+    style:border-bottom="1px solid var(--line)"
+    style:background="rgba(0,0,0,0.55)"
+    style:backdrop-filter="blur(14px)"
   >
-    <Button
-      variant="ghost"
-      size="icon"
-      href="{base}/studio"
-      class="text-zinc-400 hover:text-white"
+    <a
+      href={resolve("/studio")}
+      class="w-9 h-9 rounded-full grid place-items-center hover:bg-white/5 transition-colors"
+      style:color="var(--fg-2)"
+      aria-label="Back to studio"
     >
-      <ChevronLeft class="h-6 w-6" />
-    </Button>
+      <ChevronLeft class="h-5 w-5" />
+    </a>
+
     {#if data.video}
-      <div>
-        <h1 class="font-bold text-lg leading-none">
+      <div class="flex-1 min-w-0">
+        <h1
+          class="font-display font-bold leading-none truncate"
+          style:font-size="18px"
+          style:letter-spacing="-0.025em"
+        >
           {data.video.title}
         </h1>
-        <p class="text-xs text-zinc-500 mt-1">
-          Watching in {data.video.targetLang?.toUpperCase() || "ES"}
+        <p
+          class="text-[11px] mt-1 font-mono uppercase"
+          style:color="var(--fg-3)"
+          style:letter-spacing="0.08em"
+        >
+          {data.video.targetLang?.toUpperCase() || "ES"} → EN ·
+          {data.heatmap?.length || 0} segments analyzed
         </p>
       </div>
+
+      <Chip variant="learn" dot>Live transcript</Chip>
+
+      {#if parsedSubtitles.length > 0}
+        <button
+          class="nx-btn nx-btn-ghost"
+          style:padding="5px 10px"
+          style:font-size="11px"
+          onclick={cycleSubtitleMode}
+          title="Cycle subtitle mode"
+        >
+          CC: {subtitleMode}
+        </button>
+      {/if}
     {/if}
   </div>
 
   <div class="max-w-6xl mx-auto p-4 lg:p-8">
     {#if data.video}
+      <!-- Video frame -->
       <div
-        class="group relative aspect-video bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
+        class="group relative aspect-video rounded-2xl overflow-hidden"
+        style:background="linear-gradient(155deg, oklch(0.22 0.08 18),
+        oklch(0.09 0.04 18))"
+        style:box-shadow="0 30px 80px -20px rgba(0,0,0,0.8)"
+        style:border="1px solid var(--line)"
       >
         <!-- svelte-ignore a11y_media_has_caption -->
         <video
@@ -217,7 +303,6 @@
             srclang={data.video.targetLang || "es"}
             label="Native ({data.video.targetLang?.toUpperCase() || 'ES'})"
             src="{base}/api/videos/{data.video.id}/subtitles?mode=native"
-            default
           />
           <track
             kind="subtitles"
@@ -233,11 +318,34 @@
           />
         </video>
 
-        {#if showOverlay}
-          <div
-            class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
-            data-testid="game-overlay"
+        {#if parsedSubtitles.length > 0}
+          <SubtitleDisplay
+            subtitle={currentSubtitle}
+            mode={subtitleMode}
+            videoTargetLang={data.video.targetLang || "es"}
+            onPauseRequest={() => videoElement?.pause()}
+            onResumeRequest={() =>
+              videoElement
+                ?.play()
+                .catch((err) => console.error(PLAY_FAILED_MSG, err))}
+          />
+        {/if}
+
+        <!-- Frame chip overlay -->
+        <div class="absolute top-4 left-4 flex gap-2 pointer-events-none">
+          <span
+            class="chip"
+            style:background="rgba(0,0,0,0.6)"
+            style:border="1px solid rgba(255,255,255,0.15)"
           >
+            <span class="font-mono"
+              >{data.video.id?.slice(0, 8)?.toUpperCase()}</span
+            >
+          </span>
+        </div>
+
+        {#if showOverlay}
+          <div class="absolute inset-0 z-50" data-testid="game-overlay">
             <GameOverlay
               cards={gameCards}
               onComplete={handleGameComplete}
@@ -247,103 +355,249 @@
         {/if}
       </div>
 
-      <!-- Heatmap Visualization (Canvas) -->
-      {#if data.heatmap && data.heatmap.length > 0 && videoElement}
-        <!-- Canvas container -->
-        <div
-          class="mt-4 h-4 w-full bg-zinc-800 rounded-full overflow-hidden relative"
-        >
-          <canvas
-            width="1000"
-            height="16"
-            class="w-full h-full block"
-            use:drawHeatmap={data.heatmap}
-          ></canvas>
-        </div>
+      <!-- 12-segment chunky heatmap with playhead and "next check" marker -->
+      {#if heatmapBuckets.length > 0}
+        <div class="mt-5">
+          <div class="flex items-center justify-between mb-2">
+            <span
+              class="font-mono text-[10px] uppercase"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.12em"
+            >
+              Difficulty heatmap · {HEATMAP_SEGMENTS} chapters
+            </span>
+            <div class="flex gap-3 text-[11px]" style:color="var(--fg-2)">
+              <span class="flex items-center gap-1.5">
+                <span
+                  class="w-2 h-2 rounded-full"
+                  style:background="var(--known)"
+                ></span>
+                Known
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span
+                  class="w-2 h-2 rounded-full"
+                  style:background="var(--learn)"
+                ></span>
+                Learning
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span
+                  class="w-2 h-2 rounded-full"
+                  style:background="var(--hard)"
+                ></span>
+                Hard
+              </span>
+            </div>
+          </div>
 
-        <div class="flex justify-between text-xs text-zinc-500 mt-1">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-            Easy (Known)
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
-            Learning (Target)
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 bg-magenta-500 rounded-full"></div>
-            Hard (Too many unknowns)
-          </div>
+          <button
+            type="button"
+            class="relative w-full h-3 flex gap-1"
+            aria-label="Seek video"
+            onclick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pos = (e.clientX - rect.left) / rect.width;
+              if (videoElement) videoElement.currentTime = pos * totalDuration;
+            }}
+          >
+            {#each heatmapBuckets as bucket, i (i)}
+              <div
+                class="flex-1 rounded-[2px] transition-opacity"
+                class:seg-easy={bucket === "easy"}
+                class:seg-learn={bucket === "learn"}
+                class:seg-hard={bucket === "hard"}
+                class:seg-empty={bucket === "empty"}
+                style:opacity={i <= playheadIdx ? 1 : 0.42}
+              ></div>
+            {/each}
+
+            <!-- Playhead -->
+            <div
+              class="absolute top-[-4px] bottom-[-4px] pointer-events-none"
+              style:left="{(currentTime / totalDuration) * 100}%"
+              style:width="2px"
+              style:background="var(--fg)"
+              style:border-radius="2px"
+              style:box-shadow="0 0 10px rgba(255,255,255,0.5)"
+            ></div>
+
+            {#if nextInterruptCountdown && nextInterruptTime < Infinity}
+              <!-- Next check marker -->
+              <div
+                class="absolute pointer-events-none flex flex-col items-center"
+                style:left="{(nextInterruptTime / totalDuration) * 100}%"
+                style:top="-26px"
+                style:transform="translateX(-50%)"
+              >
+                <span
+                  class="font-mono uppercase whitespace-nowrap mb-1"
+                  style:font-size="9px"
+                  style:color="var(--learn-hi)"
+                  style:letter-spacing="0.08em"
+                >
+                  Next check
+                </span>
+                <div
+                  style:width="2px"
+                  style:height="20px"
+                  style:background="var(--learn)"
+                ></div>
+              </div>
+            {/if}
+          </button>
         </div>
       {/if}
 
-      <div
-        class="mt-8 flex flex-col md:flex-row gap-8 justify-between items-start"
-      >
+      <!-- Single info card + meta -->
+      <div class="mt-8 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-5">
         <div class="flex-1">
-          <h2 class="text-3xl font-bold tracking-tight mb-2">
+          <h2
+            class="font-display"
+            style:font-size="36px"
+            style:font-weight="800"
+            style:letter-spacing="-0.03em"
+          >
             {data.video.title}
           </h2>
-          <div class="flex items-center gap-4 text-zinc-500 text-sm">
+          <div
+            class="flex items-center gap-3 text-sm mt-2"
+            style:color="var(--fg-2)"
+          >
             <span>{new Date(data.video.createdAt).toLocaleDateString()}</span>
-            <span>•</span>
+            <span style:color="var(--fg-3)">·</span>
             <span>{data.video.views} views</span>
+            <span style:color="var(--fg-3)">·</span>
+            <span>
+              <Sparkles class="h-3 w-3 inline mr-1" color="var(--learn)" />
+              Powered by your vocabulary
+            </span>
           </div>
+          <p
+            class="mt-4 text-[15px] leading-[1.6] max-w-[600px]"
+            style:color="var(--fg-2)"
+          >
+            Notflix tracks every word you encounter during playback.
+            {#if comprehensionEstimate >= 85}
+              You're ready for this — fewer than 15% of words will be new.
+            {:else if comprehensionEstimate >= 65}
+              Comfortable difficulty — expect a knowledge check between scenes.
+            {:else}
+              Stretch zone. Pause when you need to; the player will quiz you on
+              the gaps.
+            {/if}
+          </p>
         </div>
 
+        <!-- Single InfoCard — Comprehension this session -->
         <div
-          class="bg-zinc-900/50 border border-white/5 p-4 rounded-xl flex items-center gap-4"
+          class="rounded-[14px] flex items-center gap-5"
+          style:padding="18px 20px"
+          style:background="var(--surface)"
+          style:border="1px solid var(--line)"
         >
-          <div class="h-10 w-1 bg-magenta-600 rounded-full"></div>
-          <div>
-            <p
-              class="text-xs font-bold text-zinc-500 uppercase tracking-widest"
+          <ComprehensionRing
+            value={comprehensionEstimate}
+            size={64}
+            stroke={4}
+          />
+          <div class="flex-1 min-w-0">
+            <div
+              class="font-mono text-[10px] uppercase"
+              style:color="var(--fg-3)"
+              style:letter-spacing="0.12em"
             >
-              Learning Goal
-            </p>
-            <p class="text-sm text-zinc-300">
-              Intermission every <span class="text-white font-bold"
-                >{data.gameInterval || GAME.DEFAULT_INTERVAL_MINUTES}m</span
-              >
-            </p>
+              Comprehension this session
+            </div>
+            <div
+              class="font-display font-bold mt-1"
+              style:font-size="26px"
+              style:letter-spacing="-0.025em"
+              style:color="var(--fg)"
+            >
+              {comprehensionEstimate}%
+            </div>
+            <div class="text-[12px] mt-0.5" style:color="var(--fg-2)">
+              {#if nextInterruptCountdown}
+                Next check in <strong
+                  style:color="var(--learn-hi)"
+                  class="font-mono">{nextInterruptCountdown}</strong
+                >
+              {:else}
+                Knowledge checks off
+              {/if}
+            </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            href="{base}/profile"
-            class="ml-4 border-white/10 hover:bg-white/5"
+          <a
+            href={resolve("/profile")}
+            class="nx-btn nx-btn-outline"
+            style:padding="6px 12px"
+            style:font-size="12px"
           >
-            Change
-          </Button>
+            <Settings class="h-3.5 w-3.5" />
+          </a>
         </div>
       </div>
+
+      <!-- Helper rail under the player -->
+      <div class="mt-8 flex flex-wrap gap-3">
+        {#if parsedSubtitles.length > 0}
+          <button
+            class="nx-btn nx-btn-ghost"
+            style:font-size="13px"
+            onclick={cycleSubtitleMode}
+          >
+            <FileText class="h-3.5 w-3.5" />
+            Subtitles: {subtitleMode}
+          </button>
+        {/if}
+        <a
+          href={resolve("/vocabulary")}
+          class="nx-btn nx-btn-ghost"
+          style:font-size="13px"
+        >
+          Browse vocabulary
+        </a>
+        <a
+          href={resolve("/profile")}
+          class="nx-btn nx-btn-ghost"
+          style:font-size="13px"
+        >
+          Adjust check interval ·
+          <span class="font-mono ml-1" style:color="var(--fg)">
+            {data.gameInterval || GAME.DEFAULT_INTERVAL_MINUTES}m
+          </span>
+        </a>
+      </div>
     {:else}
-      <div class="flex flex-col items-center justify-center py-40">
-        <div class="bg-zinc-900 p-8 rounded-full mb-6">
-          <ChevronLeft class="h-12 w-12 text-zinc-700" />
+      <!-- Not found -->
+      <div class="flex flex-col items-center justify-center py-32 text-center">
+        <div
+          class="w-20 h-20 grid place-items-center rounded-full mb-6"
+          style:background="var(--surface)"
+          style:border="1px solid var(--line)"
+        >
+          <ChevronLeft class="h-10 w-10" color="var(--fg-3)" />
         </div>
-        <h2 class="text-2xl font-bold text-white mb-2">Video not found</h2>
-        <p class="text-zinc-500 mb-8">
+        <h2 class="font-display text-2xl font-bold mb-2">Video not found</h2>
+        <p class="text-sm mb-6" style:color="var(--fg-2)">
           This video might have been removed or is still processing.
         </p>
-        <Button
-          href="{base}/studio"
-          class="bg-white text-black hover:bg-zinc-200 px-8 font-bold rounded-full"
-        >
+        <a href={resolve("/studio")} class="nx-btn nx-btn-brand">
           Return to Studio
-        </Button>
+        </a>
       </div>
     {/if}
   </div>
 </div>
 
 <style>
-  /* Styling for the native video track */
   video::cue {
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    font-family: sans-serif;
+    background: rgba(10, 8, 8, 0.78);
+    color: #f5e9e4;
+    font-family: "Geist", system-ui, sans-serif;
     font-size: 1.2rem;
     padding: 0.2rem 0.5rem;
+    line-height: 1.4;
   }
 </style>

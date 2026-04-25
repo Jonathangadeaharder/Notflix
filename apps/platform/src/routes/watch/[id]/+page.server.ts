@@ -11,6 +11,8 @@ import type { PageServerLoad } from "./$types";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
 import type { Session } from "$lib/server/infrastructure/auth";
 import type { InferSelectModel } from "drizzle-orm";
+import { mapSegmentsToPlayerSubtitles } from "$lib/components/player/subtitle-mapper";
+import type { Subtitle } from "$lib/components/player/types";
 
 type HeatmapSegment = { start: number; end: number; type: string };
 type User = InferSelectModel<typeof user>;
@@ -19,6 +21,7 @@ function emptyVideoResponse(session: Session | null) {
   return {
     video: null,
     heatmap: [],
+    subtitles: [] as Subtitle[],
     profile: null,
     gameInterval: DEFAULT_GAME_INTERVAL_MINUTES,
     user: session?.user ?? null,
@@ -109,9 +112,13 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
   const heatmap = generateHeatmap(result.processing?.vttJson);
   const { profile, interval } = await getGameInterval(session);
 
+  const rawSegments = result.processing?.vttJson as DbVttSegment[] | undefined;
+  const subtitles = mapSegmentsToPlayerSubtitles(rawSegments);
+
   return {
     video: { ...vid, targetLang: result.processing?.targetLang },
     heatmap,
+    subtitles,
     profile,
     gameInterval: interval,
     user: session?.user ?? null,
