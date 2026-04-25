@@ -4,7 +4,7 @@ import { render, fireEvent, waitFor } from "@testing-library/svelte";
 import GameOverlay from "./GameOverlay.svelte";
 
 describe("GameOverlay.svelte", () => {
-  it("should be perfectly isolated and delegate answer submissions to the parent via onAnswerSubmitted", async () => {
+  it("delegates answer submissions to the parent and resumes after the final card", async () => {
     const mockCards = [
       {
         lemma: "uno",
@@ -23,7 +23,7 @@ describe("GameOverlay.svelte", () => {
     const mockComplete = vi.fn();
     const mockSubmit = vi.fn();
 
-    const { getByTestId, debug } = render(GameOverlay, {
+    const { getByTestId } = render(GameOverlay, {
       props: {
         cards: mockCards,
         onComplete: mockComplete,
@@ -31,13 +31,14 @@ describe("GameOverlay.svelte", () => {
       },
     });
 
-    // Verify the dumb component successfully rendered the mock data
+    // First card renders with the original word
     expect(getByTestId("card-original").textContent).toContain("uno");
 
+    // The redesigned overlay uses Again/Hard/Good/Easy SRS rating buttons,
+    // but exposes hidden swipe-left/swipe-right test affordances for parity.
     const knownButton = getByTestId("swipe-right");
     await fireEvent.click(knownButton);
 
-    // Assert strictly that no network request occurred inside the component, but the prop was invoked
     expect(mockSubmit).toHaveBeenCalledTimes(1);
     expect(mockSubmit).toHaveBeenCalledWith({
       lemma: "uno",
@@ -45,11 +46,10 @@ describe("GameOverlay.svelte", () => {
       isKnown: true,
     });
 
-    // Test second card (swipe left)
+    // Second card now active
     await waitFor(() => {
-      expect(getByTestId("swipe-left")).toBeDefined();
+      expect(getByTestId("card-original").textContent).toContain("dos");
     });
-    expect(getByTestId("card-original").textContent).toContain("dos");
 
     const unknownButton = getByTestId("swipe-left");
     await fireEvent.click(unknownButton);
@@ -60,7 +60,13 @@ describe("GameOverlay.svelte", () => {
       isKnown: false,
     });
 
-    // Completing all cards should trigger onComplete optimistic UI
-    expect(mockComplete).toHaveBeenCalledTimes(1);
+    // After the final card, the overlay shows a brief "Resuming..." moment
+    // (dramatic by design — the world fades back in) before onComplete fires.
+    await waitFor(
+      () => {
+        expect(mockComplete).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 2500 },
+    );
   });
 });

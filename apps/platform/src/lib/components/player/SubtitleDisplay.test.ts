@@ -50,31 +50,33 @@ describe("SubtitleDisplay.svelte", () => {
   };
 
   it(
-    "renders words when mode is FILTERED",
+    "renders words with Ambient token classes when mode is FILTERED",
     { timeout: TEST_TIMEOUT_MS },
     () => {
       render(SubtitleDisplay, {
         props: {
-          subtitle: mockSubtitle as any,
+          subtitle: mockSubtitle as never,
           mode: "FILTERED",
         },
       });
 
       const words = screen.getAllByTestId("subtitle-word");
       expect(words).toHaveLength(3);
-      // The learning word gets amber styling
-      expect(words[1].className).toContain("text-amber-400");
+      // Easy / known words get tok-easy (Ambient: dimmed)
+      expect(words[0].className).toContain("tok-easy");
+      // Learning words get tok-learn-pulse (gold pulse)
+      expect(words[1].className).toContain("tok-learn-pulse");
     },
   );
 
   it(
-    "opens word details on hover and triggers pause request",
+    "opens word details on click and triggers pause request",
     { timeout: TEST_TIMEOUT_MS },
     async () => {
       const onPauseRequest = vi.fn();
       render(SubtitleDisplay, {
         props: {
-          subtitle: mockSubtitle as any,
+          subtitle: mockSubtitle as never,
           mode: "FILTERED",
           onPauseRequest,
         },
@@ -82,13 +84,14 @@ describe("SubtitleDisplay.svelte", () => {
 
       const words = screen.getAllByTestId("subtitle-word");
 
-      // Hover the second word
-      await fireEvent.mouseEnter(words[1]);
+      // Click pins the popup immediately (hover has a 180ms delay; click is
+      // intentional and synchronous — that's the design).
+      await fireEvent.click(words[1]);
 
       expect(onPauseRequest).toHaveBeenCalled();
       expect(screen.getByTestId("word-popup")).toBeVisible();
-      expect(screen.getAllByText("murciélago").length).toBeGreaterThan(0); // Lemma
-      expect(screen.getByText("bat")).toBeVisible(); // Translation
+      expect(screen.getAllByText("murciélago").length).toBeGreaterThan(0);
+      expect(screen.getByText("bat")).toBeVisible();
     },
   );
 
@@ -101,20 +104,18 @@ describe("SubtitleDisplay.svelte", () => {
 
       render(SubtitleDisplay, {
         props: {
-          subtitle: mockSubtitle as any,
+          subtitle: mockSubtitle as never,
           mode: "FILTERED",
           onMarkKnown,
         },
       });
 
       const words = screen.getAllByTestId("subtitle-word");
-
-      // Click the word to pin and open
       await fireEvent.click(words[1]);
       expect(screen.getByTestId("word-popup")).toBeVisible();
 
       const markKnownButton = screen.getByRole("button", {
-        name: "Mark Known",
+        name: /mark known/i,
       });
       await fireEvent.click(markKnownButton);
 
@@ -135,7 +136,7 @@ describe("SubtitleDisplay.svelte", () => {
   it("does not render when mode is OFF", { timeout: TEST_TIMEOUT_MS }, () => {
     render(SubtitleDisplay, {
       props: {
-        subtitle: mockSubtitle as any,
+        subtitle: mockSubtitle as never,
         mode: "OFF",
       },
     });
@@ -149,13 +150,12 @@ describe("SubtitleDisplay.svelte", () => {
     () => {
       render(SubtitleDisplay, {
         props: {
-          subtitle: mockSubtitle as any,
+          subtitle: mockSubtitle as never,
           mode: "ORIGINAL",
         },
       });
 
       expect(screen.getByTestId("subtitle-container")).toBeVisible();
-      // ORIGINAL mode: no translation separator bar
       expect(screen.queryByText("The bat flies")).toBeNull();
     },
   );
@@ -180,13 +180,13 @@ describe("SubtitleDisplay.svelte", () => {
 
       render(SubtitleDisplay, {
         props: {
-          subtitle: subtitleWithBreakdown as any,
+          subtitle: subtitleWithBreakdown as never,
           mode: "FILTERED",
         },
       });
 
       const words = screen.getAllByTestId("subtitle-word");
-      await fireEvent.mouseEnter(words[0]);
+      await fireEvent.click(words[0]);
 
       expect(screen.getByText("NOUN • Unknown")).toBeVisible();
     },
@@ -200,7 +200,7 @@ describe("SubtitleDisplay.svelte", () => {
 
       render(SubtitleDisplay, {
         props: {
-          subtitle: mockSubtitle as any,
+          subtitle: mockSubtitle as never,
           mode: "FILTERED",
         },
       });
@@ -209,7 +209,7 @@ describe("SubtitleDisplay.svelte", () => {
       await fireEvent.click(words[1]);
 
       const markKnownButton = screen.getByRole("button", {
-        name: "Mark Known",
+        name: /mark known/i,
       });
       await fireEvent.click(markKnownButton);
 
@@ -240,15 +240,20 @@ describe("SubtitleDisplay.svelte", () => {
 
       render(SubtitleDisplay, {
         props: {
-          subtitle: knownSubtitle as any,
+          subtitle: knownSubtitle as never,
           mode: "FILTERED",
         },
       });
 
       const words = screen.getAllByTestId("subtitle-word");
-      await fireEvent.mouseEnter(words[0]);
+      await fireEvent.click(words[0]);
 
-      expect(screen.getByRole("button", { name: "Known" })).toBeVisible();
+      // Disabled button labelled with "Known" (the design uses ✓ Known)
+      const knownButton = await screen.findByRole("button", {
+        name: /known/i,
+      });
+      expect(knownButton).toBeVisible();
+      expect(knownButton).toBeDisabled();
     },
   );
 
@@ -262,7 +267,7 @@ describe("SubtitleDisplay.svelte", () => {
 
     render(SubtitleDisplay, {
       props: {
-        subtitle: textOnlySubtitle as any,
+        subtitle: textOnlySubtitle as never,
         mode: "FILTERED",
       },
     });

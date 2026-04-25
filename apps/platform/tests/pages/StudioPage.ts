@@ -23,6 +23,6 @@ export class StudioPage {
 
     async waitForVideoStatus(title: string, status: string, timeout = DEFAULT_WAIT_TIMEOUT) {
         const row = this.page.locator(`[data-testid="video-item"]`, { hasText: title });
-        await expect(row.locator(`text=${status}`)).toBeVisible({ timeout });
+        await expect(row.locator(`[data-testid="status-${status}"]`)).toBeVisible({ timeout });
     }
 }

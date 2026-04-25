@@ -79,3 +79,4 @@ node_modules
 # AI agent planning artifacts
 .claude/
 .benchmarks/
+.envrc

@@ -1,11 +1,16 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button";
-  import { Plus, Play, RotateCw, Video, Mic, Languages } from "lucide-svelte";
-  import { Badge } from "$lib/components/ui/badge";
-  import * as Card from "$lib/components/ui/card";
   import { enhance } from "$app/forms";
   import { invalidate } from "$app/navigation";
+  import Plus from "lucide-svelte/icons/plus";
+  import Play from "lucide-svelte/icons/play";
+  import RotateCw from "lucide-svelte/icons/rotate-cw";
+  import Mic from "lucide-svelte/icons/mic";
+  import Languages from "lucide-svelte/icons/languages";
+  import Trash2 from "lucide-svelte/icons/trash-2";
+  import Settings from "lucide-svelte/icons/settings";
+  import Upload from "lucide-svelte/icons/upload";
+  import Poster from "$lib/components/brand/Poster.svelte";
 
   let { data } = $props();
   let submittingId = $state<string | null>(null);
@@ -14,7 +19,6 @@
 
   $effect(() => {
     const hasPending = data.videos.some((v) => v.status === "PENDING");
-
     if (!hasPending) return;
 
     const interval = setInterval(() => {
@@ -23,248 +27,567 @@
         !(window as unknown as Record<string, unknown>).__e2e
       )
         return;
-
       invalidate("app:videos");
     }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
   });
 
-  function getStatusVariant(
-    status: string | null,
-  ): "default" | "secondary" | "destructive" | "outline" {
-    if (status === "COMPLETED") return "default";
-    if (status === "ERROR") return "destructive";
-    if (status === "PENDING") return "secondary";
-    return "outline";
+  const STUDIO_HASH_PRIME = 31;
+  const STUDIO_HUE_MAX = 360;
+  const DIM_BG = "rgba(255,255,255,0.06)";
+  const DIM_FG = "var(--fg-2)";
+  const WATCH_ROUTE = "/watch/[id]";
+  const POSTER_ART_MODULO = 2;
+
+  type StatusKey = "ready" | "processing" | "pending" | "error" | "untracked";
+
+  function statusKey(status: string | null | undefined): StatusKey {
+    if (status === "COMPLETED") return "ready";
+    if (status === "PENDING") return "processing";
+    if (status === "ERROR") return "error";
+    return "untracked";
   }
+
+  const statusMeta: Record<
+    StatusKey,
+    { label: string; color: string; bg: string }
+  > = {
+    ready: {
+      label: "Ready",
+      color: "var(--known)",
+      bg: "rgba(34,197,94,0.10)",
+    },
+    processing: {
+      label: "Processing",
+      color: "var(--learn-hi)",
+      bg: "var(--learn-soft)",
+    },
+    pending: {
+      label: "Queued",
+      color: DIM_FG,
+      bg: DIM_BG,
+    },
+    error: {
+      label: "Error",
+      color: "var(--hard)",
+      bg: "rgba(239,68,68,0.10)",
+    },
+    untracked: {
+      label: "Untracked",
+      color: DIM_FG,
+      bg: DIM_BG,
+    },
+  };
+
+  const PIPE_STEPS = [
+    { key: "upload", label: "Upload" },
+    { key: "transcribe", label: "Transcribe" },
+    { key: "analyze", label: "Analyze" },
+    { key: "filter", label: "Filter known" },
+    { key: "translate", label: "Translate gaps" },
+    { key: "finalize", label: "Finalize" },
+  ];
+
+  function pipeStepIndex(stage: string | null | undefined): number {
+    const lower = (stage || "").toLowerCase();
+    const idx = PIPE_STEPS.findIndex((s) => lower.includes(s.key));
+    return idx >= 0 ? idx : 0;
+  }
+
+  function stepBgColor(done: boolean, active: boolean): string {
+    if (done) return "var(--known)";
+    if (active) return "var(--learn)";
+    return "var(--surface-2)";
+  }
+
+  function stepFgColor(done: boolean, active: boolean): string {
+    if (active) return "var(--learn-hi)";
+    if (done) return "var(--fg-2)";
+    return "var(--fg-3)";
+  }
+
+  function hueOf(id: string): number {
+    let h = 0;
+    for (let i = 0; i < id.length; i++)
+      h = (h * STUDIO_HASH_PRIME + id.charCodeAt(i)) >>> 0;
+    return h % STUDIO_HUE_MAX;
+  }
+
+  function fmtDate(d: Date | string): string {
+    return new Date(d).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  const totalVideos = $derived(data.videos.length);
+  const inProgress = $derived(
+    data.videos.filter((v) => v.status === "PENDING"),
+  );
+  const library = $derived(
+    data.videos.filter(
+      (v) => v.status === "COMPLETED" || v.status === "ERROR" || !v.status,
+    ),
+  );
+  const readyCount = $derived(
+    data.videos.filter((v) => v.status === "COMPLETED").length,
+  );
 </script>
 
-<div class="p-8 max-w-7xl mx-auto min-h-screen">
-  <div class="flex justify-between items-end mb-8">
-    <div>
-      <h1 class="text-4xl font-bold text-white tracking-tight mb-2">
-        Creator Studio
-      </h1>
-      <p class="text-zinc-400">Manage and upload your AI-generated content.</p>
-    </div>
-    <Button
-      href={resolve("/studio/upload")}
-      class="bg-white text-black hover:bg-zinc-200 rounded-full font-bold"
-      data-testid="upload-link"
-    >
-      <Plus class="mr-2 h-5 w-5" />
-      Upload New Video
-    </Button>
-  </div>
+<svelte:head>
+  <title>Studio · Notflix</title>
+</svelte:head>
 
-  <div
-    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-  >
-    {#each data.videos as video (video.id)}
-      <Card.Root
-        class="group bg-zinc-900/50 border-white/5 hover:border-white/20 transition-all hover:-translate-y-1 overflow-hidden"
-        data-testid="video-item"
-      >
+<div class="min-h-screen" style:background="var(--bg)">
+  <div class="max-w-7xl mx-auto" style:padding="40px 60px">
+    <!-- Header -->
+    <div class="flex items-end justify-between flex-wrap gap-4 mb-9">
+      <div>
+        <div
+          class="font-mono uppercase"
+          style:font-size="11px"
+          style:color="var(--fg-3)"
+          style:letter-spacing="0.1em"
+        >
+          Your library
+        </div>
+        <h1
+          class="font-display"
+          style:font-size="40px"
+          style:font-weight="800"
+          style:letter-spacing="-0.035em"
+          style:margin="8px 0 6px"
+        >
+          Creator Studio
+        </h1>
+        <p class="text-[15px]" style:color="var(--fg-2)" style:margin="0">
+          Upload, process, and manage your learning material — all locally.
+        </p>
+      </div>
+      <div class="flex gap-2.5">
+        <button class="nx-btn nx-btn-ghost" disabled title="Coming soon">
+          <Settings class="h-3.5 w-3.5" /> Pipeline
+        </button>
         <a
-          href={resolve("/watch/[id]", { id: video.id })}
-          class="block aspect-video bg-black relative overflow-hidden"
+          href={resolve("/studio/upload")}
+          class="nx-btn nx-btn-brand"
+          data-testid="upload-link"
         >
-          <!-- Fallback always present underneath -->
-          <div
-            class="absolute inset-0 flex flex-col items-center justify-center text-zinc-700 bg-zinc-900"
-          >
-            <Video class="w-12 h-12 mb-2 opacity-50" />
-            <span class="text-xs font-medium uppercase tracking-wider"
-              >No Thumbnail</span
-            >
-          </div>
-          {#if video.thumbnailPath}
-            <!-- svelte-ignore a11y_missing_attribute -->
-            <img
-              src={video.thumbnailPath}
-              onerror={(e) =>
-                ((e.currentTarget as HTMLImageElement).style.display = "none")}
-              class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-            />
-          {/if}
-
-          <div class="absolute top-2 right-2">
-            <Badge
-              variant={getStatusVariant(video.status)}
-              data-testid="status-{video.status || 'UNPROCESSED'}"
-            >
-              {video.status || "UNPROCESSED"}
-            </Badge>
-          </div>
-
-          {#if video.status === "PENDING"}
-            <div class="absolute bottom-0 left-0 right-0">
-              <div class="h-1 bg-zinc-800 relative overflow-hidden">
-                {#if !video.progressPercent || video.progressPercent === 0}
-                  <div
-                    class="absolute inset-0 bg-magenta-500/40 animate-pulse"
-                  ></div>
-                {:else}
-                  <div
-                    class="h-full bg-magenta-500 transition-all duration-1000"
-                    style="width: {video.progressPercent}%"
-                  ></div>
-                {/if}
-              </div>
-              {#if video.progressStage}
-                <div
-                  class="bg-black/70 text-zinc-300 text-[10px] px-2 py-0.5 uppercase tracking-wider"
-                >
-                  {video.progressStage}…
-                </div>
-              {/if}
-            </div>
-          {/if}
-
-          <div
-            class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <div
-              class="bg-white text-black p-3 rounded-full transform scale-75 group-hover:scale-100 transition-transform"
-            >
-              <Play class="w-6 h-6 fill-current" />
-            </div>
-          </div>
+          <Upload class="h-3.5 w-3.5" /> Upload new video
         </a>
-        <Card.Header class="p-5 pb-0">
-          <Card.Title class="text-lg truncate">{video.title}</Card.Title>
-          <Card.Description class="text-xs text-zinc-500">
-            Uploaded on {new Date(video.createdAt).toLocaleDateString()}
-          </Card.Description>
-        </Card.Header>
-        <Card.Content
-          class="p-5 pt-4 mt-2 border-t border-white/5 flex items-center justify-between"
-        >
-          <Button
-            variant="link"
-            href={resolve("/watch/[id]", { id: video.id })}
-            class="p-0 h-auto text-xs font-bold text-white hover:text-magenta-500 uppercase tracking-wider"
-          >
-            Watch Now
-          </Button>
-          {#if video.status === "ERROR"}
-            <form
-              method="POST"
-              action="{resolve('/studio')}?/reprocess"
-              use:enhance={() => {
-                submittingId = video.id;
-                return async ({ update }) => {
-                  try {
-                    await update();
-                  } finally {
-                    submittingId = null;
-                  }
-                };
-              }}
-            >
-              <input type="hidden" name="id" value={video.id} />
-              <input
-                type="hidden"
-                name="targetLang"
-                value={data.userTargetLang}
-              />
-              <Button
-                type="submit"
-                variant="ghost"
-                disabled={submittingId === video.id}
-                class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
-              >
-                <RotateCw class="mr-1 h-3 w-3" />
-                Retry
-              </Button>
-            </form>
-          {:else if !video.status && !video.hasAnyTranscription}
-            <form
-              method="POST"
-              action="{resolve('/studio')}?/reprocess"
-              use:enhance={() => {
-                submittingId = video.id;
-                return async ({ update }) => {
-                  try {
-                    await update();
-                  } finally {
-                    submittingId = null;
-                  }
-                };
-              }}
-            >
-              <input type="hidden" name="id" value={video.id} />
-              <input
-                type="hidden"
-                name="targetLang"
-                value={data.userTargetLang}
-              />
-              <Button
-                type="submit"
-                variant="ghost"
-                disabled={submittingId === video.id}
-                class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
-              >
-                <Mic class="mr-1 h-3 w-3" />
-                Transcribe
-              </Button>
-            </form>
-          {:else if !video.status && video.hasAnyTranscription}
-            <form
-              method="POST"
-              action="{resolve('/studio')}?/reprocess"
-              use:enhance={() => {
-                submittingId = video.id;
-                return async ({ update }) => {
-                  try {
-                    await update();
-                  } finally {
-                    submittingId = null;
-                  }
-                };
-              }}
-            >
-              <input type="hidden" name="id" value={video.id} />
-              <input
-                type="hidden"
-                name="targetLang"
-                value={data.userTargetLang}
-              />
-              <Button
-                type="submit"
-                variant="ghost"
-                disabled={submittingId === video.id}
-                class="h-auto p-0 text-xs font-bold text-magenta-500 hover:text-magenta-400 uppercase tracking-wider hover:bg-transparent"
-              >
-                <Languages class="mr-1 h-3 w-3" />
-                Translate to {data.userTargetLang}
-              </Button>
-            </form>
-          {/if}
-        </Card.Content>
-      </Card.Root>
-    {/each}
+      </div>
+    </div>
 
-    {#if data.videos.length === 0}
+    <!-- Stat row -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-9">
       <div
-        class="col-span-full py-32 text-center border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20"
+        class="rounded-[12px]"
+        style:padding="18px 20px"
+        style:background="var(--surface)"
+        style:border="1px solid var(--line)"
       >
         <div
-          class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800 mb-4 text-zinc-500"
+          class="font-mono uppercase"
+          style:font-size="10px"
+          style:color="var(--fg-3)"
+          style:letter-spacing="0.1em"
         >
-          <Video class="w-8 h-8" />
+          Videos in library
         </div>
-        <h3 class="text-xl font-bold text-white mb-2">No content yet</h3>
-        <p class="text-zinc-500 mb-6 max-w-sm mx-auto">
-          Upload your first video to start building your AI-generated library.
-        </p>
-        <Button
-          href={resolve("/studio/upload")}
-          class="bg-magenta-600 hover:bg-magenta-700 text-white rounded-full font-bold"
+        <div
+          class="font-display font-extrabold mt-1.5"
+          style:font-size="30px"
+          style:letter-spacing="-0.025em"
         >
-          Upload Video
-        </Button>
+          {totalVideos}
+        </div>
+        <div class="text-[11px] mt-0.5" style:color="var(--fg-2)">
+          {readyCount} ready to play
+        </div>
+      </div>
+      <div
+        class="rounded-[12px]"
+        style:padding="18px 20px"
+        style:background="var(--surface)"
+        style:border="1px solid var(--line)"
+      >
+        <div
+          class="font-mono uppercase"
+          style:font-size="10px"
+          style:color="var(--fg-3)"
+          style:letter-spacing="0.1em"
+        >
+          Pipeline queue
+        </div>
+        <div
+          class="font-display font-extrabold mt-1.5"
+          style:font-size="30px"
+          style:letter-spacing="-0.025em"
+          style:color="var(--brand-hi)"
+        >
+          {inProgress.length}
+        </div>
+        <div class="text-[11px] mt-0.5" style:color="var(--fg-2)">
+          {inProgress.length === 0 ? "Idle" : "Running locally"}
+        </div>
+      </div>
+      <div
+        class="rounded-[12px]"
+        style:padding="18px 20px"
+        style:background="var(--surface)"
+        style:border="1px solid var(--line)"
+      >
+        <div
+          class="font-mono uppercase"
+          style:font-size="10px"
+          style:color="var(--fg-3)"
+          style:letter-spacing="0.1em"
+        >
+          Target language
+        </div>
+        <div
+          class="font-display font-extrabold mt-1.5"
+          style:font-size="30px"
+          style:letter-spacing="-0.025em"
+          style:color="var(--learn-hi)"
+        >
+          {data.userTargetLang?.toUpperCase()}
+        </div>
+        <div class="text-[11px] mt-0.5" style:color="var(--fg-2)">
+          From your profile
+        </div>
+      </div>
+      <div
+        class="rounded-[12px]"
+        style:padding="18px 20px"
+        style:background="var(--surface)"
+        style:border="1px solid var(--line)"
+      >
+        <div
+          class="font-mono uppercase"
+          style:font-size="10px"
+          style:color="var(--fg-3)"
+          style:letter-spacing="0.1em"
+        >
+          Storage
+        </div>
+        <div
+          class="font-display font-extrabold mt-1.5"
+          style:font-size="30px"
+          style:letter-spacing="-0.025em"
+        >
+          Local
+        </div>
+        <div class="text-[11px] mt-0.5" style:color="var(--fg-2)">
+          Zero cloud sync
+        </div>
+      </div>
+    </div>
+
+    <!-- In progress section -->
+    {#if inProgress.length > 0}
+      <h2
+        class="font-mono uppercase mb-4"
+        style:font-size="13px"
+        style:font-weight="600"
+        style:color="var(--fg-3)"
+        style:letter-spacing="0.08em"
+      >
+        In progress · {inProgress.length}
+      </h2>
+      <div class="flex flex-col gap-3 mb-9">
+        {#each inProgress as v (v.id)}
+          {@const stepIdx = pipeStepIndex(v.progressStage)}
+          <div
+            class="rounded-[12px]"
+            style:padding="20px"
+            style:background="var(--surface)"
+            style:border="1px solid var(--line)"
+            data-testid="video-item"
+          >
+            <div class="flex items-center gap-3.5 mb-3.5">
+              <div
+                class="rounded-[5px] overflow-hidden shrink-0"
+                style:width="52px"
+                style:height="34px"
+              >
+                <Poster
+                  title={v.title}
+                  id={v.id}
+                  hue={hueOf(v.id)}
+                  variant="placeholder"
+                />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold truncate">{v.title}</div>
+                <div
+                  class="font-mono mt-0.5"
+                  style:font-size="11px"
+                  style:color="var(--fg-3)"
+                >
+                  {v.progressStage || "Queued"} · {v.progressPercent ?? 0}%
+                </div>
+              </div>
+              <div
+                class="font-mono font-semibold"
+                style:font-size="13px"
+                style:color="var(--learn-hi)"
+                data-testid="status-{v.status || 'UNPROCESSED'}"
+              >
+                {v.progressPercent ?? 0}%
+              </div>
+            </div>
+
+            <div class="flex gap-1 mb-2.5">
+              {#each PIPE_STEPS as step, i (step.key)}
+                {@const done = i < stepIdx}
+                {@const active = i === stepIdx}
+                <div class="flex-1 relative">
+                  <div
+                    class="rounded-[2px]"
+                    style:height="3px"
+                    style:background={stepBgColor(done, active)}
+                  ></div>
+                  <div
+                    class="font-mono uppercase mt-1.5 truncate"
+                    style:font-size="9px"
+                    style:color={stepFgColor(done, active)}
+                    style:letter-spacing="0.06em"
+                  >
+                    {step.label}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Library table -->
+    <h2
+      class="font-mono uppercase mb-4"
+      style:font-size="13px"
+      style:font-weight="600"
+      style:color="var(--fg-3)"
+      style:letter-spacing="0.08em"
+    >
+      Library · {library.length}
+    </h2>
+
+    {#if library.length === 0 && inProgress.length === 0}
+      <div
+        class="rounded-[14px] py-20 text-center"
+        style:background="var(--surface)"
+        style:border="2px dashed var(--line-2)"
+      >
+        <div
+          class="w-16 h-16 mx-auto rounded-full grid place-items-center mb-4"
+          style:background="var(--surface-2)"
+          style:color="var(--fg-2)"
+        >
+          <Upload class="h-7 w-7" />
+        </div>
+        <div class="font-display font-bold" style:font-size="22px">
+          No content yet
+        </div>
+        <p class="text-sm mt-1.5 mb-6" style:color="var(--fg-2)">
+          Upload your first video to start building your library.
+        </p>
+        <a href={resolve("/studio/upload")} class="nx-btn nx-btn-brand">
+          <Plus class="h-4 w-4" /> Upload video
+        </a>
+      </div>
+    {:else if library.length > 0}
+      <div
+        class="rounded-[12px] overflow-hidden overflow-x-auto"
+        style:background="var(--surface)"
+        style:border="1px solid var(--line)"
+      >
+        <div
+          class="hidden md:grid font-mono uppercase"
+          style:grid-template-columns="56px 2.5fr 1fr 1.4fr 200px"
+          style:padding="12px 20px"
+          style:border-bottom="1px solid var(--line)"
+          style:font-size="10px"
+          style:color="var(--fg-3)"
+          style:letter-spacing="0.1em"
+        >
+          <span></span>
+          <span>Title</span>
+          <span>Uploaded</span>
+          <span>Status</span>
+          <span class="text-right">Actions</span>
+        </div>
+
+        {#each library as v, i (v.id)}
+          {@const sk = statusKey(v.status)}
+          {@const meta = statusMeta[sk]}
+          <div
+            class="grid items-center transition-colors hover:bg-white/[0.02]"
+            style:grid-template-columns="56px 2.5fr 1fr 1.4fr 200px"
+            style:padding="14px 20px"
+            style:border-bottom={i < library.length - 1
+              ? "1px solid var(--line)"
+              : "none"}
+            data-testid="video-item"
+          >
+            <a
+              href={resolve(WATCH_ROUTE, { id: v.id })}
+              class="block w-11 h-7 rounded-[4px] overflow-hidden"
+            >
+              <Poster
+                title={v.title}
+                id={v.id}
+                hue={hueOf(v.id)}
+                variant={i % POSTER_ART_MODULO === 0 ? "art" : "placeholder"}
+              />
+            </a>
+            <a href={resolve(WATCH_ROUTE, { id: v.id })} class="block min-w-0">
+              <div class="text-sm font-semibold truncate">{v.title}</div>
+              <div class="text-[11px] mt-0.5" style:color="var(--fg-3)">
+                {data.userTargetLang?.toUpperCase()} target ·
+                {v.hasAnyTranscription ? "Transcribed" : "Awaiting transcript"}
+              </div>
+            </a>
+            <div class="font-mono text-xs" style:color="var(--fg-2)">
+              {fmtDate(v.createdAt)}
+            </div>
+            <div>
+              <span
+                class="chip"
+                style:background={meta.bg}
+                style:color={meta.color}
+                style:border-color="transparent"
+                data-testid="status-{v.status || 'UNPROCESSED'}"
+              >
+                <span
+                  class="inline-block rounded-full"
+                  style:width="6px"
+                  style:height="6px"
+                  style:background={meta.color}
+                ></span>
+                {meta.label}
+              </span>
+            </div>
+            <div class="flex gap-1.5 justify-end items-center">
+              {#if v.status === "ERROR"}
+                <form
+                  method="POST"
+                  action="{resolve('/studio')}?/reprocess"
+                  use:enhance={() => {
+                    submittingId = v.id;
+                    return async ({ update }) => {
+                      try {
+                        await update();
+                      } finally {
+                        submittingId = null;
+                      }
+                    };
+                  }}
+                >
+                  <input type="hidden" name="id" value={v.id} />
+                  <input
+                    type="hidden"
+                    name="targetLang"
+                    value={data.userTargetLang}
+                  />
+                  <button
+                    type="submit"
+                    class="nx-btn nx-btn-ghost"
+                    style:padding="5px 10px"
+                    style:font-size="11px"
+                    disabled={submittingId === v.id}
+                  >
+                    <RotateCw class="h-3 w-3" /> Retry
+                  </button>
+                </form>
+              {:else if !v.status && !v.hasAnyTranscription}
+                <form
+                  method="POST"
+                  action="{resolve('/studio')}?/reprocess"
+                  use:enhance={() => {
+                    submittingId = v.id;
+                    return async ({ update }) => {
+                      try {
+                        await update();
+                      } finally {
+                        submittingId = null;
+                      }
+                    };
+                  }}
+                >
+                  <input type="hidden" name="id" value={v.id} />
+                  <input
+                    type="hidden"
+                    name="targetLang"
+                    value={data.userTargetLang}
+                  />
+                  <button
+                    type="submit"
+                    class="nx-btn nx-btn-ghost"
+                    style:padding="5px 10px"
+                    style:font-size="11px"
+                    disabled={submittingId === v.id}
+                  >
+                    <Mic class="h-3 w-3" /> Transcribe
+                  </button>
+                </form>
+              {:else if !v.status && v.hasAnyTranscription}
+                <form
+                  method="POST"
+                  action="{resolve('/studio')}?/reprocess"
+                  use:enhance={() => {
+                    submittingId = v.id;
+                    return async ({ update }) => {
+                      try {
+                        await update();
+                      } finally {
+                        submittingId = null;
+                      }
+                    };
+                  }}
+                >
+                  <input type="hidden" name="id" value={v.id} />
+                  <input
+                    type="hidden"
+                    name="targetLang"
+                    value={data.userTargetLang}
+                  />
+                  <button
+                    type="submit"
+                    class="nx-btn nx-btn-ghost"
+                    style:padding="5px 10px"
+                    style:font-size="11px"
+                    disabled={submittingId === v.id}
+                  >
+                    <Languages class="h-3 w-3" /> Translate
+                  </button>
+                </form>
+              {:else if v.status === "COMPLETED"}
+                <a
+                  href={resolve(WATCH_ROUTE, { id: v.id })}
+                  class="rounded-full w-8 h-8 grid place-items-center hover:bg-white/5"
+                  style:color="var(--fg-2)"
+                  aria-label="Play {v.title}"
+                >
+                  <Play class="h-4 w-4 fill-current" />
+                </a>
+              {/if}
+              <button
+                class="rounded-full w-8 h-8 grid place-items-center hover:bg-white/5"
+                style:color="var(--fg-3)"
+                aria-label="Delete {v.title}"
+                disabled
+                title="Delete coming soon"
+              >
+                <Trash2 class="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        {/each}
       </div>
     {/if}
   </div>
