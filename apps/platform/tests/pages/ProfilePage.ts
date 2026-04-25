@@ -11,7 +11,7 @@ export class ProfilePage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.locator("h1");
-    this.gameIntervalSelect = page.locator("select#gameInterval");
+    this.gameIntervalSelect = page.locator('input[name="gameInterval"]');
     this.saveButton = page.locator('button[type="submit"]');
     this.successIndicator = page.locator("text=saved");
   }
@@ -22,7 +22,8 @@ export class ProfilePage {
   }
 
   async setGameInterval(value: string) {
-    await this.gameIntervalSelect.selectOption(value);
+    const btn = this.page.locator(`form button`, { hasText: value === "0" ? "Off" : `${value} min` });
+    await btn.click();
   }
 
   async save() {

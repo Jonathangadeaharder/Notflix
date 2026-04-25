@@ -13,15 +13,23 @@
 
   let { data }: { data: PageData } = $props();
 
-  let searchInput = $state(data.filters.search ?? "");
+  const initialSearch = data.filters.search ?? "";
+  let searchInput = $state(initialSearch);
   const togglingWords = new SvelteSet<string>();
+
+  const COLOR_KNOWN = "var(--known)";
+  const HASH_STRENGTH_KNOWN = 0.92;
+  const HASH_PRIME = 17;
+  const HASH_BASE = 0.18;
+  const HASH_MOD = 100;
+  const HASH_DIV = 250;
+  const PERCENT = 100;
 
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2", "untracked"] as const;
 
-  // CEFR colour ramp — green for early, gold for middle, brand for advanced
   const levelColors: Record<string, string> = {
-    A1: "var(--known)",
-    A2: "var(--known)",
+    A1: COLOR_KNOWN,
+    A2: COLOR_KNOWN,
     B1: "var(--learn)",
     B2: "var(--learn-hi)",
     C1: "var(--brand-hi)",
@@ -89,11 +97,11 @@
   const knownInPage = $derived(data.words.filter((w) => w.isKnown).length);
 
   function hashStrength(lemma: string, isKnown: boolean): number {
-    if (isKnown) return 0.92;
+    if (isKnown) return HASH_STRENGTH_KNOWN;
     let h = 0;
     for (let i = 0; i < lemma.length; i++)
-      h = (h * 17 + lemma.charCodeAt(i)) >>> 0;
-    return 0.18 + (h % 100) / 250;
+      h = (h * HASH_PRIME + lemma.charCodeAt(i)) >>> 0;
+    return HASH_BASE + (h % HASH_MOD) / HASH_DIV;
   }
 </script>
 
@@ -346,7 +354,7 @@
               >
                 <div
                   class="h-full rounded-full transition-all"
-                  style:width="{strength * 100}%"
+                  style:width="{strength * PERCENT}%"
                   style:background={stateColor}
                 ></div>
               </div>

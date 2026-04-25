@@ -8,6 +8,9 @@ import { eq, and, gte, sql, desc, inArray } from "drizzle-orm";
 
 const TREND_DAYS = 14;
 const READY_LEMMAS_LIMIT = 12;
+const READY_LEMMAS_FETCH_MULTIPLIER = 3;
+const HARD_LEMMA_COUNT_THRESHOLD = 3;
+const ISO_DATE_SLICE_END = 10;
 
 export interface LemmaTrendPoint {
   day: string;
@@ -79,7 +82,7 @@ async function getLemmaTrend(targetLang: string): Promise<LemmaTrendPoint[]> {
   for (let i = 0; i < TREND_DAYS; i++) {
     const day = new Date(startDay);
     day.setUTCDate(startDay.getUTCDate() + i);
-    const dayStr = day.toISOString().slice(0, 10);
+    const dayStr = day.toISOString().slice(0, ISO_DATE_SLICE_END);
     points.push({ day: dayStr, count: countsByDay.get(dayStr) ?? 0 });
   }
 
@@ -102,7 +105,7 @@ async function getReadyLemmas(
     )
     .where(eq(videoProcessing.targetLang, targetLang))
     .orderBy(desc(videoLemmas.count))
-    .limit(READY_LEMMAS_LIMIT * 3);
+    .limit(READY_LEMMAS_LIMIT * READY_LEMMAS_FETCH_MULTIPLIER);
 
   if (!userId || recentLemmas.length === 0) {
     return recentLemmas.slice(0, READY_LEMMAS_LIMIT).map((l) => ({
@@ -133,6 +136,9 @@ async function getReadyLemmas(
     .slice(0, READY_LEMMAS_LIMIT)
     .map((l) => ({
       word: l.lemma,
-      state: l.count >= 3 ? ("hard" as const) : ("learn" as const),
+      state:
+        l.count >= HARD_LEMMA_COUNT_THRESHOLD
+          ? ("hard" as const)
+          : ("learn" as const),
     }));
 }

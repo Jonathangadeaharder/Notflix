@@ -23,26 +23,55 @@
     };
   }>();
 
-  // Stable hue per video id (so the gradient feels intentional, not random)
+  const HASH_PRIME = 31;
+  const HUE_MAX = 360;
+  const SECONDS_PER_MIN = 60;
+  const SECONDS_PER_HOUR = 3600;
+  const PAD_WIDTH = 2;
+  const VARIANT_MODULO = 3;
+  const KEEP_GOING_LIMIT = 4;
+  const FRESH_LIMIT = 5;
+  const DEFAULT_HUE = 18;
+  const DEFAULT_COMPREHENSION = 92;
+  const PERCENT_FULL = 100;
+  const BAR_HEIGHT_PX = 56;
+  const BAR_BORDER_PX = 4;
+  const RING_SIZE = 34;
+  const RING_STROKE = 2.5;
+  const OVERLAY_GRADIENT =
+    "linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.85))";
+  const HERO_RADIAL =
+    "radial-gradient(ellipse at 70% 30%, rgba(255,255,255,0.10), transparent 55%)";
+  const HERO_FADE =
+    "linear-gradient(180deg, transparent 0%, transparent 50%, var(--bg) 100%)";
+  const WATCH_ROUTE = "/watch/[id]";
+  const TREND_BAR_MAX_PX = 80;
+
   function hueOf(id: string): number {
     let h = 0;
-    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-    return h % 360;
+    for (let i = 0; i < id.length; i++)
+      h = (h * HASH_PRIME + id.charCodeAt(i)) >>> 0;
+    return h % HUE_MAX;
   }
 
   function fmtTimeRemaining(v: DashboardVideo): string {
-    const totalMin = Math.max(1, Math.round((v.watchDuration || 0) / 60));
-    const watchedMin = Math.round((v.watchSeconds || 0) / 60);
+    const totalMin = Math.max(
+      1,
+      Math.round((v.watchDuration || 0) / SECONDS_PER_MIN),
+    );
+    const watchedMin = Math.round((v.watchSeconds || 0) / SECONDS_PER_MIN);
     const remaining = Math.max(0, totalMin - watchedMin);
     return remaining > 0 ? `${remaining}m left` : `${totalMin}m`;
   }
 
   function fmtTimestamp(s: number): string {
     const total = Math.max(0, Math.floor(s));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const sec = total % 60;
-    return [h, m, sec].map((n) => n.toString().padStart(2, "0")).join(":");
+    const h = Math.floor(total / SECONDS_PER_HOUR);
+    const m = Math.floor((total % SECONDS_PER_HOUR) / SECONDS_PER_MIN);
+    const sec = total % SECONDS_PER_MIN;
+    return [h, m, sec]
+      .map((n) => n.toString().padStart(PAD_WIDTH, "0"))
+      .join(":");
   }
 
   function isReady(v: DashboardVideo): boolean {
@@ -50,26 +79,27 @@
   }
 
   function variantFor(v: DashboardVideo, i: number): "art" | "placeholder" {
-    return (hueOf(v.id) + i) % 3 === 0 ? "art" : "placeholder";
+    return (hueOf(v.id) + i) % VARIANT_MODULO === 0 ? "art" : "placeholder";
   }
 
   const featured = $derived(data.featuredVideo ?? data.videos[0] ?? null);
-  const featuredHue = $derived(featured ? hueOf(featured.id) : 18);
-  const featuredComp = $derived(featured?.comprehensionPercent ?? 92);
+  const featuredHue = $derived(featured ? hueOf(featured.id) : DEFAULT_HUE);
+  const featuredComp = $derived(
+    featured?.comprehensionPercent ?? DEFAULT_COMPREHENSION,
+  );
 
-  // Rails — split videos into "keep going" (in-progress) and "fresh"
   const keepGoing = $derived(
     data.videos
       .filter(
         (v: DashboardVideo) =>
-          v.watchPercent > 0 && v.watchPercent < 100 && isReady(v),
+          v.watchPercent > 0 && v.watchPercent < PERCENT_FULL && isReady(v),
       )
-      .slice(0, 4),
+      .slice(0, KEEP_GOING_LIMIT),
   );
   const fresh = $derived(
     data.videos
       .filter((v: DashboardVideo) => v.watchPercent === 0 && isReady(v))
-      .slice(0, 5),
+      .slice(0, FRESH_LIMIT),
   );
   const showRailFallback = $derived(
     keepGoing.length === 0 && fresh.length === 0,
@@ -99,16 +129,8 @@
         class="absolute inset-0"
         style:background={`linear-gradient(155deg, oklch(0.34 0.14 ${featuredHue}) 0%, oklch(0.16 0.08 ${featuredHue}) 60%, var(--bg) 100%)`}
       ></div>
-      <div
-        class="absolute inset-0"
-        style:background="radial-gradient(ellipse at 70% 30%,
-        rgba(255,255,255,0.10), transparent 55%)"
-      ></div>
-      <div
-        class="absolute inset-0"
-        style:background="linear-gradient(180deg, transparent 0%, transparent
-        50%, var(--bg) 100%)"
-      ></div>
+      <div class="absolute inset-0" style:background={HERO_RADIAL}></div>
+      <div class="absolute inset-0" style:background={HERO_FADE}></div>
 
       <div class="relative z-[2] px-6 lg:px-[60px] pt-20 max-w-[720px]">
         <div class="flex items-center gap-2.5 mb-5">
@@ -161,7 +183,12 @@
           style:backdrop-filter="blur(10px)"
           style:border="1px solid var(--line)"
         >
-          <ComprehensionRing value={featuredComp} size={56} stroke={4} pulse />
+          <ComprehensionRing
+            value={featuredComp}
+            size={BAR_HEIGHT_PX}
+            stroke={BAR_BORDER_PX}
+            pulse
+          />
           <div class="flex flex-col gap-1 flex-1 min-w-0">
             <div
               class="font-mono text-[10px] uppercase"
@@ -203,7 +230,7 @@
 
         <div class="flex gap-3 mt-7 flex-wrap">
           <a
-            href={resolve("/watch/[id]", { id: featured.id })}
+            href={resolve(WATCH_ROUTE, { id: featured.id })}
             class="nx-btn nx-btn-primary"
           >
             <Play class="h-4 w-4 fill-current" />
@@ -250,7 +277,7 @@
         >
           {#each keepGoing as v, i (v.id)}
             <a
-              href={resolve("/watch/[id]", { id: v.id })}
+              href={resolve(WATCH_ROUTE, { id: v.id })}
               class="group block rounded-xl overflow-hidden cursor-pointer transition-transform hover:-translate-y-0.5"
               style:border="1px solid var(--line)"
               style:background="var(--surface)"
@@ -264,8 +291,7 @@
                 />
                 <div
                   class="absolute inset-0"
-                  style:background="linear-gradient(180deg, transparent 50%,
-                  rgba(0,0,0,0.85))"
+                  style:background={OVERLAY_GRADIENT}
                 ></div>
                 <div class="absolute left-3.5 right-3.5 bottom-2.5">
                   <div
@@ -283,8 +309,8 @@
                 <div class="absolute top-2.5 right-2.5">
                   <ComprehensionRing
                     value={v.comprehensionPercent ?? 0}
-                    size={34}
-                    stroke={2.5}
+                    size={RING_SIZE}
+                    stroke={RING_STROKE}
                   />
                 </div>
                 <!-- progress bar -->
@@ -321,7 +347,7 @@
         >
           {#each fresh as v, i (v.id)}
             <a
-              href={resolve("/watch/[id]", { id: v.id })}
+              href={resolve(WATCH_ROUTE, { id: v.id })}
               class="block group cursor-pointer"
             >
               <div
@@ -415,7 +441,7 @@
                 {#each lemmaTrend as v, i (i)}
                   <div
                     class="flex-1 rounded-[2px]"
-                    style:height="{(v / trendMax) * 80}px"
+                    style:height="{(v / trendMax) * TREND_BAR_MAX_PX}px"
                     style:min-height="3px"
                     style:background={i === lemmaTrend.length - 1
                       ? "var(--brand-hi)"

@@ -27,6 +27,19 @@
   const SECONDS_IN_MINUTE = 60;
   const PLAY_FAILED_MSG = "Play failed:";
   const HEATMAP_SEGMENTS = 12;
+  const BINARY_SEARCH_DIVISOR = 2;
+  const COMP_HIGH = 0.7;
+  const COMP_MID = 0.3;
+  const PERCENT = 100;
+  const COLON_PAD = 2;
+  const COMP_THRESHOLD_85 = 85;
+  const COMP_THRESHOLD_65 = 65;
+  const RING_SIZE_MD = 64;
+  const RING_STROKE_SM = 4;
+  const HEAT_START_WEIGHT = 0.42;
+  const ID_SLICE_LENGTH = 8;
+  const FRAME_GRADIENT =
+    "linear-gradient(155deg, oklch(0.22 0.08 18), oklch(0.09 0.04 18))";
 
   let { data } = $props();
 
@@ -40,7 +53,8 @@
   let duration = $state(1);
   let subtitleMode = $state<SubtitleMode>("FILTERED");
 
-  const parsedSubtitles: Subtitle[] = data.subtitles || [];
+  const initialSubtitles = data.subtitles || [];
+  const parsedSubtitles: Subtitle[] = initialSubtitles;
 
   function findSubtitleAtTime(
     subtitles: Subtitle[],
@@ -49,7 +63,7 @@
     let left = 0;
     let right = subtitles.length - 1;
     while (left <= right) {
-      const mid = Math.floor((left + right) / 2);
+      const mid = Math.floor((left + right) / BINARY_SEARCH_DIVISOR);
       const sub = subtitles[mid];
       if (time < sub.start) {
         right = mid - 1;
@@ -163,16 +177,34 @@
 
   // Build a 12-bucket heatmap from the raw segment list. Quantising to chunky
   // segments reads as "chapters with personality" instead of pixel noise.
+  type HeatBucket = { easy: number; learn: number; hard: number };
+  type HeatLevel = "easy" | "learn" | "hard" | "empty";
+
+  const HEAT_MIN_WEIGHT = 0.1;
+
+  function classifySegment(seg: HeatmapSegment): "easy" | "learn" | "hard" {
+    if (seg.type === "EASY") return "easy";
+    if (seg.type === "LEARNING") return "learn";
+    return "hard";
+  }
+
+  function dominantLevel(c: HeatBucket): HeatLevel {
+    const max = Math.max(c.easy, c.learn, c.hard);
+    if (max === 0) return "empty";
+    if (max === c.hard) return "hard";
+    if (max === c.learn) return "learn";
+    return "easy";
+  }
+
   function buildHeatmapBuckets(
     heatmap: HeatmapSegment[],
     totalDuration: number,
-  ): Array<"easy" | "learn" | "hard" | "empty"> {
-    const buckets: Array<"easy" | "learn" | "hard" | "empty"> =
-      Array(HEATMAP_SEGMENTS).fill("empty");
+  ): HeatLevel[] {
+    const buckets: HeatLevel[] = Array(HEATMAP_SEGMENTS).fill("empty");
     if (!heatmap || heatmap.length === 0 || totalDuration <= 0) return buckets;
     const bucketSize = totalDuration / HEATMAP_SEGMENTS;
 
-    const counts: { easy: number; learn: number; hard: number }[] = Array.from(
+    const counts: HeatBucket[] = Array.from(
       { length: HEATMAP_SEGMENTS },
       () => ({ easy: 0, learn: 0, hard: 0 }),
     );
@@ -182,19 +214,12 @@
         HEATMAP_SEGMENTS - 1,
         Math.floor(seg.start / bucketSize),
       );
-      const weight = Math.max(0.1, seg.end - seg.start);
-      if (seg.type === "EASY") counts[idx].easy += weight;
-      else if (seg.type === "LEARNING") counts[idx].learn += weight;
-      else counts[idx].hard += weight;
+      const weight = Math.max(HEAT_MIN_WEIGHT, seg.end - seg.start);
+      counts[idx][classifySegment(seg)] += weight;
     }
 
     for (let i = 0; i < HEATMAP_SEGMENTS; i++) {
-      const c = counts[i];
-      const max = Math.max(c.easy, c.learn, c.hard);
-      if (max === 0) buckets[i] = "empty";
-      else if (max === c.hard) buckets[i] = "hard";
-      else if (max === c.learn) buckets[i] = "learn";
-      else buckets[i] = "easy";
+      buckets[i] = dominantLevel(counts[i]);
     }
     return buckets;
   }
@@ -226,15 +251,17 @@
     }
     const total = easy + learn + hard;
     if (total === 0) return 0;
-    return Math.round(((easy * 1 + learn * 0.7 + hard * 0.3) / total) * 100);
+    return Math.round(
+      ((easy * 1 + learn * COMP_HIGH + hard * COMP_MID) / total) * PERCENT,
+    );
   });
 
   const nextInterruptCountdown = $derived.by(() => {
     if (intervalSeconds === 0 || nextInterruptTime === Infinity) return null;
     const remaining = Math.max(0, nextInterruptTime - currentTime);
-    const min = Math.floor(remaining / 60);
-    const sec = Math.floor(remaining % 60);
-    return `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+    const min = Math.floor(remaining / SECONDS_IN_MINUTE);
+    const sec = Math.floor(remaining % SECONDS_IN_MINUTE);
+    return `${min.toString().padStart(COLON_PAD, "0")}:${sec.toString().padStart(COLON_PAD, "0")}`;
   });
 
   function cycleSubtitleMode() {
@@ -301,8 +328,7 @@
       <!-- Video frame -->
       <div
         class="group relative aspect-video rounded-2xl overflow-hidden"
-        style:background="linear-gradient(155deg, oklch(0.22 0.08 18),
-        oklch(0.09 0.04 18))"
+        style:background={FRAME_GRADIENT}
         style:box-shadow="0 30px 80px -20px rgba(0,0,0,0.8)"
         style:border="1px solid var(--line)"
       >
@@ -358,7 +384,7 @@
             style:border="1px solid rgba(255,255,255,0.15)"
           >
             <span class="font-mono"
-              >{data.video.id?.slice(0, 8)?.toUpperCase()}</span
+              >{data.video.id?.slice(0, ID_SLICE_LENGTH)?.toUpperCase()}</span
             >
           </span>
         </div>
@@ -427,14 +453,14 @@
                 class:seg-learn={bucket === "learn"}
                 class:seg-hard={bucket === "hard"}
                 class:seg-empty={bucket === "empty"}
-                style:opacity={i <= playheadIdx ? 1 : 0.42}
+                style:opacity={i <= playheadIdx ? 1 : HEAT_START_WEIGHT}
               ></div>
             {/each}
 
             <!-- Playhead -->
             <div
               class="absolute top-[-4px] bottom-[-4px] pointer-events-none"
-              style:left="{(currentTime / totalDuration) * 100}%"
+              style:left="{(currentTime / totalDuration) * PERCENT}%"
               style:width="2px"
               style:background="var(--fg)"
               style:border-radius="2px"
@@ -445,7 +471,7 @@
               <!-- Next check marker -->
               <div
                 class="absolute pointer-events-none flex flex-col items-center"
-                style:left="{(nextInterruptTime / totalDuration) * 100}%"
+                style:left="{(nextInterruptTime / totalDuration) * PERCENT}%"
                 style:top="-26px"
                 style:transform="translateX(-50%)"
               >
@@ -497,9 +523,9 @@
             style:color="var(--fg-2)"
           >
             Notflix tracks every word you encounter during playback.
-            {#if comprehensionEstimate >= 85}
+            {#if comprehensionEstimate >= COMP_THRESHOLD_85}
               You're ready for this — fewer than 15% of words will be new.
-            {:else if comprehensionEstimate >= 65}
+            {:else if comprehensionEstimate >= COMP_THRESHOLD_65}
               Comfortable difficulty — expect a knowledge check between scenes.
             {:else}
               Stretch zone. Pause when you need to; the player will quiz you on
@@ -517,8 +543,8 @@
         >
           <ComprehensionRing
             value={comprehensionEstimate}
-            size={64}
-            stroke={4}
+            size={RING_SIZE_MD}
+            stroke={RING_STROKE_SM}
           />
           <div class="flex-1 min-w-0">
             <div

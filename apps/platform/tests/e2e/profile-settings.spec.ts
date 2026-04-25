@@ -8,7 +8,6 @@ test.describe("Profile: Settings", () => {
 
     await profile.expectHeadingVisible();
 
-    // The select should be visible and have a value
     await expect(profile.gameIntervalSelect).toBeVisible();
     const value = await profile.gameIntervalSelect.inputValue();
     expect(["0", "5", "10", "20"]).toContain(value);

@@ -33,6 +33,13 @@
     return () => clearInterval(interval);
   });
 
+  const STUDIO_HASH_PRIME = 31;
+  const STUDIO_HUE_MAX = 360;
+  const DIM_BG = "rgba(255,255,255,0.06)";
+  const DIM_FG = "var(--fg-2)";
+  const WATCH_ROUTE = "/watch/[id]";
+  const POSTER_ART_MODULO = 2;
+
   type StatusKey = "ready" | "processing" | "pending" | "error" | "untracked";
 
   function statusKey(status: string | null | undefined): StatusKey {
@@ -58,8 +65,8 @@
     },
     pending: {
       label: "Queued",
-      color: "var(--fg-2)",
-      bg: "rgba(255,255,255,0.06)",
+      color: DIM_FG,
+      bg: DIM_BG,
     },
     error: {
       label: "Error",
@@ -68,8 +75,8 @@
     },
     untracked: {
       label: "Untracked",
-      color: "var(--fg-2)",
-      bg: "rgba(255,255,255,0.06)",
+      color: DIM_FG,
+      bg: DIM_BG,
     },
   };
 
@@ -102,8 +109,9 @@
 
   function hueOf(id: string): number {
     let h = 0;
-    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-    return h % 360;
+    for (let i = 0; i < id.length; i++)
+      h = (h * STUDIO_HASH_PRIME + id.charCodeAt(i)) >>> 0;
+    return h % STUDIO_HUE_MAX;
   }
 
   function fmtDate(d: Date | string): string {
@@ -426,20 +434,17 @@
             data-testid="video-item"
           >
             <a
-              href={resolve("/watch/[id]", { id: v.id })}
+              href={resolve(WATCH_ROUTE, { id: v.id })}
               class="block w-11 h-7 rounded-[4px] overflow-hidden"
             >
               <Poster
                 title={v.title}
                 id={v.id}
                 hue={hueOf(v.id)}
-                variant={i % 2 === 0 ? "art" : "placeholder"}
+                variant={i % POSTER_ART_MODULO === 0 ? "art" : "placeholder"}
               />
             </a>
-            <a
-              href={resolve("/watch/[id]", { id: v.id })}
-              class="block min-w-0"
-            >
+            <a href={resolve(WATCH_ROUTE, { id: v.id })} class="block min-w-0">
               <div class="text-sm font-semibold truncate">{v.title}</div>
               <div class="text-[11px] mt-0.5" style:color="var(--fg-3)">
                 {data.userTargetLang?.toUpperCase()} target ·
@@ -562,7 +567,7 @@
                 </form>
               {:else if v.status === "COMPLETED"}
                 <a
-                  href={resolve("/watch/[id]", { id: v.id })}
+                  href={resolve(WATCH_ROUTE, { id: v.id })}
                   class="rounded-full w-8 h-8 grid place-items-center hover:bg-white/5"
                   style:color="var(--fg-2)"
                   aria-label="Play {v.title}"

@@ -49,6 +49,6 @@ test.describe("Navigation and Layout", () => {
 
     // Should NOT be on login page (E2E user is auto-authenticated)
     expect(page.url()).toContain("/studio");
-    await expect(page.locator("h1, h2")).toBeVisible();
+    await expect(page.locator("h1, h2").first()).toBeVisible();
   });
 });

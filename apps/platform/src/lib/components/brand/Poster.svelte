@@ -1,8 +1,11 @@
 <script lang="ts">
+  const DEFAULT_HUE = 340;
+  const MONOGRAM_MAX_WORDS = 2;
+
   let {
     title,
     id = "",
-    hue = 340,
+    hue = DEFAULT_HUE,
     variant = "art",
     overlay = "Notflix · Original",
     children,
@@ -20,7 +23,8 @@
     const cleaned = t.replace(/^(the|a|an|el|la|los|las)\s+/i, "");
     const words = cleaned.split(/\s+/).filter(Boolean);
     if (words.length === 0) return "··";
-    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    if (words.length === 1)
+      return words[0].slice(0, MONOGRAM_MAX_WORDS).toUpperCase();
     return (words[0][0] + words[1][0]).toUpperCase();
   }
 </script>

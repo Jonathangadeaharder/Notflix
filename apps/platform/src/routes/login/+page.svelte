@@ -12,6 +12,8 @@
   let errorMessage = $state("");
   let fieldErrors = $state<{ email?: string; password?: string }>({});
 
+  const HERO_GRADIENT = `linear-gradient(90deg, var(--brand-hi), var(--learn-hi))`;
+
   function getSafeCallbackUrl(next: string | null) {
     if (!next) return "/";
     if (!next.startsWith("/") || next.startsWith("//")) return "/";
@@ -133,8 +135,7 @@
           Watch a movie.
           <br />
           <span
-            style:background="linear-gradient(90deg, var(--brand-hi),
-            var(--learn-hi))"
+            style:background={HERO_GRADIENT}
             style:-webkit-background-clip="text"
             style:background-clip="text"
             style:-webkit-text-fill-color="transparent"

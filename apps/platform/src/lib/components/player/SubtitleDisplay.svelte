@@ -20,6 +20,7 @@
 
   const POPUP_OFFSET_Y = 16;
   const HOVER_OPEN_DELAY_MS = 180;
+  const CENTER_DIVISOR = 2;
   const HOVER_CLOSE_DELAY_MS = 120;
   type WordTriggerEvent = MouseEvent | FocusEvent;
 
@@ -84,7 +85,7 @@
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
     popupPosition = {
-      x: rect.left + rect.width / 2,
+      x: rect.left + rect.width / CENTER_DIVISOR,
       y: rect.top - POPUP_OFFSET_Y,
     };
     tooltipPinned = pinned;
@@ -96,18 +97,14 @@
   function handleWordEnter(
     word: WordData,
     index: number,
-    event: WordTriggerEvent,
+    event?: MouseEvent | FocusEvent,
   ) {
-    if (mode === "OFF" || tooltipPinned) return;
-    clearCloseTimeout();
     clearOpenTimeout();
+    clearCloseTimeout();
 
-    // Capture the rect synchronously — by the time the timeout fires, the
-    // pointer may have left and `event.currentTarget` is gone (also why JSDOM
-    // crashed in tests). The position is what we actually need to keep.
-    const target = event.currentTarget as HTMLElement | null;
+    const target = event?.currentTarget as HTMLElement | null;
     const rect = target?.getBoundingClientRect();
-    const capturedX = rect ? rect.left + rect.width / 2 : 0;
+    const capturedX = rect ? rect.left + rect.width / CENTER_DIVISOR : 0;
     const capturedY = rect ? rect.top - POPUP_OFFSET_Y : 0;
 
     // 180ms delay so the trackpad cursor merely passing through doesn't

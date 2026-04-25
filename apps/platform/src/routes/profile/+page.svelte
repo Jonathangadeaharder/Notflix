@@ -10,7 +10,8 @@
 
   let { data, form }: Props = $props();
 
-  let gameInterval = $state(data.initialData.gameInterval);
+  const initialInterval = data.initialData.gameInterval;
+  let gameInterval = $state(initialInterval);
   let isSubmitting = $state(false);
 
   // Pre-defined interrupt presets — design uses 5/10/15/Off
@@ -22,7 +23,8 @@
     { v: "0", label: "Off" },
   ];
 
-  // Display data — derive from session.user where possible
+  const INITIALS_MAX_CHARS = 2;
+  const TOGGLE_COUNT = 3;
   const displayName = $derived.by(() => {
     return (
       data.user?.name ||
@@ -46,7 +48,8 @@
     if (!n) return "··";
     const parts = n.split(/\s+/).filter(Boolean);
     if (parts.length === 0) return "··";
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    if (parts.length === 1)
+      return parts[0].slice(0, INITIALS_MAX_CHARS).toUpperCase();
     return (parts[0][0] + parts[1][0]).toUpperCase();
   });
 </script>
@@ -318,7 +321,9 @@
         <div
           class="flex items-center justify-between"
           style:padding="12px 0"
-          style:border-bottom={i < 3 ? "1px solid var(--line)" : "none"}
+          style:border-bottom={i < TOGGLE_COUNT
+            ? "1px solid var(--line)"
+            : "none"}
         >
           <div>
             <div class="text-sm font-medium">{item.label}</div>

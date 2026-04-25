@@ -1,8 +1,16 @@
 <script lang="ts">
+  const RING_DEFAULT_SIZE = 44;
+  const RING_DEFAULT_STROKE = 3;
+  const PERCENT_MAX = 100;
+  const HALF = 2;
+  const LARGE_SIZE_THRESHOLD = 60;
+  const FONT_SCALE = 0.26;
+  const SMALL_FONT_SIZE = 11;
+
   let {
     value = 0,
-    size = 44,
-    stroke = 3,
+    size = RING_DEFAULT_SIZE,
+    stroke = RING_DEFAULT_STROKE,
     showLabel = true,
     pulse = false,
   }: {
@@ -16,10 +24,10 @@
   const KNOWN_THRESHOLD = 85;
   const LEARN_THRESHOLD = 65;
 
-  const radius = $derived((size - stroke) / 2);
-  const circumference = $derived(2 * Math.PI * radius);
+  const radius = $derived((size - stroke) / HALF);
+  const circumference = $derived(HALF * Math.PI * radius);
   const dash = $derived(
-    circumference * (Math.max(0, Math.min(100, value)) / 100),
+    circumference * (Math.max(0, Math.min(PERCENT_MAX, value)) / PERCENT_MAX),
   );
   const color = $derived(
     (() => {
@@ -28,7 +36,9 @@
       return "var(--hard)";
     })(),
   );
-  const fontSize = $derived(size > 60 ? size * 0.26 : 11);
+  const fontSize = $derived(
+    size > LARGE_SIZE_THRESHOLD ? size * FONT_SCALE : SMALL_FONT_SIZE,
+  );
 </script>
 
 <div
@@ -44,16 +54,16 @@
     aria-hidden="true"
   >
     <circle
-      cx={size / 2}
-      cy={size / 2}
+      cx={size / HALF}
+      cy={size / HALF}
       r={radius}
       fill="none"
       stroke="rgba(255,255,255,0.08)"
       stroke-width={stroke}
     />
     <circle
-      cx={size / 2}
-      cy={size / 2}
+      cx={size / HALF}
+      cy={size / HALF}
       r={radius}
       fill="none"
       stroke={color}

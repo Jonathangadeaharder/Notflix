@@ -19,6 +19,8 @@
     confirmPassword?: string;
   }>({});
 
+  const HERO_GRADIENT = `linear-gradient(90deg, var(--brand-hi), var(--learn-hi))`;
+
   async function handleRegister(e: Event) {
     e.preventDefault();
     fieldErrors = {};
@@ -113,8 +115,7 @@
           Build a vocabulary
           <br />
           <span
-            style:background="linear-gradient(90deg, var(--brand-hi),
-            var(--learn-hi))"
+            style:background={HERO_GRADIENT}
             style:-webkit-background-clip="text"
             style:background-clip="text"
             style:-webkit-text-fill-color="transparent"

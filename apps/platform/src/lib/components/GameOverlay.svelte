@@ -25,6 +25,16 @@
   }>();
 
   const COMPLETE_RESUME_MS = 1400;
+  const COMPLETE_SECS_DIVISOR = 1000;
+  const MAX_RATING_KEY = 4;
+  const STROKE_WIDTH_WIDE = 3;
+  const RATING_DISABLED_OPACITY = 0.45;
+  const AGAIN_IDX = 0;
+  const EASY_IDX = 3;
+  const COLOR_KNOWN = "var(--known)";
+  const LINE_2 = "1px solid var(--line-2)";
+  const CARD_GRADIENT =
+    "linear-gradient(155deg, var(--surface-2), var(--surface))";
 
   let currentIndex = $state(0);
   let flipped = $state(false);
@@ -39,8 +49,14 @@
 
   const currentCard = $derived(cards[currentIndex]);
 
+  const ONE = 1;
+  const TWO = 2;
+  const THREE = 3;
+  const FOUR = 4;
+  type RatingKey = typeof ONE | typeof TWO | typeof THREE | typeof FOUR;
+
   type Rating = {
-    key: 1 | 2 | 3 | 4;
+    key: RatingKey;
     label: string;
     color: string;
     sub: string;
@@ -49,24 +65,24 @@
 
   const ratings: Rating[] = [
     {
-      key: 1,
+      key: ONE,
       label: "Again",
       color: "var(--hard)",
       sub: "< 1 min",
       isKnown: false,
     },
-    { key: 2, label: "Hard", color: "#f97316", sub: "6 min", isKnown: false },
+    { key: TWO, label: "Hard", color: "#f97316", sub: "6 min", isKnown: false },
     {
-      key: 3,
+      key: THREE,
       label: "Good",
       color: "var(--learn)",
       sub: "1 day",
       isKnown: true,
     },
     {
-      key: 4,
+      key: FOUR,
       label: "Easy",
-      color: "var(--known)",
+      color: COLOR_KNOWN,
       sub: "4 days",
       isKnown: true,
     },
@@ -104,7 +120,7 @@
     }
     if (!flipped) return;
     const num = parseInt(e.key, 10);
-    if (num >= 1 && num <= 4) {
+    if (num >= 1 && num <= MAX_RATING_KEY) {
       e.preventDefault();
       const r = ratings.find((x) => x.key === num);
       if (r) rate(r);
@@ -113,7 +129,7 @@
 
   // Status pill for header progress strip
   function pillColor(i: number, idx: number): string {
-    if (i < idx) return "var(--known)";
+    if (i < idx) return COLOR_KNOWN;
     if (i === idx) return "var(--learn)";
     return "var(--surface-2)";
   }
@@ -141,7 +157,7 @@
           <div
             class="font-mono uppercase"
             style:font-size="10px"
-            style:color={completed ? "var(--known)" : "var(--learn-hi)"}
+            style:color={completed ? COLOR_KNOWN : "var(--learn-hi)"}
             style:letter-spacing="0.14em"
           >
             {completed ? "✓ Gap filled" : "Knowledge check"}
@@ -187,14 +203,14 @@
         <div class="text-center py-12">
           <div
             class="w-16 h-16 mx-auto rounded-full grid place-items-center"
-            style:background="var(--known)"
+            style:background={COLOR_KNOWN}
             style:color="#000"
           >
-            <Check class="h-8 w-8" stroke-width={3} />
+            <Check class="h-8 w-8" stroke-width={STROKE_WIDTH_WIDE} />
           </div>
           <div class="mt-4 text-sm" style:color="var(--fg-2)">
             {cards.length} / {cards.length} reviewed · resuming in {(
-              COMPLETE_RESUME_MS / 1000
+              COMPLETE_RESUME_MS / COMPLETE_SECS_DIVISOR
             ).toFixed(1)}s
           </div>
         </div>
@@ -204,9 +220,8 @@
           type="button"
           class="relative w-full rounded-[16px] cursor-pointer block transition-transform duration-300 hover:-translate-y-0.5"
           style:aspect-ratio="16/7"
-          style:background="linear-gradient(155deg, var(--surface-2),
-          var(--surface))"
-          style:border="1px solid var(--line-2)"
+          style:background={CARD_GRADIENT}
+          style:border={LINE_2}
           style:padding="32px"
           onclick={() => (flipped = !flipped)}
           data-testid="card-surface"
@@ -283,7 +298,7 @@
               class="inline-block rounded font-mono"
               style:padding="1px 5px"
               style:background="rgba(255,255,255,0.1)"
-              style:border="1px solid var(--line-2)"
+              style:border={LINE_2}
               style:font-size="10px"
               style:color="var(--fg-2)">SPACE</kbd
             > to flip
@@ -300,7 +315,7 @@
                 ? `color-mix(in oklab, ${r.color} 15%, transparent)`
                 : "var(--surface-2)"}
               style:border="1px solid {flipped ? r.color : 'var(--line)'}"
-              style:opacity={flipped ? 1 : 0.45}
+              style:opacity={flipped ? 1 : RATING_DISABLED_OPACITY}
               style:cursor={flipped ? "pointer" : "not-allowed"}
               onclick={() => rate(r)}
               disabled={!flipped}
@@ -316,7 +331,7 @@
                   class="inline-block rounded font-mono"
                   style:padding="1px 5px"
                   style:background="rgba(255,255,255,0.1)"
-                  style:border="1px solid var(--line-2)"
+                  style:border={LINE_2}
                   style:font-size="10px"
                   style:color="var(--fg-2)">{r.key}</kbd
                 >
@@ -349,7 +364,7 @@
                 class="inline-block rounded font-mono"
                 style:padding="1px 5px"
                 style:background="rgba(255,255,255,0.1)"
-                style:border="1px solid var(--line-2)"
+                style:border={LINE_2}
                 style:font-size="10px"
                 style:color="var(--fg-2)">ESC</kbd
               >
@@ -366,10 +381,10 @@
             data-testid="swipe-left"
             onclick={() => {
               if (flipped) {
-                rate(ratings[0]);
+                rate(ratings[AGAIN_IDX]);
               } else {
                 flipped = true;
-                rate(ratings[0]);
+                rate(ratings[AGAIN_IDX]);
               }
             }}>Unknown</button
           >
@@ -377,10 +392,10 @@
             data-testid="swipe-right"
             onclick={() => {
               if (flipped) {
-                rate(ratings[3]);
+                rate(ratings[EASY_IDX]);
               } else {
                 flipped = true;
-                rate(ratings[3]);
+                rate(ratings[EASY_IDX]);
               }
             }}>Known</button
           >

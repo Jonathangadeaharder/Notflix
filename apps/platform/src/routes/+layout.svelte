@@ -17,6 +17,8 @@
 
   let { children } = $props();
   let mobileMenuOpen = $state(false);
+  const AVATAR_GRADIENT =
+    "linear-gradient(135deg, var(--brand-hi), var(--brand))";
 
   const navItems = [
     { key: "home", label: "Home", icon: Home, href: "/" },
@@ -113,8 +115,7 @@
           <a
             href="{base}/profile"
             class="w-8 h-8 rounded-full grid place-items-center text-white"
-            style:background="linear-gradient(135deg, var(--brand-hi),
-            var(--brand))"
+            style:background={AVATAR_GRADIENT}
             aria-label="Open profile"
           >
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
