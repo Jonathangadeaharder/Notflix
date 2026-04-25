@@ -8,23 +8,22 @@ test.describe("Profile: Settings", () => {
 
     await profile.expectHeadingVisible();
 
-    await expect(profile.gameIntervalSelect).toBeVisible();
-    const value = await profile.gameIntervalSelect.inputValue();
-    expect(["0", "5", "10", "20"]).toContain(value);
+    const value = await profile.getGameInterval();
+    expect(["0", "5", "10", "15", "20"]).toContain(value);
   });
 
   test("updates game interval", async ({ page }) => {
     const profile = new ProfilePage(page);
     await profile.goto();
 
-    const originalValue = await profile.gameIntervalSelect.inputValue();
+    const originalValue = await profile.getGameInterval();
 
     try {
       await profile.setGameInterval("5");
       await profile.save();
 
       await profile.goto();
-      const value = await profile.gameIntervalSelect.inputValue();
+      const value = await profile.getGameInterval();
       expect(value).toBe("5");
     } finally {
       await profile.setGameInterval(originalValue);

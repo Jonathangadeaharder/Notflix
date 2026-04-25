@@ -4,14 +4,14 @@ import type { Page, Locator } from "@playwright/test";
 export class ProfilePage {
   readonly page: Page;
   readonly heading: Locator;
-  readonly gameIntervalSelect: Locator;
+  readonly gameIntervalInput: Locator;
   readonly saveButton: Locator;
   readonly successIndicator: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.heading = page.locator("h1");
-    this.gameIntervalSelect = page.locator('input[name="gameInterval"]');
+    this.gameIntervalInput = page.locator('input[name="gameInterval"]');
     this.saveButton = page.locator('button[type="submit"]');
     this.successIndicator = page.locator("text=saved");
   }
@@ -21,8 +21,14 @@ export class ProfilePage {
     await this.page.waitForLoadState("load");
   }
 
+  async getGameInterval(): Promise<string> {
+    return this.gameIntervalInput.inputValue();
+  }
+
   async setGameInterval(value: string) {
-    const btn = this.page.locator(`form button`, { hasText: value === "0" ? "Off" : `${value} min` });
+    const btn = this.page.locator('button[type="button"]', {
+      hasText: value === "0" ? "Off" : `${value} min`,
+    });
     await btn.click();
   }
 
