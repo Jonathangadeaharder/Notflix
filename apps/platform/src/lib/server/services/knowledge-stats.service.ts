@@ -89,6 +89,25 @@ async function getLemmaTrend(targetLang: string): Promise<LemmaTrendPoint[]> {
   return points;
 }
 
+async function fetchKnownLemmas(
+  userId: string,
+  targetLang: string,
+  lemmaTexts: string[],
+): Promise<Set<string>> {
+  if (lemmaTexts.length === 0) return new Set<string>();
+  const known = await db
+    .select({ lemma: knownWords.lemma })
+    .from(knownWords)
+    .where(
+      and(
+        eq(knownWords.userId, userId),
+        eq(knownWords.lang, targetLang),
+        inArray(knownWords.lemma, lemmaTexts),
+      ),
+    );
+  return new Set(known.map((k) => k.lemma));
+}
+
 async function getReadyLemmas(
   userId: string | null | undefined,
   targetLang: string,
@@ -114,22 +133,11 @@ async function getReadyLemmas(
     }));
   }
 
-  const lemmaTexts = recentLemmas.map((l) => l.lemma);
-  const knownSet = new Set<string>();
-
-  if (lemmaTexts.length > 0) {
-    const known = await db
-      .select({ lemma: knownWords.lemma })
-      .from(knownWords)
-      .where(
-        and(
-          eq(knownWords.userId, userId),
-          eq(knownWords.lang, targetLang),
-          inArray(knownWords.lemma, lemmaTexts),
-        ),
-      );
-    known.forEach((k) => knownSet.add(k.lemma));
-  }
+  const knownSet = await fetchKnownLemmas(
+    userId,
+    targetLang,
+    recentLemmas.map((l) => l.lemma),
+  );
 
   return recentLemmas
     .filter((l) => !knownSet.has(l.lemma))

@@ -305,6 +305,7 @@
             style:padding="20px"
             style:background="var(--surface)"
             style:border="1px solid var(--line)"
+            data-testid="video-item"
           >
             <div class="flex items-center gap-3.5 mb-3.5">
               <div

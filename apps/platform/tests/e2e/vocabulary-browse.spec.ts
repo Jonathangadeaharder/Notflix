@@ -10,7 +10,7 @@ test.describe("Vocabulary: Browse and Filter", () => {
     await page.waitForLoadState("load");
 
     // Page heading
-    await expect(page.locator("h1")).toContainText("Vocabulary");
+    await expect(page.locator("h1")).toContainText("vocabulary");
 
     // Level filter buttons should be visible
     await expect(
