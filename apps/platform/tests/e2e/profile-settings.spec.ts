@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { ProfilePage } from "../pages/ProfilePage";
 
+const PRESET_VALUES = ["0", "5", "10", "15", "20"];
+
 test.describe("Profile: Settings", () => {
   test("displays current game interval", async ({ page }) => {
     const profile = new ProfilePage(page);
@@ -9,7 +11,7 @@ test.describe("Profile: Settings", () => {
     await profile.expectHeadingVisible();
 
     const value = await profile.getGameInterval();
-    expect(["0", "5", "10", "15", "20"]).toContain(value);
+    expect(PRESET_VALUES).toContain(value);
   });
 
   test("updates game interval", async ({ page }) => {
@@ -26,8 +28,10 @@ test.describe("Profile: Settings", () => {
       const value = await profile.getGameInterval();
       expect(value).toBe("5");
     } finally {
-      await profile.setGameInterval(originalValue);
-      await profile.save();
+      if (PRESET_VALUES.includes(originalValue)) {
+        await profile.setGameInterval(originalValue);
+        await profile.save();
+      }
     }
   });
 });

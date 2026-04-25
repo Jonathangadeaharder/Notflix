@@ -45,6 +45,7 @@
     <!-- eslint-enable svelte/no-navigation-without-resolve -->
   {:else if onSeeAll}
     <button
+      type="button"
       class="text-xs flex items-center gap-1 hover:opacity-80"
       style:color="var(--fg-2)"
       onclick={onSeeAll}

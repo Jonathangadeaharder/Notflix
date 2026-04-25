@@ -69,6 +69,7 @@ async function getLemmaTrend(targetLang: string): Promise<LemmaTrendPoint[]> {
     .where(
       and(
         eq(videoProcessing.targetLang, targetLang),
+        eq(videoProcessing.status, "COMPLETED"),
         gte(videoProcessing.createdAt, startDay),
       ),
     )

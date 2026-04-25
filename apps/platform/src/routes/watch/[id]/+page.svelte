@@ -210,12 +210,21 @@
     );
 
     for (const seg of heatmap) {
-      const idx = Math.min(
+      const startIdx = Math.min(
         HEATMAP_SEGMENTS - 1,
-        Math.floor(seg.start / bucketSize),
+        Math.max(0, Math.floor(seg.start / bucketSize)),
       );
-      const weight = Math.max(HEAT_MIN_WEIGHT, seg.end - seg.start);
-      counts[idx][classifySegment(seg)] += weight;
+      const endIdx = Math.min(
+        HEATMAP_SEGMENTS - 1,
+        Math.max(0, Math.floor(seg.end / bucketSize)),
+      );
+      const level = classifySegment(seg);
+      for (let b = startIdx; b <= endIdx; b++) {
+        const bStart = b * bucketSize;
+        const bEnd = (b + 1) * bucketSize;
+        const overlap = Math.min(seg.end, bEnd) - Math.max(seg.start, bStart);
+        counts[b][level] += Math.max(HEAT_MIN_WEIGHT, overlap);
+      }
     }
 
     for (let i = 0; i < HEATMAP_SEGMENTS; i++) {

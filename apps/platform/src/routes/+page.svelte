@@ -134,7 +134,7 @@
 
       <div class="relative z-[2] px-6 lg:px-[60px] pt-20 max-w-[720px]">
         <div class="flex items-center gap-2.5 mb-5">
-          {#if data.continueWatching}
+          {#if data.continueWatching && featured?.id === data.continueWatching.id}
             <Chip variant="brand">Continue watching</Chip>
             <span
               class="font-mono text-[11px] uppercase"

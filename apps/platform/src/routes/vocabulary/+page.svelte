@@ -83,6 +83,8 @@
       });
       if (res.ok) {
         await invalidateAll();
+      } else {
+        console.error("Toggle known failed:", res.status, await res.text());
       }
     } catch (e) {
       console.error("Toggle known error:", e);
@@ -277,7 +279,7 @@
         <span>Lemma</span>
         <span>Level</span>
         <span>State</span>
-        <span>Strength</span>
+        <span>Exposure</span>
         <span class="text-right">Action</span>
       </div>
 

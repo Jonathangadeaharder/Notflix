@@ -98,8 +98,7 @@
   <div class="absolute inset-0 atmo-grid pointer-events-none"></div>
 
   <div
-    class="relative z-10 grid min-h-screen lg:[grid-template-columns:1.1fr_1fr]"
-    style="grid-template-columns:1fr"
+    class="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_1fr]"
   >
     <div class="hidden lg:flex flex-col justify-between" style:padding="60px">
       <a href={resolve("/")} class="flex items-center gap-2.5">

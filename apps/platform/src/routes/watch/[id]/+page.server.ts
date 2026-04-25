@@ -29,11 +29,22 @@ function emptyVideoResponse(session: Session | null) {
   };
 }
 
+function isValidVttSegments(v: unknown): v is DbVttSegment[] {
+  if (!Array.isArray(v)) return false;
+  return v.every(
+    (s) =>
+      typeof s === "object" &&
+      s !== null &&
+      typeof s.start === "number" &&
+      typeof s.end === "number" &&
+      Array.isArray(s.tokens),
+  );
+}
+
 function generateHeatmap(vttJson: unknown): HeatmapSegment[] {
   const heatmap: HeatmapSegment[] = [];
-  if (vttJson) {
-    const segments = vttJson as DbVttSegment[];
-    for (const seg of segments) {
+  if (isValidVttSegments(vttJson)) {
+    for (const seg of vttJson) {
       if (seg.classification) {
         heatmap.push({
           start: seg.start,
@@ -112,7 +123,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
   const heatmap = generateHeatmap(result.processing?.vttJson);
   const { profile, interval } = await getGameInterval(session);
 
-  const rawSegments = result.processing?.vttJson as DbVttSegment[] | undefined;
+  const rawSegments = isValidVttSegments(result.processing?.vttJson)
+    ? result.processing.vttJson
+    : undefined;
   const subtitles = mapSegmentsToPlayerSubtitles(rawSegments);
 
   return {
