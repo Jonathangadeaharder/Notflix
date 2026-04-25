@@ -150,7 +150,7 @@
               style:color="var(--fg-2)"
               style:letter-spacing="0.08em"
             >
-              Curated for B1 Spanish
+              Curated picks
             </span>
           {/if}
         </div>
