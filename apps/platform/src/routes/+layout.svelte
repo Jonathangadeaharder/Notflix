@@ -112,12 +112,14 @@
           </span>
           <a
             href="{base}/profile"
-            class="w-8 h-8 rounded-full grid place-items-center font-bold text-xs text-white"
+            class="w-8 h-8 rounded-full grid place-items-center text-white"
             style:background="linear-gradient(135deg, var(--brand-hi),
             var(--brand))"
             aria-label="Open profile"
           >
-            JG
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+            </svg>
           </a>
           <button
             data-testid="logout-btn"

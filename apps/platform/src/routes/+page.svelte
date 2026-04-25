@@ -408,7 +408,7 @@
               style:color="var(--fg-3)"
               style:letter-spacing="0.12em"
             >
-              Lemma acquisition · last 14 days
+              Videos processed · last 14 days
             </div>
             {#if lemmaTrend.length > 0}
               <div class="flex items-end gap-1 mt-4" style:height="90px">

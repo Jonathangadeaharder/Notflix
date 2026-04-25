@@ -32,10 +32,10 @@
     if (!email.trim()) errors.email = "Email is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errors.email = "Please enter a valid email address.";
-    const MIN_PASSWORD_LENGTH = 6;
+    const MIN_PASSWORD_LENGTH = 8;
     if (!password) errors.password = "Password is required.";
     else if (password.length < MIN_PASSWORD_LENGTH)
-      errors.password = "Password must be at least 6 characters.";
+      errors.password = "Password must be at least 8 characters.";
     /* eslint-enable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
 
     if (Object.keys(errors).length > 0) {

@@ -10,7 +10,7 @@
 
   let { data, form }: Props = $props();
 
-  let gameInterval = $derived.by(() => data.initialData.gameInterval);
+  let gameInterval = $state(data.initialData.gameInterval);
   let isSubmitting = $state(false);
 
   // Pre-defined interrupt presets — design uses 5/10/15/Off
@@ -301,6 +301,16 @@
             Defaults that make subtitles feel like part of the film, not a
             heads-up display.
           </p>
+          <span
+            class="font-mono text-[9px] uppercase"
+            style:color="var(--fg-3)"
+            style:letter-spacing="0.1em"
+            style:background="var(--surface-2)"
+            style:padding="2px 8px"
+            style:border-radius="4px"
+          >
+            Coming soon
+          </span>
         </div>
       </div>
 

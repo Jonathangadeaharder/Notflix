@@ -179,6 +179,19 @@
     return "known";
   }
 
+  $effect(() => {
+    return () => {
+      clearOpenTimeout();
+      clearCloseTimeout();
+    };
+  });
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape" && activeWord) {
+      closeWordDetails({ resume: true });
+    }
+  }
+
   function getDifficultyChipClass(
     d: WordData["difficulty"] | undefined,
   ): string {
@@ -187,6 +200,8 @@
     return "known";
   }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if subtitle && mode !== "OFF"}
   <div

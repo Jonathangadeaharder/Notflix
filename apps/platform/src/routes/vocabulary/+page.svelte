@@ -172,7 +172,7 @@
           ></span>
           {levelLabels[level]}
           <span class="font-mono text-[11px]" style:color="var(--fg-3)">
-            {data.levelCounts[level]}
+            {data.levelCounts[level] ?? 0}
           </span>
         </button>
       {/each}

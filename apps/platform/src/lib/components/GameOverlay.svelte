@@ -29,6 +29,13 @@
   let currentIndex = $state(0);
   let flipped = $state(false);
   let completed = $state(false);
+  let completeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  $effect(() => {
+    return () => {
+      if (completeTimer) clearTimeout(completeTimer);
+    };
+  });
 
   const currentCard = $derived(cards[currentIndex]);
 
@@ -76,7 +83,7 @@
 
     if (currentIndex + 1 >= cards.length) {
       completed = true;
-      setTimeout(() => onComplete(), COMPLETE_RESUME_MS);
+      completeTimer = setTimeout(() => onComplete(), COMPLETE_RESUME_MS);
     } else {
       currentIndex++;
       flipped = false;
@@ -91,6 +98,7 @@
       return;
     }
     if (e.key === "Escape") {
+      if (completeTimer) clearTimeout(completeTimer);
       onComplete();
       return;
     }
@@ -152,7 +160,10 @@
           class="w-9 h-9 rounded-full grid place-items-center transition-colors hover:bg-white/10"
           style:background="rgba(255,255,255,0.06)"
           style:color="var(--fg)"
-          onclick={() => onComplete()}
+          onclick={() => {
+            if (completeTimer) clearTimeout(completeTimer);
+            onComplete();
+          }}
           aria-label="Skip knowledge check"
         >
           <X class="h-4 w-4" />

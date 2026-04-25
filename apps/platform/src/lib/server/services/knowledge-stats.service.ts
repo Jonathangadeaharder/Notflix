@@ -51,30 +51,36 @@ async function getKnownCount(
 }
 
 async function getLemmaTrend(targetLang: string): Promise<LemmaTrendPoint[]> {
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - TREND_DAYS);
-  fourteenDaysAgo.setHours(0, 0, 0, 0);
+  const startDay = new Date();
+  startDay.setUTCHours(0, 0, 0, 0);
+  startDay.setUTCDate(startDay.getUTCDate() - (TREND_DAYS - 1));
 
-  const processingRows = await db
-    .select({ createdAt: videoProcessing.createdAt })
+  const dayExpr = sql<string>`to_char(date_trunc('day', timezone('UTC', ${videoProcessing.createdAt})), 'YYYY-MM-DD')`;
+
+  const processingCounts = await db
+    .select({
+      day: dayExpr,
+      count: sql<number>`count(*)::int`,
+    })
     .from(videoProcessing)
     .where(
       and(
         eq(videoProcessing.targetLang, targetLang),
-        gte(videoProcessing.createdAt, fourteenDaysAgo),
+        gte(videoProcessing.createdAt, startDay),
       ),
-    );
+    )
+    .groupBy(dayExpr);
+
+  const countsByDay = new Map(
+    processingCounts.map((row) => [row.day, row.count] as const),
+  );
 
   const points: LemmaTrendPoint[] = [];
-  for (let i = TREND_DAYS - 1; i >= 0; i--) {
-    const day = new Date();
-    day.setDate(day.getDate() - i);
+  for (let i = 0; i < TREND_DAYS; i++) {
+    const day = new Date(startDay);
+    day.setUTCDate(startDay.getUTCDate() + i);
     const dayStr = day.toISOString().slice(0, 10);
-    const count = processingRows.filter((row) => {
-      if (!row.createdAt) return false;
-      return row.createdAt.toISOString().slice(0, 10) === dayStr;
-    }).length;
-    points.push({ day: dayStr, count });
+    points.push({ day: dayStr, count: countsByDay.get(dayStr) ?? 0 });
   }
 
   return points;
@@ -90,6 +96,11 @@ async function getReadyLemmas(
       count: videoLemmas.count,
     })
     .from(videoLemmas)
+    .innerJoin(
+      videoProcessing,
+      eq(videoLemmas.videoId, videoProcessing.videoId),
+    )
+    .where(eq(videoProcessing.targetLang, targetLang))
     .orderBy(desc(videoLemmas.count))
     .limit(READY_LEMMAS_LIMIT * 3);
 

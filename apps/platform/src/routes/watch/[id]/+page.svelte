@@ -41,10 +41,29 @@
   let subtitleMode = $state<SubtitleMode>("FILTERED");
 
   const parsedSubtitles: Subtitle[] = data.subtitles || [];
+
+  function findSubtitleAtTime(
+    subtitles: Subtitle[],
+    time: number,
+  ): Subtitle | null {
+    let left = 0;
+    let right = subtitles.length - 1;
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const sub = subtitles[mid];
+      if (time < sub.start) {
+        right = mid - 1;
+      } else if (time >= sub.end) {
+        left = mid + 1;
+      } else {
+        return sub;
+      }
+    }
+    return null;
+  }
+
   const currentSubtitle = $derived(
-    parsedSubtitles.find(
-      (sub) => currentTime >= sub.start && currentTime < sub.end,
-    ) || null,
+    findSubtitleAtTime(parsedSubtitles, currentTime),
   );
 
   const intervalSeconds = $derived(
@@ -106,7 +125,6 @@
   async function handleTimeUpdate() {
     if (!videoElement || showOverlay || interruptInFlight) return;
     currentTime = videoElement.currentTime;
-    duration = videoElement.duration || 1;
 
     if (intervalSeconds === 0) return;
     if (currentTime < nextInterruptTime) return;
@@ -291,6 +309,7 @@
         <!-- svelte-ignore a11y_media_has_caption -->
         <video
           bind:this={videoElement}
+          bind:duration
           data-testid="video-player"
           src={data.video.filePath}
           poster={data.video.thumbnailPath}

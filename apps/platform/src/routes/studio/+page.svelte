@@ -574,6 +574,8 @@
                 class="rounded-full w-8 h-8 grid place-items-center hover:bg-white/5"
                 style:color="var(--fg-3)"
                 aria-label="Delete {v.title}"
+                disabled
+                title="Delete coming soon"
               >
                 <Trash2 class="h-3.5 w-3.5" />
               </button>
