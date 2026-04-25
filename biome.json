@@ -2,14 +2,7 @@
   "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "ignoreUnknown": true,
-    "ignore": [
-      "**/brain-api.d.ts",
-      "**/dist/**",
-      "**/build/**",
-      "**/.svelte-kit/**",
-      "**/report/**"
-    ]
+    "ignoreUnknown": true
   },
   "formatter": {
     "enabled": true,
@@ -83,6 +76,7 @@
     }
   },
   "html": {
+    "experimentalFullSupportEnabled": true,
     "formatter": {
       "indentScriptAndStyle": false,
       "selfCloseVoidElements": "always"
