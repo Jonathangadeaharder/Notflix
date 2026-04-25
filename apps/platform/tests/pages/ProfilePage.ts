@@ -26,8 +26,9 @@ export class ProfilePage {
   }
 
   async setGameInterval(value: string) {
-    const btn = this.page.locator('button[type="button"]', {
-      hasText: value === "0" ? "Off" : `${value} min`,
+    const label = value === "0" ? "Off" : `${value} min`;
+    const btn = this.page.locator('[data-testid="interval-preset"]', {
+      hasText: label,
     });
     await btn.click();
   }

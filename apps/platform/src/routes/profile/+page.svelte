@@ -225,6 +225,7 @@
             {#each intervalPresets as preset (preset.v)}
               <button
                 type="button"
+                data-testid="interval-preset"
                 class="rounded-[10px] font-semibold transition-all"
                 style:padding="14px 10px"
                 style:background={gameInterval === preset.v
