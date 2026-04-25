@@ -70,7 +70,7 @@ test.describe("Vocabulary: Browse and Filter", () => {
 
     const toggleBtn = page.getByTestId("toggle-known-hola");
 
-    await expect(toggleBtn).toContainText("nmark", { timeout: 10_000 });
+    await expect(toggleBtn).toContainText("Unmark", { timeout: 10_000 });
 
     const deleteResponse = page.waitForResponse(
       (resp) => resp.url().includes("/api/words/known") && resp.request().method() === "DELETE",
@@ -90,6 +90,6 @@ test.describe("Vocabulary: Browse and Filter", () => {
     expect(postResp.ok()).toBeTruthy();
     await expect(toggleBtn).toBeEnabled({ timeout: 10_000 });
 
-    await expect(toggleBtn).toContainText("nmark", { timeout: 15_000 });
+    await expect(toggleBtn).toContainText("Unmark", { timeout: 15_000 });
   });
 });

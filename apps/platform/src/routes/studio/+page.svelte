@@ -167,7 +167,7 @@
         </p>
       </div>
       <div class="flex gap-2.5">
-        <button class="nx-btn nx-btn-ghost">
+        <button class="nx-btn nx-btn-ghost" disabled title="Coming soon">
           <Settings class="h-3.5 w-3.5" /> Pipeline
         </button>
         <a
@@ -402,11 +402,10 @@
       </div>
     {:else if library.length > 0}
       <div
-        class="rounded-[12px] overflow-hidden"
+        class="rounded-[12px] overflow-hidden overflow-x-auto"
         style:background="var(--surface)"
         style:border="1px solid var(--line)"
       >
-        <!-- Header row -->
         <div
           class="hidden md:grid font-mono uppercase"
           style:grid-template-columns="56px 2.5fr 1fr 1.4fr 200px"

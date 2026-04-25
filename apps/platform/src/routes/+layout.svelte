@@ -104,6 +104,8 @@
             class="w-9 h-9 rounded-full grid place-items-center transition-colors hover:bg-white/5"
             style:color="var(--fg-2)"
             aria-label="Search library"
+            disabled
+            title="Search coming soon"
           >
             <Search class="h-4 w-4" />
           </button>

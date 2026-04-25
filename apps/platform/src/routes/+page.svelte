@@ -236,7 +236,7 @@
             <Play class="h-4 w-4 fill-current" />
             {data.continueWatching ? "Resume watching" : "Start watching"}
           </a>
-          <button class="nx-btn nx-btn-ghost">
+          <button class="nx-btn nx-btn-ghost" disabled title="Coming soon">
             <Info class="h-4 w-4" />
             Episode details
           </button>
@@ -244,6 +244,8 @@
             class="nx-btn nx-btn-ghost"
             style:padding="10px 14px"
             aria-label="Add to watchlist"
+            disabled
+            title="Coming soon"
           >
             <Plus class="h-4 w-4" />
           </button>

@@ -107,15 +107,15 @@
   }
 
   function handleKey(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      if (completeTimer) clearTimeout(completeTimer);
+      onComplete();
+      return;
+    }
     if (completed) return;
     if (e.code === "Space") {
       e.preventDefault();
       flipped = !flipped;
-      return;
-    }
-    if (e.key === "Escape") {
-      if (completeTimer) clearTimeout(completeTimer);
-      onComplete();
       return;
     }
     if (!flipped) return;
@@ -376,33 +376,35 @@
         <!-- Hidden test affordances — keep parity with old swipe-based testid hooks
              so existing playwright/vitest checks for swipe-left / swipe-right
               still resolve to a clickable element. -->
-        <div
-          class="fixed bottom-4 right-4 flex gap-2 z-[60]"
-          style:opacity="0.01"
-        >
-          <button
-            data-testid="swipe-left"
-            onclick={() => {
-              if (flipped) {
-                rate(ratings[AGAIN_IDX]);
-              } else {
-                flipped = true;
-                rate(ratings[AGAIN_IDX]);
-              }
-            }}>Unknown</button
+        {#if import.meta.env.DEV || (window as unknown as Record<string, unknown>).__e2e}
+          <div
+            class="fixed bottom-4 right-4 flex gap-2 z-[60]"
+            style:opacity="0.01"
           >
-          <button
-            data-testid="swipe-right"
-            onclick={() => {
-              if (flipped) {
-                rate(ratings[EASY_IDX]);
-              } else {
-                flipped = true;
-                rate(ratings[EASY_IDX]);
-              }
-            }}>Known</button
-          >
-        </div>
+            <button
+              data-testid="swipe-left"
+              onclick={() => {
+                if (flipped) {
+                  rate(ratings[AGAIN_IDX]);
+                } else {
+                  flipped = true;
+                  rate(ratings[AGAIN_IDX]);
+                }
+              }}>Unknown</button
+            >
+            <button
+              data-testid="swipe-right"
+              onclick={() => {
+                if (flipped) {
+                  rate(ratings[EASY_IDX]);
+                } else {
+                  flipped = true;
+                  rate(ratings[EASY_IDX]);
+                }
+              }}>Known</button
+            >
+          </div>
+        {/if}
       {/if}
     </div>
   </div>

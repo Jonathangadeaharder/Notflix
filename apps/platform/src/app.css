@@ -429,3 +429,11 @@
     radial-gradient(ellipse at 20% 30%, var(--brand-glow), transparent 50%),
     radial-gradient(ellipse at 80% 70%, rgba(212, 165, 116, 0.13), transparent 50%);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .tok-learn-pulse,
+  .ring-pulse,
+  [style*="animation"] {
+    animation: none !important;
+  }
+}

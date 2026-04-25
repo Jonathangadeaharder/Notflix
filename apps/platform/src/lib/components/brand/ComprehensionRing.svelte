@@ -24,15 +24,17 @@
   const KNOWN_THRESHOLD = 85;
   const LEARN_THRESHOLD = 65;
 
+  const normalizedValue = $derived(
+    Number.isFinite(value) ? Math.max(0, Math.min(PERCENT_MAX, value)) : 0,
+  );
+
   const radius = $derived((size - stroke) / HALF);
   const circumference = $derived(HALF * Math.PI * radius);
-  const dash = $derived(
-    circumference * (Math.max(0, Math.min(PERCENT_MAX, value)) / PERCENT_MAX),
-  );
+  const dash = $derived(circumference * (normalizedValue / PERCENT_MAX));
   const color = $derived(
     (() => {
-      if (value >= KNOWN_THRESHOLD) return "var(--known)";
-      if (value >= LEARN_THRESHOLD) return "var(--learn)";
+      if (normalizedValue >= KNOWN_THRESHOLD) return "var(--known)";
+      if (normalizedValue >= LEARN_THRESHOLD) return "var(--learn)";
       return "var(--hard)";
     })(),
   );
@@ -80,8 +82,9 @@
       style:letter-spacing="-0.02em"
       style:color="var(--fg)"
     >
-      {Math.round(value)}<span class="opacity-60" style:font-size="0.6em"
-        >%</span
+      {Math.round(normalizedValue)}<span
+        class="opacity-60"
+        style:font-size="0.6em">%</span
       >
     </div>
   {/if}

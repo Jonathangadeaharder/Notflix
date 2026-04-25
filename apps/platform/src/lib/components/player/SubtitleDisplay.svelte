@@ -32,6 +32,7 @@
   let isSavingKnown = $state(false);
   let saveError = $state("");
 
+  let wasPlaying = $state(false);
   let hoverOpenTimeout: ReturnType<typeof setTimeout> | undefined;
   let hoverCloseTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -59,13 +60,15 @@
   function closeWordDetails(opts: { resume?: boolean } = {}) {
     clearOpenTimeout();
     clearCloseTimeout();
+    const shouldResume = wasPlaying;
     activeWord = null;
     activeIndex = null;
     tooltipPinned = false;
     tooltipHovered = false;
     isSavingKnown = false;
     saveError = "";
-    if (opts.resume) {
+    wasPlaying = false;
+    if (opts.resume && shouldResume) {
       onResumeRequest?.();
     }
   }
@@ -81,6 +84,7 @@
     clearCloseTimeout();
 
     onPauseRequest?.();
+    wasPlaying = true;
 
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
@@ -112,6 +116,7 @@
     hoverOpenTimeout = setTimeout(() => {
       if (mode === "OFF") return;
       onPauseRequest?.();
+      wasPlaying = true;
       popupPosition = { x: capturedX, y: capturedY };
       tooltipPinned = false;
       saveError = "";
@@ -144,8 +149,14 @@
     openAt(word, index, event, true);
   }
 
+  function snapshotMatches(lemma: string, idx: number | null): boolean {
+    return activeWord?.lemma === lemma && activeIndex === idx;
+  }
+
   async function markWordKnown() {
     if (!activeWord?.lemma || isSavingKnown) return;
+    const snapshotLemma = activeWord.lemma;
+    const snapshotIndex = activeIndex;
     isSavingKnown = true;
     saveError = "";
     try {
@@ -153,20 +164,26 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lemma: activeWord.lemma,
+          lemma: snapshotLemma,
           lang: videoTargetLang,
         }),
       });
       if (!response.ok) {
         throw new Error("Failed to save known word");
       }
-      onMarkKnown?.(activeWord.lemma);
-      closeWordDetails({ resume: true });
+      if (snapshotMatches(snapshotLemma, snapshotIndex)) {
+        onMarkKnown?.(snapshotLemma);
+        closeWordDetails({ resume: true });
+      }
     } catch (error) {
       console.error(error);
-      saveError = "Could not save this word right now.";
+      if (snapshotMatches(snapshotLemma, snapshotIndex)) {
+        saveError = "Could not save this word right now.";
+      }
     } finally {
-      isSavingKnown = false;
+      if (snapshotMatches(snapshotLemma, snapshotIndex)) {
+        isSavingKnown = false;
+      }
     }
   }
 

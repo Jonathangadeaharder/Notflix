@@ -258,6 +258,7 @@
 
   const nextInterruptCountdown = $derived.by(() => {
     if (intervalSeconds === 0 || nextInterruptTime === Infinity) return null;
+    if (nextInterruptTime > totalDuration) return null;
     const remaining = Math.max(0, nextInterruptTime - currentTime);
     const min = Math.floor(remaining / SECONDS_IN_MINUTE);
     const sec = Math.floor(remaining % SECONDS_IN_MINUTE);

@@ -226,6 +226,7 @@
               <button
                 type="button"
                 data-testid="interval-preset"
+                aria-pressed={gameInterval === preset.v}
                 class="rounded-[10px] font-semibold transition-all"
                 style:padding="14px 10px"
                 style:background={gameInterval === preset.v

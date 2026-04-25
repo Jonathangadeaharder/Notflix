@@ -13,8 +13,8 @@
 
   let { data }: { data: PageData } = $props();
 
-  const initialSearch = data.filters.search ?? "";
-  let searchInput = $state(initialSearch);
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let searchInput = $state(data.filters.search ?? "");
   const togglingWords = new SvelteSet<string>();
 
   const COLOR_KNOWN = "var(--known)";
@@ -103,6 +103,10 @@
       h = (h * HASH_PRIME + lemma.charCodeAt(i)) >>> 0;
     return HASH_BASE + (h % HASH_MOD) / HASH_DIV;
   }
+
+  $effect(() => {
+    searchInput = data.filters.search ?? "";
+  });
 </script>
 
 <svelte:head>
@@ -189,6 +193,8 @@
           class="nx-btn nx-btn-ghost"
           style:padding="6px 12px"
           style:font-size="12px"
+          disabled
+          title="Coming soon"
         >
           <Download class="h-3 w-3" /> Export CSV
         </button>
@@ -196,6 +202,8 @@
           class="nx-btn nx-btn-brand"
           style:padding="6px 12px"
           style:font-size="12px"
+          disabled
+          title="Coming soon"
         >
           <Sparkles class="h-3 w-3" /> Start review
         </button>
@@ -252,7 +260,7 @@
 
     <!-- Table -->
     <div
-      class="rounded-[12px] overflow-hidden"
+      class="rounded-[12px] overflow-hidden overflow-x-auto"
       style:background="var(--surface)"
       style:border="1px solid var(--line)"
     >
