@@ -375,14 +375,10 @@
 
         <!-- Hidden test affordances — keep parity with old swipe-based testid hooks
              so existing playwright/vitest checks for swipe-left / swipe-right
-             still resolve to a clickable element. -->
+              still resolve to a clickable element. -->
         <div
-          class="absolute opacity-0 pointer-events-auto"
-          style:bottom="0"
-          style:right="0"
-          style:width="1px"
-          style:height="1px"
-          style:overflow="visible"
+          class="fixed bottom-4 right-4 flex gap-2 z-[60]"
+          style:opacity="0.01"
         >
           <button
             data-testid="swipe-left"
