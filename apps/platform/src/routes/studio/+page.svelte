@@ -334,6 +334,7 @@
                 class="font-mono font-semibold"
                 style:font-size="13px"
                 style:color="var(--learn-hi)"
+                data-testid="status-{v.status || 'UNPROCESSED'}"
               >
                 {v.progressPercent ?? 0}%
               </div>

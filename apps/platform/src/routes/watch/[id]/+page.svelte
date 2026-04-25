@@ -390,7 +390,8 @@
         </div>
 
         {#if showOverlay}
-          <div class="absolute inset-0 z-50" data-testid="game-overlay">
+          <!-- fixed overlay to escape video frame bounds -->
+          <div class="fixed inset-0 z-50" data-testid="game-overlay">
             <GameOverlay
               cards={gameCards}
               onComplete={handleGameComplete}
