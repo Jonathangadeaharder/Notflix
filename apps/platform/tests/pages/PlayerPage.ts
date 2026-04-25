@@ -18,7 +18,7 @@ export class PlayerPage {
         this.swipeLeftButton = page.getByTestId('swipe-left');
         this.cardWord = page.getByTestId('card-original');
         this.subtitleContainer = page.getByTestId('subtitle-container');
-        this.subtitleBtn = page.getByTestId('subtitle-mode-btn');
+        this.subtitleBtn = page.getByTestId('subtitle-btn');
     }
 
     async waitForPlayback() {

@@ -38,7 +38,7 @@ describe("GET /api/game/generate", () => {
     vi.mocked(generateDeck).mockResolvedValueOnce([mockCard]);
 
     const url = new URL(
-      `http://localhost/api/game/generate?videoId=vid-1&start=0&end=${CHUNK_END_SECONDS}&targetLang=es`,
+      `http://localhost/api/game/generate?videoId=550e8400-e29b-41d4-a716-446655440000&start=0&end=${CHUNK_END_SECONDS}&targetLang=es`,
     );
     const response = await GET({
       url,
@@ -52,7 +52,7 @@ describe("GET /api/game/generate", () => {
     expect(body.nextChunkStart).toBe(CHUNK_END_SECONDS);
     expect(generateDeck).toHaveBeenCalledWith(
       "u1",
-      "vid-1",
+      "550e8400-e29b-41d4-a716-446655440000",
       0,
       CHUNK_END_SECONDS,
       "es",

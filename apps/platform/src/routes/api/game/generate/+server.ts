@@ -1,14 +1,19 @@
 import { json } from "@sveltejs/kit";
 import { generateDeck } from "$lib/server/services/chunker.service";
 import type { RequestHandler } from "./$types";
+import { HTTP_STATUS } from "$lib/constants";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DEFAULT_END_TIME = 600;
-const HTTP_STATUS_BAD_REQUEST = 400;
 
 export const GET: RequestHandler = async ({ url, locals }) => {
   const session = await locals.auth();
-  if (!session) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user) {
+    return json(
+      { error: "Unauthorized" },
+      { status: HTTP_STATUS.UNAUTHORIZED },
+    );
   }
   const userId = session.user.id;
 
@@ -23,7 +28,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   if (!videoId) {
     return json(
       { error: "Missing videoId" },
-      { status: HTTP_STATUS_BAD_REQUEST },
+      { status: HTTP_STATUS.BAD_REQUEST },
+    );
+  }
+
+  if (!UUID_RE.test(videoId)) {
+    return json(
+      { error: "videoId must be a valid UUID" },
+      { status: HTTP_STATUS.BAD_REQUEST },
     );
   }
 

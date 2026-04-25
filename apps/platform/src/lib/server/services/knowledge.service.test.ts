@@ -23,7 +23,6 @@ describe("getKnownLemmas", () => {
       where: vi.fn().mockResolvedValue([{ lemma: "gato" }, { lemma: "perro" }]),
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await getKnownLemmas(
       USER_ID,
       TARGET_LANG,
@@ -43,7 +42,6 @@ describe("getKnownLemmas", () => {
       where: vi.fn().mockResolvedValue([{ lemma: "gato" }]),
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await getKnownLemmas(
       USER_ID,
       TARGET_LANG,

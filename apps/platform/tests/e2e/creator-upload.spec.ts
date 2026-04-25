@@ -3,7 +3,6 @@ import path from 'path';
 import { StudioPage } from '../pages/StudioPage';
 import { UploadPage } from '../pages/UploadPage';
 
-const ERROR_TIMEOUT_MS = 15000;
 const COMPLETED_TIMEOUT_MS = 60000;
 
 test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
@@ -26,16 +25,11 @@ test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
         const videoCard = page.locator(`[data-testid="video-item"]`, { hasText: uniqueTitle });
         await expect(videoCard).toBeVisible();
 
-        if (process.env.CI) {
-            // Without AI service in CI, processing fails fast — verify error handling
-            await studioPage.waitForVideoStatus(uniqueTitle, 'ERROR', ERROR_TIMEOUT_MS);
-            await expect(videoCard.locator('text=Retry')).toBeVisible();
-        } else {
-            // With full stack locally, verify PENDING → COMPLETED transition
-            await expect(page.locator(`[data-testid="status-PENDING"]`).first()).toBeVisible();
-            await studioPage.waitForVideoStatus(uniqueTitle, 'COMPLETED', COMPLETED_TIMEOUT_MS);
-            const watchLink = videoCard.locator('a[href^="/watch/"]').first();
-            await expect(watchLink).toBeVisible();
-        }
+        // Wait for either PENDING or COMPLETED on this specific card (avoids global match + race)
+        const pendingOrCompleted = videoCard.locator('[data-testid="status-PENDING"], [data-testid="status-COMPLETED"]');
+        await expect(pendingOrCompleted).toBeVisible({ timeout: COMPLETED_TIMEOUT_MS });
+        await studioPage.waitForVideoStatus(uniqueTitle, 'COMPLETED', COMPLETED_TIMEOUT_MS);
+        const watchLink = videoCard.locator('a[href^="/watch/"]').first();
+        await expect(watchLink).toBeVisible();
     });
 });

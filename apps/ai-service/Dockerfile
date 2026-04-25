@@ -2,11 +2,13 @@
 # ── Shared base: CUDA + Python 3.12 (same distro for builder & runner)
 FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS base
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common curl \
+    software-properties-common=0.99.* curl=7.68.* \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 python3.12-distutils python3.12-venv \
+    python3.12=3.12.* python3.12-venv=3.12.* \
     && rm -rf /var/lib/apt/lists/* \
     && curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -29,7 +31,7 @@ RUN uv venv /opt/venv && \
 # ── Runner (driver ≥ 525 required; RTX 2000 Ada + 591.64 is fine)
 FROM base AS runner
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg=7:* \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

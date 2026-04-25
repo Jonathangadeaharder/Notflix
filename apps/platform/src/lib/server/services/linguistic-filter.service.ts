@@ -3,6 +3,8 @@ import type { TokenAnalysis } from "../domain/translation-core";
 import { getKnownLemmas } from "./knowledge.service";
 import { LIMITS } from "$lib/constants";
 
+const DEFAULT_LEMMA_QUERY_BATCH_SIZE = 500;
+
 export enum SegmentClassification {
   EASY = "EASY", // Majority of words are known
   LEARNING = "LEARNING", // Contains unknown words worth learning
@@ -16,7 +18,7 @@ export type FilteredSegment = {
 };
 
 export class SmartFilter {
-  private static readonly LEMMA_BATCH_SIZE = 500;
+  private static readonly LEMMA_BATCH_SIZE = DEFAULT_LEMMA_QUERY_BATCH_SIZE;
 
   constructor(private db = defaultDb) {}
 

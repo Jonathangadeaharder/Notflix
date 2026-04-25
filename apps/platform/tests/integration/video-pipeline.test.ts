@@ -36,7 +36,7 @@ describe('processVideo sequential pipeline', () => {
             set: vi.fn().mockReturnThis(),
         } as any;
 
-        await processVideo('v1', 'es', 'en', 'user-1', mockDb);
+        await processVideo({ videoId: 'v1', targetLang: 'es', nativeLang: 'en', userId: 'user-1', db: mockDb });
 
         // Verify DB was updated to COMPLETED
         expect(mockDb.update).toHaveBeenCalled();

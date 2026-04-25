@@ -1,27 +1,14 @@
-import type { TranscriptionResponse } from "../adapters/real-ai-gateway";
+import type {
+  TranscriptionResponse,
+  TokenAnalysis,
+  VttSegment,
+} from "$lib/types";
 
-export type TokenAnalysis = {
-  text: string;
-  lemma: string;
-  pos: string;
-  is_stop: boolean;
-  whitespace?: string;
-  translation?: string;
-  isKnown?: boolean;
-};
-
-export type VttSegment = {
-  start: number;
-  end: number;
-  text: string;
-  tokens: TokenAnalysis[];
-  translation?: string;
-  classification?: string;
-};
+export type { TokenAnalysis, VttSegment };
 
 export function mapAnalysisToSegments(
   transcription: TranscriptionResponse,
-  batchAnalysis: any[],
+  batchAnalysis: TokenAnalysis[][],
 ): VttSegment[] {
   return transcription.segments.map((seg, i) => ({
     start: seg.start,
@@ -49,7 +36,7 @@ export function extractUnknownLemmas(segments: VttSegment[]): string[] {
   const unique = new Set<string>();
   segments.forEach((seg) =>
     seg.tokens.forEach((t) => {
-      if (!(t as any).isKnown) unique.add(t.lemma);
+      if (!t.isKnown) unique.add(t.lemma);
     }),
   );
   return Array.from(unique);
@@ -68,7 +55,7 @@ export function mapTranslationsToSegments(
     translation: sentenceTranslations[i],
     tokens: seg.tokens.map((t) => ({
       ...t,
-      translation: lemmaMap.get(t.lemma) || (t as any).translation,
+      translation: lemmaMap.get(t.lemma) ?? t.translation,
     })),
   }));
 }

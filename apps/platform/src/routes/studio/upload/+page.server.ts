@@ -30,36 +30,62 @@ export const load = async () => {
   };
 };
 
+function parseUploadForm(formData: FormData) {
+  const rawTitle = formData.get("title");
+  const rawTargetLang = formData.get("targetLang");
+  const rawNativeLang = formData.get("nativeLang");
+  const rawFile = formData.get("file");
+
+  const title = typeof rawTitle === "string" ? rawTitle : "";
+  const targetLang = typeof rawTargetLang === "string" ? rawTargetLang : "";
+  const nativeLang = typeof rawNativeLang === "string" ? rawNativeLang : "";
+  const file = rawFile instanceof File ? rawFile : null;
+
+  const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
+  return { title, targetLang, nativeLang, file, result };
+}
+
+function validateUploadForm(
+  file: File | null,
+  result: ReturnType<typeof uploadSchema.safeParse>,
+  title: string,
+  targetLang: string,
+  nativeLang: string,
+) {
+  if (result.success && file && file.size !== 0) return null;
+  const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
+  const fileErrors = !file || file.size === 0 ? ["File is required"] : [];
+  return fail(HTTP_STATUS.BAD_REQUEST, {
+    errors: {
+      ...fieldErrors,
+      file: fileErrors.length > 0 ? fileErrors : undefined,
+    },
+    data: { title, targetLang, nativeLang },
+  });
+}
+
 export const actions = {
   upload: async ({ request, locals }) => {
     const session = await locals.auth();
     if (!session) throw redirect(HTTP_STATUS.SEE_OTHER, "/login");
     const formData = await request.formData();
 
-    const title = formData.get("title") as string;
-    const targetLang = formData.get("targetLang") as string;
-    const nativeLang = formData.get("nativeLang") as string;
-    const file = formData.get("file") as File;
+    const { title, targetLang, nativeLang, file, result } =
+      parseUploadForm(formData);
+    const validationFailure = validateUploadForm(
+      file,
+      result,
+      title,
+      targetLang,
+      nativeLang,
+    );
+    if (validationFailure) return validationFailure;
 
-    const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
-
-    if (!result.success || !file || file.size === 0) {
-      const fieldErrors = result.success
-        ? {}
-        : result.error.flatten().fieldErrors;
-      const fileErrors = !file || file.size === 0 ? ["File is required"] : [];
-
-      return fail(HTTP_STATUS.BAD_REQUEST, {
-        errors: {
-          ...fieldErrors,
-          file: fileErrors.length > 0 ? fileErrors : undefined,
-        },
-        data: { title, targetLang, nativeLang },
-      });
-    }
+    if (!result.success) return validationFailure;
+    const validatedFile = file as File;
 
     const videoId = crypto.randomUUID();
-    const filePath = await saveUploadedFile(file, videoId);
+    const filePath = await saveUploadedFile(validatedFile, videoId);
 
     await db.insert(video).values({
       id: videoId,
@@ -70,18 +96,19 @@ export const actions = {
       published: true,
     });
 
-    processVideo(
+    processVideo({
       videoId,
-      result.data.targetLang,
-      result.data.nativeLang ??
+      targetLang: result.data.targetLang,
+      nativeLang:
+        result.data.nativeLang ??
         session.user.nativeLang ??
         CONFIG.DEFAULT_NATIVE_LANG,
-      session.user.id,
-    ).catch((err) =>
+      userId: session.user.id,
+    }).catch((err) =>
       console.error(`[Pipeline] Background error for ${videoId}:`, err),
     );
 
-    throw redirect(HTTP_STATUS.SEE_OTHER, "/studio"); // 303 is standard for redirects after post
+    throw redirect(HTTP_STATUS.SEE_OTHER, "/studio");
   },
 };
 

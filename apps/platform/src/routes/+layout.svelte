@@ -7,7 +7,9 @@
   import User from "lucide-svelte/icons/user";
   import LayoutGrid from "lucide-svelte/icons/layout-grid";
   import BookOpen from "lucide-svelte/icons/book-open";
+  import LogOut from "lucide-svelte/icons/log-out";
   import { base } from "$app/paths";
+  import { signOut } from "$lib/auth-client";
 
   let { children } = $props();
 
@@ -64,6 +66,17 @@
               <User class="h-4 w-4" />
               Profile
             </a>
+            <button
+              data-testid="logout-btn"
+              class="flex items-center gap-2 text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-full text-sm font-medium transition-all cursor-pointer"
+              onclick={async () => {
+                const { error } = await signOut();
+                if (error) console.error("Logout failed:", error);
+              }}
+            >
+              <LogOut class="h-4 w-4" />
+              Log Out
+            </button>
           </div>
         </div>
 
@@ -139,6 +152,18 @@
             <User class="h-5 w-5" />
             Profile
           </a>
+          <button
+            data-testid="logout-btn-mobile"
+            class="flex items-center gap-3 text-zinc-300 hover:text-white hover:bg-white/5 px-3 py-3 rounded-lg text-sm font-medium transition-all w-full text-left cursor-pointer"
+            onclick={async () => {
+              mobileMenuOpen = false;
+              const { error } = await signOut();
+              if (error) console.error("Logout failed:", error);
+            }}
+          >
+            <LogOut class="h-5 w-5" />
+            Log Out
+          </button>
         </div>
       </div>
     {/if}

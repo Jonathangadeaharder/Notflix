@@ -10,6 +10,17 @@
   } from "./types";
   import { GAME } from "$lib/constants";
   import { getUpcomingGameWindow } from "$lib/utils/game-window";
+  import {
+    formatTime,
+    getMediaErrorMessage,
+    getNextSubtitleMode,
+    isAudioFile,
+    calculateNextInterrupt,
+    getTranscriptItemClass as getTranscriptItemClassPure,
+    markWordKnown,
+    shouldReportProgress,
+    calcProgressPercent,
+  } from "./video-player-utils";
 
   let {
     video,
@@ -42,15 +53,8 @@
     }) => void;
   }>();
 
-  const SECONDS_IN_MINUTE = 60;
-  const PAD_LENGTH = 2;
-  const MEDIA_ERR_ABORTED = 1;
-  const MEDIA_ERR_NETWORK = 2;
-  const MEDIA_ERR_DECODE = 3;
-  const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
-  const PERCENTAGE_BASE = 100;
   const NO_PROGRESS_REPORTED = -1;
-  const PROGRESS_REPORT_INTERVAL_SECONDS = 5;
+  const SECONDS_IN_MINUTE = 60;
 
   // Player State
   let videoElement = $state<HTMLVideoElement>();
@@ -79,16 +83,13 @@
       SECONDS_IN_MINUTE,
   );
 
-  let isAudio = $derived(
-    video.filePath?.toLowerCase().endsWith(".m4a") ||
-      video.filePath?.toLowerCase().endsWith(".mp3"),
-  );
+  let isAudio = $derived(isAudioFile(video.filePath));
 
-  let videoProgress = $derived((currentTime / duration) * PERCENTAGE_BASE);
+  let videoProgress = $derived(calcProgressPercent(currentTime, duration));
 
   let currentSubtitle = $derived(
     subtitleEntries.find(
-      (sub: Subtitle) => currentTime >= sub.start && currentTime <= sub.end,
+      (sub: Subtitle) => currentTime >= sub.start && currentTime < sub.end,
     ) || null,
   );
 
@@ -114,11 +115,7 @@
   });
 
   function initNextInterrupt() {
-    if (intervalSeconds > 0) {
-      nextInterruptTime = intervalSeconds * (chunkIndex + 1);
-    } else {
-      nextInterruptTime = Infinity;
-    }
+    nextInterruptTime = calculateNextInterrupt(intervalSeconds, chunkIndex);
   }
 
   onMount(() => {
@@ -126,29 +123,20 @@
   });
 
   function reportProgress(force = false) {
-    if (!onProgressUpdate) {
-      return;
-    }
-
+    if (!onProgressUpdate) return;
     const roundedCurrentTime = Math.round(currentTime);
     const roundedDuration = Math.round(duration || 0);
-    if (roundedDuration <= 0) {
-      return;
-    }
-
+    if (roundedDuration <= 0) return;
     if (
       !force &&
-      Math.abs(roundedCurrentTime - lastProgressReportSecond) <
-        PROGRESS_REPORT_INTERVAL_SECONDS
-    ) {
+      !shouldReportProgress(currentTime, duration, lastProgressReportSecond)
+    )
       return;
-    }
-
     lastProgressReportSecond = roundedCurrentTime;
     onProgressUpdate({
       currentTime: roundedCurrentTime,
       duration: roundedDuration,
-      progressPercent: (roundedCurrentTime / roundedDuration) * PERCENTAGE_BASE,
+      progressPercent: calcProgressPercent(currentTime, duration),
     });
   }
 
@@ -171,32 +159,11 @@
 
     if (target && target.error) {
       const code = target.error.code;
-      let message = target.error.message;
-
-      // Map standard error codes to user-friendly messages
-      switch (code) {
-        case MEDIA_ERR_ABORTED:
-          message = "Playback aborted by user.";
-          break;
-        case MEDIA_ERR_NETWORK:
-          message = "Network error while downloading.";
-          break;
-        case MEDIA_ERR_DECODE:
-          message =
-            "Video playback aborted due to a corruption problem or because the video used features your browser did not support.";
-          break;
-        case MEDIA_ERR_SRC_NOT_SUPPORTED:
-          message =
-            "The video could not be loaded, either because the server or network failed or because the format is not supported (File might be missing).";
-          break;
-      }
+      const message = getMediaErrorMessage(code);
 
       console.error("[Player] Error Details:", code, message);
 
-      errorState = {
-        code: code,
-        message: message,
-      };
+      errorState = { code, message };
     } else {
       errorState = { code: 0, message: "Unknown error occurred" };
     }
@@ -241,28 +208,12 @@
     videoElement?.play().catch((e) => console.error(e));
   }
 
-  function formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / SECONDS_IN_MINUTE);
-    const secs = Math.floor(seconds % SECONDS_IN_MINUTE);
-    return `${mins}:${secs.toString().padStart(PAD_LENGTH, "0")}`;
-  }
-
   function toggleSubtitleMode() {
-    const modes: SubtitleMode[] = ["OFF", "FILTERED", "DUAL", "ORIGINAL"];
-    const idx = modes.indexOf(subtitleMode);
-    subtitleMode = modes[(idx + 1) % modes.length];
+    subtitleMode = getNextSubtitleMode(subtitleMode);
   }
 
   function handleWordMarkedKnown(lemma: string) {
-    subtitleEntries = subtitleEntries.map((subtitle: Subtitle) => ({
-      ...subtitle,
-      words: subtitle.words?.map(
-        (word: NonNullable<Subtitle["words"]>[number]) =>
-          word.lemma === lemma
-            ? { ...word, isKnown: true, difficulty: "easy" }
-            : word,
-      ),
-    }));
+    subtitleEntries = markWordKnown(subtitleEntries, lemma);
   }
 
   function jumpToSubtitle(subtitle: Subtitle) {
@@ -272,25 +223,6 @@
 
     videoElement.currentTime = subtitle.start;
     videoElement.play().catch((error) => console.error(error));
-  }
-
-  function getTranscriptItemClass(subtitle: Subtitle) {
-    const isCurrent =
-      currentTime >= subtitle.start && currentTime <= subtitle.end;
-
-    if (isCurrent) {
-      return "border-amber-400/70 bg-white/10";
-    }
-
-    if (subtitle.classification === "LEARNING") {
-      return "border-amber-500/30";
-    }
-
-    if (subtitle.classification === "HARD") {
-      return "border-red-500/30";
-    }
-
-    return "border-white/10";
   }
 </script>
 
@@ -412,7 +344,8 @@
         {#each subtitleEntries as subtitle, index (index)}
           <button
             type="button"
-            class="w-full rounded-xl border p-3 text-left transition-colors hover:bg-white/5 {getTranscriptItemClass(
+            class="w-full rounded-xl border p-3 text-left transition-colors hover:bg-white/5 {getTranscriptItemClassPure(
+              currentTime,
               subtitle,
             )}"
             onclick={() => jumpToSubtitle(subtitle)}

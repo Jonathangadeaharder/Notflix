@@ -18,12 +18,10 @@ const profileSchema = z.object({
   ),
 });
 
-const HTTP_STATUS_SEE_OTHER = 303;
-
 export const load: PageServerLoad = async ({ locals }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(HTTP_STATUS_SEE_OTHER, "/login?next=/profile");
+    throw redirect(HTTP_STATUS.SEE_OTHER, "/login?next=/profile");
   }
 
   const [profile] = await db

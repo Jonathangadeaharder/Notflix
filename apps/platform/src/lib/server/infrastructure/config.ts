@@ -4,6 +4,17 @@ import path from "path";
 // @ts-ignore SvelteKit virtual module not resolvable outside Vite context
 import { env } from "$env/dynamic/private";
 
+const DEFAULT_AI_TIMEOUT_MS = 15_000;
+const DEFAULT_AI_TRANSCRIBE_TIMEOUT_MS = 300_000;
+
+function parsePositiveTimeout(
+  raw: string | undefined,
+  fallback: number,
+): number {
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 // The AI service container always mounts media at this path, regardless of host layout.
 const AI_MEDIA_PATH = "/app/media/uploads";
 
@@ -12,9 +23,9 @@ const uploadDir = env.UPLOAD_DIR || "media/uploads";
 // Detect if running inside Docker container
 const isDocker = env.RUNNING_IN_DOCKER === "true";
 
-function resolveUploadDir(dir: string, docker: boolean): string {
+export function resolveUploadDir(dir: string, docker: boolean): string {
   if (docker) return dir;
-  const isAbsolute = dir.startsWith("/") || dir.includes(":");
+  const isAbsolute = path.isAbsolute(dir) || /^[A-Za-z]:[\\/]/.test(dir);
   return isAbsolute ? dir : path.resolve(process.cwd(), "../../", dir);
 }
 
@@ -30,9 +41,14 @@ export const CONFIG = {
   },
   AI_SERVICE_URL: env.AI_SERVICE_URL || "http://127.0.0.1:8000",
   AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || "dev_secret_key",
-  AI_SERVICE_TIMEOUT_MS: Number(env.AI_SERVICE_TIMEOUT_MS) || 15000,
-  AI_SERVICE_TRANSCRIBE_TIMEOUT_MS:
-    Number(env.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS) || 300_000,
+  AI_SERVICE_TIMEOUT_MS: parsePositiveTimeout(
+    env.AI_SERVICE_TIMEOUT_MS,
+    DEFAULT_AI_TIMEOUT_MS,
+  ),
+  AI_SERVICE_TRANSCRIBE_TIMEOUT_MS: parsePositiveTimeout(
+    env.AI_SERVICE_TRANSCRIBE_TIMEOUT_MS,
+    DEFAULT_AI_TRANSCRIBE_TIMEOUT_MS,
+  ),
   UPLOAD_DIR: uploadDir,
   RESOLVED_UPLOAD_DIR: resolvedUploadDir,
   MEDIA_ROOT: resolvedUploadDir,
@@ -54,13 +70,20 @@ export enum ProcessingStatus {
  * Converts a local file path to a path that the AI Service can understand.
  * Relies on MEDIA_ROOT_INTERNAL env var to be consistent across services.
  */
-export function toAiServicePath(localPath: string): string {
-  if (!isDocker) {
+export function toAiServicePath(
+  localPath: string,
+  runningInDocker = isDocker,
+  mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH,
+): string {
+  if (!runningInDocker) {
     return localPath;
   }
   // Split on both / and \ so Windows paths (stored from local uploads)
   // work correctly when the pipeline runs inside the Linux Docker container.
   const filename = localPath.split(/[/\\]/).pop() || path.basename(localPath);
-  const mediaRootInternal = env.MEDIA_ROOT_INTERNAL || AI_MEDIA_PATH;
-  return `${mediaRootInternal}/${filename}`;
+  let normalizedRoot = mediaRootInternal;
+  while (normalizedRoot.endsWith("/") || normalizedRoot.endsWith("\\")) {
+    normalizedRoot = normalizedRoot.slice(0, -1);
+  }
+  return `${normalizedRoot}/${filename}`;
 }

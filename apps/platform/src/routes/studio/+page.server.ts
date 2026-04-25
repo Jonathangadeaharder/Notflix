@@ -1,17 +1,33 @@
+import { fail } from "@sveltejs/kit";
 import { db } from "$lib/server/infrastructure/database";
 import { video, videoProcessing } from "$lib/server/db/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { CONFIG, ProcessingStatus } from "$lib/server/infrastructure/config";
 import { processVideo } from "$lib/server/services/video-pipeline";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
+import { HTTP_STATUS } from "$lib/constants";
+
+async function fetchCompletedVideoIds(
+  videoIds: string[],
+): Promise<Set<string>> {
+  if (videoIds.length === 0) return new Set();
+  const completedRows = await db
+    .select({ videoId: videoProcessing.videoId })
+    .from(videoProcessing)
+    .where(
+      and(
+        eq(videoProcessing.status, ProcessingStatus.COMPLETED),
+        inArray(videoProcessing.videoId, videoIds),
+      ),
+    );
+  return new Set(completedRows.map((r) => r.videoId));
+}
 
 export const load = async ({ depends, locals }) => {
   depends("app:videos");
   const session = await locals.auth();
   const userTargetLang = session?.user.targetLang || CONFIG.DEFAULT_TARGET_LANG;
 
-  // Filter JOIN to user's targetLang to avoid duplicate rows when a video has
-  // multiple videoProcessing records (one per language).
   const videos = await db
     .select({
       id: video.id,
@@ -32,22 +48,7 @@ export const load = async ({ depends, locals }) => {
     )
     .orderBy(desc(video.createdAt));
 
-  // Determine which videos have ANY completed processing (any language).
-  // Used to show "Translate to X" vs "Transcribe" button in the UI.
-  const videoIds = videos.map((v) => v.id);
-  const completedRows =
-    videoIds.length > 0
-      ? await db
-          .select({ videoId: videoProcessing.videoId })
-          .from(videoProcessing)
-          .where(
-            and(
-              eq(videoProcessing.status, ProcessingStatus.COMPLETED),
-              inArray(videoProcessing.videoId, videoIds),
-            ),
-          )
-      : [];
-  const completedIds = new Set(completedRows.map((r) => r.videoId));
+  const completedIds = await fetchCompletedVideoIds(videos.map((v) => v.id));
 
   return {
     userTargetLang,
@@ -69,14 +70,17 @@ export const actions = {
       session?.user.targetLang ||
       CONFIG.DEFAULT_TARGET_LANG;
 
-    if (!id || !session) return { success: false };
+    if (!session)
+      return fail(HTTP_STATUS.UNAUTHORIZED, { error: "Not authenticated" });
+    if (!id)
+      return fail(HTTP_STATUS.BAD_REQUEST, { error: "Video ID is required" });
 
-    processVideo(
-      id,
+    processVideo({
+      videoId: id,
       targetLang,
-      session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
-      session.user.id,
-    ).catch((err) =>
+      nativeLang: session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
+      userId: session.user.id,
+    }).catch((err) =>
       console.error(`[Pipeline] Background error for ${id}:`, err),
     );
 

@@ -12,6 +12,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 
+const PROGRESS_STAGE_QUEUED = "QUEUED";
+
+export const DEFAULT_GAME_INTERVAL_MINUTES = 10;
+
 // --- AUTHENTICATION (Better Auth Standard) ---
 export const user = pgTable("user", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -23,7 +27,9 @@ export const user = pgTable("user", {
   targetLang: text("target_lang").default("es"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-  gameIntervalMinutes: integer("game_interval_minutes").default(10), // Game & Watch specific
+  gameIntervalMinutes: integer("game_interval_minutes").default(
+    DEFAULT_GAME_INTERVAL_MINUTES,
+  ),
 });
 
 export type User = InferSelectModel<typeof user>;
@@ -111,7 +117,7 @@ export const videoProcessing = pgTable(
       .notNull(), // Fixed reference to singular 'video' table
     targetLang: text("target_lang").notNull(), // "es"
     status: text("status").notNull(), // "PENDING", "COMPLETED", "ERROR"
-    progressStage: text("progress_stage").default("QUEUED"),
+    progressStage: text("progress_stage").default(PROGRESS_STAGE_QUEUED),
     progressPercent: integer("progress_percent").default(0).notNull(),
     vttJson: jsonb("vtt_json").$type<DbVttSegment[]>(), // The full subtitles with timestamps
     createdAt: timestamp("created_at").defaultNow(),

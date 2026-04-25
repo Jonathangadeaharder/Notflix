@@ -50,12 +50,12 @@ async function validateAuthenticatedUploadScenario() {
       views: 0,
     }),
   );
-  expect(deps.processVideo).toHaveBeenCalledWith(
-    "video-123",
-    "es",
-    "de",
-    "user-1",
-  );
+  expect(deps.processVideo).toHaveBeenCalledWith({
+    videoId: "video-123",
+    targetLang: "es",
+    nativeLang: "de",
+    userId: "user-1",
+  });
   expect(deps.queueTask).toHaveBeenCalledWith(
     "processVideo:video-123",
     expect.any(Promise),

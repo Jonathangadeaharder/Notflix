@@ -6,10 +6,26 @@ import { mkdir, writeFile } from "fs/promises";
 import { dirname, extname, join } from "path";
 import { z } from "zod";
 
+const BYTES_PER_KB = 1024;
+const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB;
 const MIN_LANG_LEN = 2;
 const MAX_LANG_LEN = 5;
 const FALLBACK_FILE_EXTENSION = ".bin";
 const PLACEHOLDER_THUMBNAIL = "/placeholder.jpg";
+const DEFAULT_MAX_FILE_SIZE_MB = 500;
+const DEFAULT_MAX_FILE_SIZE_BYTES = DEFAULT_MAX_FILE_SIZE_MB * BYTES_PER_MB;
+const ALLOWED_EXTENSIONS = new Set([
+  "mp4",
+  "mp3",
+  "wav",
+  "webm",
+  "ogg",
+  "m4a",
+  "aac",
+  "mkv",
+  "avi",
+  "mov",
+]);
 
 const uploadSchema = z.object({
   title: z.string().min(1, "Title is required").max(LIMITS.MAX_TITLE_LENGTH),
@@ -48,16 +64,17 @@ type UploadResult =
 type UploadDependencies = {
   uploadDir: string;
   defaultNativeLang: string;
+  maxFileSizeBytes?: number;
   createVideoId: () => string;
   saveFileToStorage: (file: File, filePath: string) => Promise<void>;
   insertVideo: (record: NewVideo) => Promise<unknown>;
   queueTask: (name: string, task: Promise<unknown>) => void;
-  processVideo: (
-    videoId: string,
-    targetLang: string,
-    nativeLang: string,
-    userId: string,
-  ) => Promise<unknown>;
+  processVideo: (opts: {
+    videoId: string;
+    targetLang: string;
+    nativeLang: string;
+    userId: string;
+  }) => Promise<unknown>;
 };
 
 const defaultDependencies: UploadDependencies = {
@@ -76,7 +93,10 @@ export async function handleVideoUpload(
   overrides: Partial<UploadDependencies>,
 ): Promise<UploadResult> {
   const dependencies = { ...defaultDependencies, ...overrides };
-  const validation = validateUploadPayload(payload);
+  const validation = validateUploadPayload(
+    payload,
+    dependencies.maxFileSizeBytes,
+  );
   if (!validation.ok) {
     return validation;
   }
@@ -101,12 +121,12 @@ export async function handleVideoUpload(
 
   dependencies.queueTask(
     `processVideo:${videoId}`,
-    dependencies.processVideo(
+    dependencies.processVideo({
       videoId,
-      validation.data.targetLang,
-      user.nativeLang || dependencies.defaultNativeLang,
-      user.id,
-    ),
+      targetLang: validation.data.targetLang,
+      nativeLang: user.nativeLang || dependencies.defaultNativeLang,
+      userId: user.id,
+    }),
   );
 
   return {
@@ -128,8 +148,78 @@ async function saveUploadedFileToDisk(
   await writeFile(filePath, Buffer.from(arrayBuffer));
 }
 
+const FILE_TYPE_NOT_ALLOWED_MSG =
+  "File type not allowed. Accepted: " + [...ALLOWED_EXTENSIONS].join(", ");
+
+function makeValidationFailure(
+  errors: UploadErrors,
+  title: string,
+  targetLang: string,
+): { ok: false; value: UploadFailure } {
+  return {
+    ok: false,
+    value: { errors, data: { title, targetLang } },
+  };
+}
+
+function extractFileExtension(filename: string): string | null {
+  const lastDotIndex = filename.lastIndexOf(".");
+  return lastDotIndex > 0
+    ? filename.slice(lastDotIndex + 1).toLowerCase()
+    : null;
+}
+
+type SchemaResult = ReturnType<typeof uploadSchema.safeParse>;
+
+function validateSchemaAndFile(
+  payload: UploadPayload,
+  parsed: SchemaResult,
+): { ok: false; value: UploadFailure } | null {
+  if (parsed.success && payload.file && payload.file.size !== 0) return null;
+  const fieldErrors = parsed.success ? {} : parsed.error.flatten().fieldErrors;
+  const fileErrors =
+    !payload.file || payload.file.size === 0 ? ["File is required"] : undefined;
+  return makeValidationFailure(
+    { ...fieldErrors, file: fileErrors },
+    payload.title,
+    payload.targetLang,
+  );
+}
+
+function validateFileSize(
+  file: File,
+  maxFileSizeBytes: number | undefined,
+  parsed: SchemaResult,
+): { ok: false; value: UploadFailure } | null {
+  if (!parsed.success) return null;
+  const maxFileSize = maxFileSizeBytes ?? DEFAULT_MAX_FILE_SIZE_BYTES;
+  if (file.size <= maxFileSize) return null;
+  return makeValidationFailure(
+    {
+      file: [`File exceeds maximum size of ${maxFileSize / BYTES_PER_MB}MB`],
+    },
+    parsed.data.title,
+    parsed.data.targetLang,
+  );
+}
+
+function validateFileType(
+  file: File,
+  parsed: SchemaResult,
+): { ok: false; value: UploadFailure } | null {
+  if (!parsed.success) return null;
+  const ext = extractFileExtension(file.name);
+  if (ext && ALLOWED_EXTENSIONS.has(ext)) return null;
+  return makeValidationFailure(
+    { file: [FILE_TYPE_NOT_ALLOWED_MSG] },
+    parsed.data.title,
+    parsed.data.targetLang,
+  );
+}
+
 function validateUploadPayload(
   payload: UploadPayload,
+  maxFileSizeBytes?: number,
 ):
   | { ok: true; data: { title: string; targetLang: string; file: File } }
   | { ok: false; value: UploadFailure } {
@@ -138,36 +228,30 @@ function validateUploadPayload(
     targetLang: payload.targetLang,
   });
 
-  if (!parsed.success || !payload.file || payload.file.size === 0) {
-    const fieldErrors = parsed.success
-      ? {}
-      : parsed.error.flatten().fieldErrors;
-    const fileErrors =
-      !payload.file || payload.file.size === 0
-        ? ["File is required"]
-        : undefined;
+  const schemaFailure = validateSchemaAndFile(payload, parsed);
+  if (schemaFailure) return schemaFailure;
 
-    return {
-      ok: false,
-      value: {
-        errors: {
-          ...fieldErrors,
-          file: fileErrors,
-        },
-        data: {
-          title: payload.title,
-          targetLang: payload.targetLang,
-        },
-      },
-    };
+  if (!parsed.success || !payload.file) {
+    return makeValidationFailure(
+      { file: ["File is required"] },
+      payload.title,
+      payload.targetLang,
+    );
   }
+  const file = payload.file;
+
+  const sizeFailure = validateFileSize(file, maxFileSizeBytes, parsed);
+  if (sizeFailure) return sizeFailure;
+
+  const typeFailure = validateFileType(file, parsed);
+  if (typeFailure) return typeFailure;
 
   return {
     ok: true,
     data: {
       title: parsed.data.title,
       targetLang: parsed.data.targetLang,
-      file: payload.file,
+      file,
     },
   };
 }

@@ -6,7 +6,11 @@ import {
 } from "$lib/server/services/subtitle.service";
 import { HTTP_STATUS } from "$lib/constants";
 
-const VALID_MODES = new Set<string>(["native", "translated", "bilingual"]);
+const VALID_MODES: Set<SubtitleMode> = new Set([
+  "native",
+  "translated",
+  "bilingual",
+]);
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
   const mode = url.searchParams.get("mode") || "native";
@@ -16,7 +20,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     throw error(HTTP_STATUS.BAD_REQUEST, "Video ID is required");
   }
 
-  if (!VALID_MODES.has(mode)) {
+  if (!VALID_MODES.has(mode as SubtitleMode)) {
     throw error(
       HTTP_STATUS.BAD_REQUEST,
       `Invalid mode: ${mode}. Must be one of: native, translated, bilingual`,

@@ -3,17 +3,19 @@ import type { Session } from "$lib/server/infrastructure/auth";
 import { building } from "$app/environment";
 import { randomUUID } from "crypto";
 import { db } from "$lib/server/infrastructure/database";
-import { user as userTable, videoProcessing } from "$lib/server/db/schema";
+import {
+  user as userTable,
+  videoProcessing,
+  DEFAULT_GAME_INTERVAL_MINUTES,
+} from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { json, redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit";
+import { resolveAuthRequirement } from "$lib/server/services/auth-routes";
+import { HTTP_STATUS, INDICES } from "$lib/constants";
 
 const E2E_USER_ID = "00000000-e2e0-4000-a000-000000000000";
 const SESSION_TTL_MS = 86400000;
-
-const PROTECTED_PAGE_ROUTES = ["/studio", "/profile", "/vocabulary"];
-const PROTECTED_API_PREFIX = "/api/";
-const AUTH_EXEMPT_API = new Set(["/api/health"]);
 
 async function resolveE2eSession(): Promise<Session | null> {
   const [existing] = await db
@@ -33,13 +35,13 @@ async function resolveE2eSession(): Promise<Session | null> {
           emailVerified: true,
           nativeLang: "en",
           targetLang: "es",
-          gameIntervalMinutes: 10,
+          gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
         .onConflictDoNothing()
         .returning()
-    )[0];
+    )[INDICES.FIRST];
   if (!testUser) return null;
   return {
     user: testUser,
@@ -79,21 +81,20 @@ export const handle: Handle = async ({ event, resolve }) => {
   };
 
   // Centralized auth guard
-  const { pathname } = event.url;
-  const isProtectedPage = PROTECTED_PAGE_ROUTES.some((r) =>
-    pathname.startsWith(r),
-  );
-  const isProtectedApi =
-    pathname.startsWith(PROTECTED_API_PREFIX) && !AUTH_EXEMPT_API.has(pathname);
+  const { pathname, search } = event.url;
+  const { requiresAuth, responseKind } = resolveAuthRequirement(pathname);
 
-  if (isProtectedPage || isProtectedApi) {
+  if (requiresAuth) {
     const session = await event.locals.auth();
     if (!session) {
-      if (isProtectedApi) {
-        return json({ error: "Unauthorized" }, { status: 401 });
+      if (responseKind === "json401") {
+        return json(
+          { error: "Unauthorized" },
+          { status: HTTP_STATUS.UNAUTHORIZED },
+        );
       }
-      const next = encodeURIComponent(pathname);
-      return redirect(303, `/login?next=${next}`);
+      const next = encodeURIComponent(pathname + search);
+      return redirect(HTTP_STATUS.SEE_OTHER, `/login?next=${next}`);
     }
   }
 

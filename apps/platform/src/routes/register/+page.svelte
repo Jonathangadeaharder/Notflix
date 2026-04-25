@@ -6,6 +6,9 @@
 
   const MIN_PASSWORD_LENGTH = 8;
 
+  const INPUT_BORDER_ERROR = "border-magenta-500";
+  const INPUT_BORDER_DEFAULT = "border-zinc-700";
+
   let isLoading = $state(false);
   let name = $state("");
   let email = $state("");
@@ -86,8 +89,8 @@
             bind:value={name}
             placeholder="Your name"
             class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.name
-              ? 'border-magenta-500'
-              : 'border-zinc-700'}"
+              ? INPUT_BORDER_ERROR
+              : INPUT_BORDER_DEFAULT}"
           />
           {#if fieldErrors.name}<p class="text-xs text-magenta-500 mt-1">
               {fieldErrors.name}
@@ -104,8 +107,8 @@
             bind:value={email}
             placeholder="name@example.com"
             class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.email
-              ? 'border-magenta-500'
-              : 'border-zinc-700'}"
+              ? INPUT_BORDER_ERROR
+              : INPUT_BORDER_DEFAULT}"
           />
           {#if fieldErrors.email}<p class="text-xs text-magenta-500 mt-1">
               {fieldErrors.email}
@@ -122,8 +125,8 @@
             bind:value={password}
             placeholder="At least 8 characters"
             class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.password
-              ? 'border-magenta-500'
-              : 'border-zinc-700'}"
+              ? INPUT_BORDER_ERROR
+              : INPUT_BORDER_DEFAULT}"
           />
           {#if fieldErrors.password}<p class="text-xs text-magenta-500 mt-1">
               {fieldErrors.password}
@@ -139,8 +142,8 @@
             name="confirmPassword"
             bind:value={confirmPassword}
             class="w-full px-3 py-2 bg-black/50 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-magenta-600 focus:border-transparent transition-all {fieldErrors.confirmPassword
-              ? 'border-magenta-500'
-              : 'border-zinc-700'}"
+              ? INPUT_BORDER_ERROR
+              : INPUT_BORDER_DEFAULT}"
           />
           {#if fieldErrors.confirmPassword}<p
               class="text-xs text-magenta-500 mt-1"

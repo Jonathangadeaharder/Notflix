@@ -3,7 +3,7 @@ import { DELETE } from '../../src/routes/api/videos/[id]/+server';
 import { deleteVideoAndAssets } from '$lib/server/services/delete-video.service';
 import { HTTP_STATUS } from '$lib/constants';
 
-const VIDEO_ID = 'video-1';
+const VIDEO_ID = '550e8400-e29b-41d4-a716-446655440000';
 
 vi.mock('$lib/server/services/delete-video.service', () => ({
 	deleteVideoAndAssets: vi.fn()

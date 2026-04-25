@@ -18,7 +18,10 @@
     if (!hasPending) return;
 
     const interval = setInterval(() => {
-      if (document.visibilityState !== "visible" && !(window as any).__e2e)
+      if (
+        document.visibilityState !== "visible" &&
+        !(window as unknown as Record<string, unknown>).__e2e
+      )
         return;
 
       invalidate("app:videos");

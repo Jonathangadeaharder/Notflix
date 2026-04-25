@@ -22,6 +22,7 @@
   const HEATMAP_COLOR_LEARNING = "rgba(234, 179, 8, 0.8)";
   const HEATMAP_COLOR_HARD = "rgba(192, 38, 211, 0.5)"; // Magenta 600-ish
   const SECONDS_IN_MINUTE = 60;
+  const PLAY_FAILED_MSG = "Play failed:";
 
   let { data } = $props();
 
@@ -47,7 +48,7 @@
   function advanceChunk() {
     chunkIndex++;
     initNextInterrupt();
-    videoElement?.play().catch((err) => console.error("Play failed:", err));
+    videoElement?.play().catch((err) => console.error(PLAY_FAILED_MSG, err));
   }
 
   async function handleInterrupt() {
@@ -73,7 +74,7 @@
       }
     } catch (e) {
       console.error("Game generation failed", e);
-      videoElement?.play().catch((err) => console.error("Play failed:", err));
+      videoElement?.play().catch((err) => console.error(PLAY_FAILED_MSG, err));
     }
   }
 
@@ -119,7 +120,7 @@
     showOverlay = false;
     chunkIndex++;
     initNextInterrupt();
-    videoElement?.play().catch((err) => console.error("Play failed:", err));
+    videoElement?.play().catch((err) => console.error(PLAY_FAILED_MSG, err));
   }
 
   async function handleAnswerSubmitted(answer: {

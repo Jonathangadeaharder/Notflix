@@ -3,6 +3,7 @@
   import { base } from "$app/paths";
   import { Button } from "$lib/components/ui/button";
   import { AlertTriangle, Home, ArrowLeft } from "lucide-svelte";
+  import { HTTP_STATUS } from "$lib/constants";
 </script>
 
 <div class="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
@@ -18,7 +19,7 @@
     </h1>
 
     <p class="text-xl text-zinc-400 mb-8">
-      {#if page.status === 404}
+      {#if page.status === HTTP_STATUS.NOT_FOUND}
         The page you're looking for doesn't exist or has been moved.
       {:else}
         Something went wrong on our end. Please try again later.

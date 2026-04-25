@@ -29,6 +29,15 @@ export async function signInEmail(
   return {};
 }
 
+export async function signOut(callbackUrl = "/"): Promise<{ error?: string }> {
+  const supabase = await getSupabaseClient();
+  const { error } = await supabase.auth.signOut();
+  if (error) return { error: error.message };
+  // eslint-disable-next-line svelte/no-navigation-without-resolve
+  await goto(callbackUrl);
+  return {};
+}
+
 export async function signUpEmail(
   email: string,
   password: string,

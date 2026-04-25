@@ -58,6 +58,19 @@ export const ProcessingStatus = {
 export type ProcessingStatusType =
   (typeof ProcessingStatus)[keyof typeof ProcessingStatus];
 
+// --- Progress Stage ---
+export const ProgressStage = {
+  QUEUED: "QUEUED",
+  TRANSCRIBING: "TRANSCRIBING",
+  ANALYZING: "ANALYZING",
+  TRANSLATING: "TRANSLATING",
+  READY: "READY",
+  FAILED: "FAILED",
+} as const;
+
+export type ProgressStageType =
+  (typeof ProgressStage)[keyof typeof ProgressStage];
+
 // --- Segment Classification ---
 export const SegmentClassification = {
   EASY: "EASY",

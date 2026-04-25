@@ -4,14 +4,27 @@ import {
   user,
   videoProcessing,
   type DbVttSegment,
+  DEFAULT_GAME_INTERVAL_MINUTES,
 } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { toMediaUrl } from "$lib/server/utils/media-utils";
-
-const DEFAULT_GAME_INTERVAL = 10;
+import type { Session } from "$lib/server/infrastructure/auth";
+import type { InferSelectModel } from "drizzle-orm";
 
 type HeatmapSegment = { start: number; end: number; type: string };
+type User = InferSelectModel<typeof user>;
+
+function emptyVideoResponse(session: Session | null) {
+  return {
+    video: null,
+    heatmap: [],
+    profile: null,
+    gameInterval: DEFAULT_GAME_INTERVAL_MINUTES,
+    user: session?.user ?? null,
+    session,
+  };
+}
 
 function generateHeatmap(vttJson: unknown): HeatmapSegment[] {
   const heatmap: HeatmapSegment[] = [];
@@ -22,7 +35,7 @@ function generateHeatmap(vttJson: unknown): HeatmapSegment[] {
         heatmap.push({
           start: seg.start,
           end: seg.end,
-          type: seg.classification, // EASY, LEARNING, HARD
+          type: seg.classification,
         });
       }
     }
@@ -39,15 +52,30 @@ async function fetchUserProfile(userId: string) {
   return profile || null;
 }
 
-import type { Session } from "$lib/server/infrastructure/auth";
-
-import type { InferSelectModel } from "drizzle-orm";
-type User = InferSelectModel<typeof user>;
+async function fetchVideoWithProcessing(videoId: string, targetLang: string) {
+  const [result] = await db
+    .select({
+      video: video,
+      processing: videoProcessing,
+    })
+    .from(video)
+    .leftJoin(
+      videoProcessing,
+      and(
+        eq(video.id, videoProcessing.videoId),
+        eq(videoProcessing.targetLang, targetLang),
+      ),
+    )
+    .where(eq(video.id, videoId))
+    .limit(1);
+  return result ?? null;
+}
 
 async function getGameInterval(
   session: Session | null,
 ): Promise<{ profile: User | null; interval: number }> {
-  if (!session) return { profile: null, interval: DEFAULT_GAME_INTERVAL };
+  if (!session)
+    return { profile: null, interval: DEFAULT_GAME_INTERVAL_MINUTES };
 
   const userProfile = await fetchUserProfile(session.user.id);
 
@@ -63,51 +91,16 @@ async function getGameInterval(
 
   return {
     profile: userProfile,
-    interval: userProfile?.gameIntervalMinutes ?? DEFAULT_GAME_INTERVAL,
+    interval: userProfile?.gameIntervalMinutes ?? DEFAULT_GAME_INTERVAL_MINUTES,
   };
 }
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
-  const videoId = params.id;
   const session = await locals.auth();
   const targetLang = url.searchParams.get("lang") || "es";
 
-  let result;
-  try {
-    [result] = await db
-      .select({
-        video: video,
-        processing: videoProcessing,
-      })
-      .from(video)
-      .leftJoin(
-        videoProcessing,
-        and(
-          eq(video.id, videoProcessing.videoId),
-          eq(videoProcessing.targetLang, targetLang),
-        ),
-      )
-      .where(eq(video.id, videoId))
-      .limit(1);
-  } catch {
-    return {
-      video: null,
-      heatmap: [],
-      profile: null,
-      user: session?.user ?? null,
-      session,
-    };
-  }
-
-  if (!result || !result.video) {
-    return {
-      video: null,
-      heatmap: [],
-      profile: null,
-      user: session?.user ?? null,
-      session,
-    };
-  }
+  const result = await fetchVideoWithProcessing(params.id, targetLang);
+  if (!result?.video) return emptyVideoResponse(session);
 
   const vid = result.video;
   vid.filePath = toMediaUrl(vid.filePath);

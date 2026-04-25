@@ -4,9 +4,13 @@ import { env } from "$env/dynamic/private";
 import { env as publicEnv } from "$env/dynamic/public";
 import type { RequestEvent } from "@sveltejs/kit";
 import { db } from "./database";
-import { user as userTable } from "$lib/server/db/schema";
+import {
+  user as userTable,
+  DEFAULT_GAME_INTERVAL_MINUTES,
+} from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import type { User as DbUser } from "$lib/server/db/schema";
+import { INDICES } from "$lib/constants";
 
 export type User = DbUser;
 
@@ -18,38 +22,53 @@ export interface Session {
   expires: string;
 }
 
-function createSupabaseServerClient(event: RequestEvent) {
-  // Always use PUBLIC_SUPABASE_URL as the client URL so the cookie key
-  // (e.g. "sb-localhost-auth-token") matches what the browser sets.
-  // When running inside Docker, rewrite outgoing fetch requests to the
-  // internal SUPABASE_URL (e.g. http://kong:8000) so they resolve correctly.
-  const publicUrl = publicEnv.PUBLIC_SUPABASE_URL || "";
-  const internalUrl = env.SUPABASE_URL || publicUrl;
+function extractRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
 
-  const customFetch: typeof fetch = (input, init) => {
-    let url = "";
-    if (typeof input === "string") {
-      url = input;
-    } else if (input instanceof URL) {
-      url = input.href;
-    } else {
-      url = input.url;
+function buildRewrittenRequest(
+  input: RequestInfo | URL,
+  rewrittenUrl: string,
+): RequestInfo {
+  if (typeof input === "string" || input instanceof URL) return rewrittenUrl;
+  return new Request(rewrittenUrl, input);
+}
+
+function createDockerAwareFetch(
+  publicUrl: string,
+  internalUrl: string,
+): typeof fetch {
+  return (input, init) => {
+    const url = extractRequestUrl(input);
+    let rewritten = url;
+    if (publicUrl && internalUrl && internalUrl !== publicUrl) {
+      try {
+        const parsed = new URL(url);
+        const publicParsed = new URL(publicUrl);
+        if (
+          parsed.origin === publicParsed.origin &&
+          parsed.pathname.startsWith(publicParsed.pathname)
+        ) {
+          const internalParsed = new URL(internalUrl);
+          parsed.protocol = internalParsed.protocol;
+          parsed.host = internalParsed.host;
+          rewritten = parsed.href;
+        }
+      } catch {
+        rewritten = url;
+      }
     }
-
-    const rewritten =
-      internalUrl && internalUrl !== publicUrl
-        ? url.replace(publicUrl, internalUrl)
-        : url;
-
-    let request: Request | string;
-    if (typeof input === "string" || input instanceof URL) {
-      request = rewritten;
-    } else {
-      request = new Request(rewritten, input);
-    }
-
+    const request = buildRewrittenRequest(input, rewritten);
     return fetch(request, init);
   };
+}
+
+function createSupabaseServerClient(event: RequestEvent) {
+  const publicUrl = publicEnv.PUBLIC_SUPABASE_URL || "";
+  const internalUrl = env.SUPABASE_URL || publicUrl;
+  const customFetch = createDockerAwareFetch(publicUrl, internalUrl);
 
   return createServerClient(
     publicUrl,
@@ -89,7 +108,7 @@ async function upsertProfile(authUser: SupabaseAuthUser): Promise<User | null> {
     .from(userTable)
     .where(eq(userTable.id, authUser.id))
     .limit(1);
-  if (existing[0]) return existing[0];
+  if (existing[INDICES.FIRST]) return existing[INDICES.FIRST];
 
   const name =
     (authUser.user_metadata?.name as string | undefined) ||
@@ -104,7 +123,7 @@ async function upsertProfile(authUser: SupabaseAuthUser): Promise<User | null> {
       emailVerified: authUser.email_confirmed_at != null,
       nativeLang: "en",
       targetLang: "es",
-      gameIntervalMinutes: 10,
+      gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
       createdAt: new Date(),
       updatedAt: new Date(),
     })

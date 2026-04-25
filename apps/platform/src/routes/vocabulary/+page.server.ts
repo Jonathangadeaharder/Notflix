@@ -1,15 +1,17 @@
 import { db } from "$lib/server/infrastructure/database";
-import { vocabReference, user } from "$lib/server/db/schema";
-import { eq, and, sql, ilike } from "drizzle-orm";
+import { vocabReference, user, knownWords } from "$lib/server/db/schema";
+import { eq, and, sql, ilike, inArray, type SQL } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 import { redirect } from "@sveltejs/kit";
+import { CefrLevels } from "$lib/types";
+import { HTTP_STATUS } from "$lib/constants";
 
-const ALLOWED_LEVELS = new Set(["A1", "A2", "B1", "B2", "C1", "C2"]);
+const ALLOWED_LEVELS: Set<string> = new Set(CefrLevels);
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(303, "/login?next=/vocabulary");
+    throw redirect(HTTP_STATUS.SEE_OTHER, "/login?next=/vocabulary");
   }
   const userId = session.user.id;
 
@@ -30,8 +32,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     fetchLevelCounts(lang),
   ]);
 
+  const knownSet = await fetchKnownWords(
+    userId,
+    lang,
+    words.map((w) => w.lemma),
+  );
+  const wordsWithKnown = words.map((w) => ({
+    ...w,
+    isKnown: knownSet.has(w.lemma),
+  }));
+
   return {
-    words,
+    words: wordsWithKnown,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     filters: {
       lang,
@@ -61,7 +73,7 @@ function buildFilterConditions(
   lang: string,
   level: string | null,
   search: string | null,
-) {
+): (SQL | undefined)[] {
   const conditions = [eq(vocabReference.lang, lang)];
 
   if (level) {
@@ -85,7 +97,7 @@ function buildFilterConditions(
 }
 
 async function fetchVocabWords(
-  conditions: any[],
+  conditions: (SQL | undefined)[],
   limit: number,
   offset: number,
 ) {
@@ -103,7 +115,9 @@ async function fetchVocabWords(
     .offset(offset);
 }
 
-async function fetchVocabCount(conditions: any[]): Promise<number> {
+async function fetchVocabCount(
+  conditions: (SQL | undefined)[],
+): Promise<number> {
   const [result] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(vocabReference)
@@ -131,4 +145,23 @@ async function fetchLevelCounts(lang: string): Promise<Record<string, number>> {
     countsMap[row.level ?? "untracked"] = row.count;
   }
   return countsMap;
+}
+
+async function fetchKnownWords(
+  userId: string,
+  lang: string,
+  lemmas: string[],
+): Promise<Set<string>> {
+  if (lemmas.length === 0) return new Set();
+  const rows = await db
+    .select({ lemma: knownWords.lemma })
+    .from(knownWords)
+    .where(
+      and(
+        eq(knownWords.userId, userId),
+        eq(knownWords.lang, lang),
+        inArray(knownWords.lemma, lemmas),
+      ),
+    );
+  return new Set(rows.map((r) => r.lemma));
 }

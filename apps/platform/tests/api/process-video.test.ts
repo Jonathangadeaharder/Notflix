@@ -42,6 +42,11 @@ describe('POST /api/process/[id]', () => {
 		expect(response.status).toBe(HTTP_STATUS.OK);
 		// processVideo is called as fire-and-forget, so give it a tick
 		await new Promise(r => setTimeout(r, 0));
-		expect(processVideo).toHaveBeenCalledWith(VIDEO_ID, 'es', 'en', 'u1');
+		expect(processVideo).toHaveBeenCalledWith({
+			videoId: VIDEO_ID,
+			targetLang: 'es',
+			nativeLang: 'en',
+			userId: 'u1',
+		});
 	});
 });

@@ -2,10 +2,8 @@ import { test, expect } from "@playwright/test";
 import { PlayerPage } from "../pages/PlayerPage";
 
 test.describe("Video Player Component", () => {
-    // Skip in CI: headless Chromium lacks codecs for BigBuckBunny.mp4,
-    // causing errorState that hides subtitles/controls. The full-flow
-    // and transcription E2E tests validate real playback in CI.
-    test.skip(!!process.env.CI, "Headless Chromium lacks video codecs");
+    // Video source is a local WebM (VP8/Vorbis) that all Chromium builds support.
+    // Previously used remote BigBuckBunny.mp4 which failed in headless due to H.264 codecs.
 
     test("loads and toggles subtitle modes", async ({ page }) => {
         await page.goto("/test/player");
@@ -13,10 +11,27 @@ test.describe("Video Player Component", () => {
         const player = new PlayerPage(page);
         await player.waitForPlayback();
 
-        // Force video time to 2s to trigger subtitles (first subtitle: start=1, end=5)
+        // Force video time to 2s and pause so subtitles are deterministic
         await page.evaluate(() => {
             const v = document.querySelector("video") as HTMLVideoElement;
-            if (v) v.currentTime = 2;
+            if (!v) return;
+            return new Promise<void>((resolve) => {
+                const targetTime = 2;
+                const seek = () => {
+                    v.pause();
+                    if (Math.abs(v.currentTime - targetTime) < 0.01) {
+                        resolve();
+                        return;
+                    }
+                    v.addEventListener("seeked", () => resolve(), { once: true });
+                    v.currentTime = targetTime;
+                };
+                if (v.readyState >= 1) {
+                    seek();
+                } else {
+                    v.addEventListener("loadedmetadata", () => seek(), { once: true });
+                }
+            });
         });
 
         // Check if subtitles appear
