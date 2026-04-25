@@ -1,7 +1,16 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "files": { "ignoreUnknown": false },
+  "files": {
+    "ignoreUnknown": true,
+    "ignore": [
+      "**/brain-api.d.ts",
+      "**/dist/**",
+      "**/build/**",
+      "**/.svelte-kit/**",
+      "**/report/**"
+    ]
+  },
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -41,7 +50,8 @@
         "**/*.test.ts",
         "**/*.spec.ts",
         "tests/**/*.ts",
-        "tests/**/*.js"
+        "tests/**/*.js",
+        "**/playwright.config.ts"
       ],
       "linter": {
         "rules": {
@@ -64,7 +74,7 @@
       "jsxQuoteStyle": "double",
       "quoteProperties": "asNeeded",
       "trailingCommas": "all",
-      "semicolons": "asNeeded",
+      "semicolons": "always",
       "arrowParentheses": "always",
       "bracketSameLine": false,
       "quoteStyle": "single",
