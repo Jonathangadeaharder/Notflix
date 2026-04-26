@@ -27,3 +27,5 @@ playwright-report/
 
 # Test coverage reports
 coverage/
+report/
+reports/
