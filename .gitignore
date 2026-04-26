@@ -80,7 +80,3 @@ node_modules
 .claude/
 .benchmarks/
 .envrc
-
-# Reports
-apps/platform/report/html/index.html
-apps/platform/reports/mutation/mutation.html
