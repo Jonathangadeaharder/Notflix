@@ -1,20 +1,21 @@
-import { resolveSession } from "$lib/server/infrastructure/auth";
-import type { Session } from "$lib/server/infrastructure/auth";
-import { building } from "$app/environment";
-import { randomUUID } from "crypto";
-import { db } from "$lib/server/infrastructure/database";
+import type { Handle } from '@sveltejs/kit';
+import { json, redirect } from '@sveltejs/kit';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
+import { building } from '$app/environment';
+import { HTTP_STATUS, INDICES } from '$lib/constants';
 import {
+  DEFAULT_GAME_INTERVAL_MINUTES,
   user as userTable,
   videoProcessing,
-  DEFAULT_GAME_INTERVAL_MINUTES,
-} from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import { json, redirect } from "@sveltejs/kit";
-import type { Handle } from "@sveltejs/kit";
-import { resolveAuthRequirement } from "$lib/server/services/auth-routes";
-import { HTTP_STATUS, INDICES } from "$lib/constants";
+} from '$lib/server/db/schema';
+import type { Session } from '$lib/server/infrastructure/auth';
+import { resolveSession } from '$lib/server/infrastructure/auth';
+import { db } from '$lib/server/infrastructure/database';
+import { resolveAuthRequirement } from '$lib/server/services/auth-routes';
+import '$lib/server/services/pipeline-orchestrator';
 
-const E2E_USER_ID = "00000000-e2e0-4000-a000-000000000000";
+const E2E_USER_ID = '00000000-e2e0-4000-a000-000000000000';
 const SESSION_TTL_MS = 86400000;
 
 async function resolveE2eSession(): Promise<Session | null> {
@@ -30,11 +31,11 @@ async function resolveE2eSession(): Promise<Session | null> {
         .insert(userTable)
         .values({
           id: E2E_USER_ID,
-          name: "E2E Test User",
-          email: "e2e@test.local",
+          name: 'E2E Test User',
+          email: 'e2e@test.local',
           emailVerified: true,
-          nativeLang: "en",
-          targetLang: "es",
+          nativeLang: 'en',
+          targetLang: 'es',
           gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -56,23 +57,23 @@ if (!building) {
       // Cleanup stale tasks from previous crash/restart
       await db
         .update(videoProcessing)
-        .set({ status: "ERROR" })
-        .where(eq(videoProcessing.status, "PENDING"));
+        .set({ status: 'ERROR' })
+        .where(eq(videoProcessing.status, 'PENDING'));
     } catch (err) {
-      console.error("[System] Startup cleanup failed:", err);
+      console.error('[System] Startup cleanup failed:', err);
     }
   })();
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-  const requestId = event.request.headers.get("x-request-id") || randomUUID();
+  const requestId = event.request.headers.get('x-request-id') || randomUUID();
 
   event.locals.db = db;
 
   let sessionCache: Session | null | undefined;
   event.locals.auth = async () => {
     if (sessionCache !== undefined) return sessionCache;
-    if (process.env.PLAYWRIGHT_TEST === "true") {
+    if (process.env.PLAYWRIGHT_TEST === 'true') {
       sessionCache = await resolveE2eSession();
       return sessionCache;
     }
@@ -87,9 +88,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   if (requiresAuth) {
     const session = await event.locals.auth();
     if (!session) {
-      if (responseKind === "json401") {
+      if (responseKind === 'json401') {
         return json(
-          { error: "Unauthorized" },
+          { error: 'Unauthorized' },
           { status: HTTP_STATUS.UNAUTHORIZED },
         );
       }
@@ -100,9 +101,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const response = await resolve(event, {
     filterSerializedResponseHeaders: (name) =>
-      name === "content-range" || name === "x-supabase-api-version",
+      name === 'content-range' || name === 'x-supabase-api-version',
   });
 
-  response.headers.set("x-request-id", requestId);
+  response.headers.set('x-request-id', requestId);
   return response;
 };
