@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { dirname, join } from 'path';
 import { video, videoProcessing } from '$lib/server/db/schema';
 import type {
   ProgressStageType,
@@ -16,6 +17,7 @@ import { ProcessingStatus, toAiServicePath } from '../infrastructure/config';
 import { db as drizzleDb } from '../infrastructure/database';
 import { eventBus } from '../infrastructure/event-bus';
 import { SmartFilter } from './linguistic-filter.service';
+import { mediaChunker } from './media-chunker.service';
 
 const PROGRESS_DB_MIN_INTERVAL_MS = 2000;
 const TRANSCRIBE_PROGRESS_CAP_PERCENT = 80;
@@ -42,12 +44,32 @@ class PipelineOrchestrator {
     const { videoId, targetLang, nativeLang, userId } = payload;
     try {
       await this.initProcessingRecord(drizzleDb, videoId, targetLang);
+
+      const [record] = await drizzleDb
+        .select()
+        .from(video)
+        .where(eq(video.id, videoId))
+        .limit(1);
+      if (!record) throw new Error(`Video not found: ${videoId}`);
+
+      // Extract audio first
+      const audioPath = join(dirname(record.filePath), `${videoId}.mp3`);
+      await this.setStage(
+        drizzleDb,
+        videoId,
+        targetLang,
+        ProgressStage.TRANSCRIBING,
+        0,
+      );
+      await mediaChunker.extractAudio(record.filePath, audioPath);
+
       const transcription = await this.transcribeWithProgress(
         drizzleDb,
         videoId,
         targetLang,
+        audioPath,
       );
-      await this.generateThumbnail(drizzleDb, videoId, transcription.record);
+      await this.generateThumbnail(drizzleDb, videoId, record);
       const finalSegments = await this.analyzeSegments(
         drizzleDb,
         videoId,
@@ -140,19 +162,9 @@ class PipelineOrchestrator {
     db: typeof drizzleDb,
     videoId: string,
     targetLang: string,
-  ): Promise<{
-    record: typeof video.$inferSelect;
-    data: TranscriptionResponse;
-  }> {
-    await this.setStage(db, videoId, targetLang, ProgressStage.TRANSCRIBING, 0);
-    const [record] = await db
-      .select()
-      .from(video)
-      .where(eq(video.id, videoId))
-      .limit(1);
-    if (!record) throw new Error(`Video not found: ${videoId}`);
-
-    const aiPath = toAiServicePath(record.filePath);
+    audioPath: string,
+  ): Promise<{ data: TranscriptionResponse }> {
+    const aiPath = toAiServicePath(audioPath);
     console.log(`[Pipeline] Calling AI service for transcription: ${aiPath}`);
 
     const onProgress = this.createProgressCallback(db, videoId, targetLang);
@@ -169,7 +181,7 @@ class PipelineOrchestrator {
       ProgressStage.TRANSCRIBING,
       TRANSCRIBE_PROGRESS_CAP_PERCENT,
     );
-    return { record, data: transcription };
+    return { data: transcription };
   }
 
   private async generateThumbnail(
