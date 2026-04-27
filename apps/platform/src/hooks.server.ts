@@ -14,6 +14,7 @@ import { resolveSession } from '$lib/server/infrastructure/auth';
 import { db } from '$lib/server/infrastructure/database';
 import { resolveAuthRequirement } from '$lib/server/services/auth-routes';
 import '$lib/server/services/pipeline-orchestrator';
+import '$lib/server/services/progress-persistence';
 
 const E2E_USER_ID = '00000000-e2e0-4000-a000-000000000000';
 const SESSION_TTL_MS = 86400000;

@@ -5,6 +5,7 @@ import { db } from '../infrastructure/database';
 import { eventBus } from '../infrastructure/event-bus';
 import { mediaChunker } from './media-chunker.service';
 import { orchestrator } from './pipeline-orchestrator';
+import { progressPersistence } from './progress-persistence';
 
 // Mock infrastructure and database
 vi.mock('../infrastructure/database', () => ({
