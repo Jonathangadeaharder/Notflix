@@ -1,8 +1,8 @@
-import path from "path";
+import path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore SvelteKit virtual module not resolvable outside Vite context
-import { env } from "$env/dynamic/private";
+// @ts-expect-error SvelteKit virtual module not resolvable outside Vite context
+import { env } from '$env/dynamic/private';
 
 const DEFAULT_AI_TIMEOUT_MS = 15_000;
 const DEFAULT_AI_TRANSCRIBE_TIMEOUT_MS = 300_000;
@@ -16,17 +16,17 @@ function parsePositiveTimeout(
 }
 
 // The AI service container always mounts media at this path, regardless of host layout.
-const AI_MEDIA_PATH = "/app/media/uploads";
+const AI_MEDIA_PATH = '/app/media/uploads';
 
-const uploadDir = env.UPLOAD_DIR || "media/uploads";
+const uploadDir = env.UPLOAD_DIR || 'media/uploads';
 
 // Detect if running inside Docker container
-const isDocker = env.RUNNING_IN_DOCKER === "true";
+const isDocker = env.RUNNING_IN_DOCKER === 'true';
 
 export function resolveUploadDir(dir: string, docker: boolean): string {
   if (docker) return dir;
   const isAbsolute = path.isAbsolute(dir) || /^[A-Za-z]:[\\/]/.test(dir);
-  return isAbsolute ? dir : path.resolve(process.cwd(), "../../", dir);
+  return isAbsolute ? dir : path.resolve(process.cwd(), '../../', dir);
 }
 
 const resolvedUploadDir = resolveUploadDir(uploadDir, isDocker);
@@ -36,11 +36,11 @@ export const CONFIG = {
     return (
       process.env.DATABASE_URL ||
       env.DATABASE_URL ||
-      "postgres://admin:password@localhost:5432/main_db"
+      'postgres://admin:password@localhost:5432/main_db'
     );
   },
-  AI_SERVICE_URL: env.AI_SERVICE_URL || "http://127.0.0.1:8000",
-  AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || "dev_secret_key",
+  AI_SERVICE_URL: env.AI_SERVICE_URL || 'http://127.0.0.1:8000',
+  AI_SERVICE_API_KEY: env.AI_SERVICE_API_KEY || 'dev_secret_key',
   AI_SERVICE_TIMEOUT_MS: parsePositiveTimeout(
     env.AI_SERVICE_TIMEOUT_MS,
     DEFAULT_AI_TIMEOUT_MS,
@@ -54,16 +54,17 @@ export const CONFIG = {
   MEDIA_ROOT: resolvedUploadDir,
   AI_SERVICE_MEDIA_PREFIX: AI_MEDIA_PATH,
   IS_DOCKER: isDocker,
-  DEFAULT_TARGET_LANG: "es",
-  DEFAULT_NATIVE_LANG: "en",
-  MODEL_SIZE: "tiny",
-  STORAGE_TYPE: env.STORAGE_TYPE || "local", // local | s3
+  DEFAULT_TARGET_LANG: 'es',
+  DEFAULT_NATIVE_LANG: 'en',
+  MODEL_SIZE: 'tiny',
+  STORAGE_TYPE: env.STORAGE_TYPE || 'local', // local | s3
 };
 
 export enum ProcessingStatus {
-  PENDING = "PENDING",
-  COMPLETED = "COMPLETED",
-  ERROR = "ERROR",
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  ERROR = 'ERROR',
 }
 
 /**
@@ -82,7 +83,7 @@ export function toAiServicePath(
   // work correctly when the pipeline runs inside the Linux Docker container.
   const filename = localPath.split(/[/\\]/).pop() || path.basename(localPath);
   let normalizedRoot = mediaRootInternal;
-  while (normalizedRoot.endsWith("/") || normalizedRoot.endsWith("\\")) {
+  while (normalizedRoot.endsWith('/') || normalizedRoot.endsWith('\\')) {
     normalizedRoot = normalizedRoot.slice(0, -1);
   }
   return `${normalizedRoot}/${filename}`;

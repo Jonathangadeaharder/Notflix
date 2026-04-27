@@ -1,7 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { dirname, join } from 'path';
-import { video, videoProcessing } from '$lib/server/db/schema';
+import { video } from '$lib/server/db/schema';
 import type {
+  LanguageCode,
   ProgressStageType,
   TranscriptionResponse,
   VttSegment,
@@ -13,7 +14,7 @@ import {
   mapAnalysisToSegments,
   mapTranslationsToSegments,
 } from '../domain/translation-core';
-import { ProcessingStatus, toAiServicePath } from '../infrastructure/config';
+import { toAiServicePath } from '../infrastructure/config';
 import { db as drizzleDb } from '../infrastructure/database';
 import { eventBus } from '../infrastructure/event-bus';
 import { SmartFilter } from './linguistic-filter.service';
@@ -37,14 +38,12 @@ class PipelineOrchestrator {
 
   private async handleVideoProcessingStarted(payload: {
     videoId: string;
-    targetLang: string;
-    nativeLang: string;
+    targetLang: LanguageCode;
+    nativeLang: LanguageCode;
     userId: string;
   }) {
     const { videoId, targetLang, nativeLang, userId } = payload;
     try {
-      await this.initProcessingRecord(drizzleDb, videoId, targetLang);
-
       const [record] = await drizzleDb
         .select()
         .from(video)
@@ -54,85 +53,65 @@ class PipelineOrchestrator {
 
       // Extract audio first
       const audioPath = join(dirname(record.filePath), `${videoId}.mp3`);
-      await this.setStage(
-        drizzleDb,
-        videoId,
-        targetLang,
-        ProgressStage.TRANSCRIBING,
-        0,
-      );
+      this.emitProgress(videoId, targetLang, ProgressStage.TRANSCRIBING, 0);
       await mediaChunker.extractAudio(record.filePath, audioPath);
 
       const transcription = await this.transcribeWithProgress(
-        drizzleDb,
         videoId,
         targetLang,
         audioPath,
       );
-      await this.generateThumbnail(drizzleDb, videoId, record);
+
+      await this.generateThumbnail(videoId, record);
+
       const finalSegments = await this.analyzeSegments(
-        drizzleDb,
         videoId,
         targetLang,
         transcription.data,
       );
+
       const translated = await this.translateAndFilter(
-        drizzleDb,
         videoId,
         targetLang,
         nativeLang,
         userId,
         finalSegments,
       );
-      await this.persistCompletion(drizzleDb, videoId, targetLang, translated);
 
       eventBus.emit('video.processing.completed', {
         videoId,
-        targetLang: targetLang as any,
+        targetLang,
+        vttJson: translated,
       });
 
       console.log(`[Pipeline] Processing fully complete for: ${videoId}.`);
     } catch (err) {
-      await this.handleProcessingError(drizzleDb, videoId, targetLang, err);
       eventBus.emit('video.processing.failed', {
         videoId,
-        targetLang: targetLang as any,
+        targetLang,
         error: err instanceof Error ? err.message : String(err),
       });
       console.error(`[Pipeline Error] videoId=${videoId}:`, err);
     }
   }
 
-  private async initProcessingRecord(
-    db: typeof drizzleDb,
+  private emitProgress(
     videoId: string,
-    targetLang: string,
-  ): Promise<void> {
-    await db
-      .insert(videoProcessing)
-      .values({
-        videoId,
-        targetLang,
-        status: ProcessingStatus.PENDING,
-        progressStage: ProgressStage.QUEUED,
-        progressPercent: 0,
-        vttJson: null,
-      })
-      .onConflictDoUpdate({
-        target: [videoProcessing.videoId, videoProcessing.targetLang],
-        set: {
-          status: ProcessingStatus.PENDING,
-          progressStage: ProgressStage.QUEUED,
-          progressPercent: 0,
-          vttJson: null,
-        },
-      });
+    targetLang: LanguageCode,
+    stage: ProgressStageType,
+    percent: number,
+  ) {
+    eventBus.emit('video.processing.progress', {
+      videoId,
+      targetLang,
+      stage,
+      percent,
+    });
   }
 
   private createProgressCallback(
-    db: typeof drizzleDb,
     videoId: string,
-    targetLang: string,
+    targetLang: LanguageCode,
   ): (percent: number) => Promise<void> {
     let lastPersistedPercent = 0;
     let lastPersistedAt = 0;
@@ -148,8 +127,7 @@ class PipelineOrchestrator {
       lastPersistedPercent = clamped;
       lastPersistedAt = now;
       console.log(`[Pipeline] Transcription progress: ${clamped}%`);
-      await this.setStage(
-        db,
+      this.emitProgress(
         videoId,
         targetLang,
         ProgressStage.TRANSCRIBING,
@@ -159,23 +137,21 @@ class PipelineOrchestrator {
   }
 
   private async transcribeWithProgress(
-    db: typeof drizzleDb,
     videoId: string,
-    targetLang: string,
+    targetLang: LanguageCode,
     audioPath: string,
   ): Promise<{ data: TranscriptionResponse }> {
     const aiPath = toAiServicePath(audioPath);
     console.log(`[Pipeline] Calling AI service for transcription: ${aiPath}`);
 
-    const onProgress = this.createProgressCallback(db, videoId, targetLang);
+    const onProgress = this.createProgressCallback(videoId, targetLang);
     const transcription = await this.aiGateway.transcribeWithProgress(
       aiPath,
       targetLang,
       onProgress,
     );
 
-    await this.setStage(
-      db,
+    this.emitProgress(
       videoId,
       targetLang,
       ProgressStage.TRANSCRIBING,
@@ -185,7 +161,6 @@ class PipelineOrchestrator {
   }
 
   private async generateThumbnail(
-    db: typeof drizzleDb,
     videoId: string,
     record: typeof video.$inferSelect,
   ): Promise<void> {
@@ -194,7 +169,7 @@ class PipelineOrchestrator {
     this.aiGateway
       .generateThumbnail(aiPath)
       .then(async (res) => {
-        await db
+        await drizzleDb
           .update(video)
           .set({ thumbnailPath: res.thumbnail_path })
           .where(eq(video.id, videoId));
@@ -203,13 +178,11 @@ class PipelineOrchestrator {
   }
 
   private async analyzeSegments(
-    db: typeof drizzleDb,
     videoId: string,
-    targetLang: string,
+    targetLang: LanguageCode,
     transcription: TranscriptionResponse,
   ): Promise<VttSegment[]> {
-    await this.setStage(
-      db,
+    this.emitProgress(
       videoId,
       targetLang,
       ProgressStage.ANALYZING,
@@ -225,15 +198,13 @@ class PipelineOrchestrator {
   }
 
   private async translateAndFilter(
-    db: typeof drizzleDb,
     videoId: string,
-    targetLang: string,
-    nativeLang: string,
+    targetLang: LanguageCode,
+    nativeLang: LanguageCode,
     userId: string,
     finalSegments: VttSegment[],
   ): Promise<VttSegment[]> {
-    await this.setStage(
-      db,
+    this.emitProgress(
       videoId,
       targetLang,
       ProgressStage.TRANSLATING,
@@ -268,74 +239,6 @@ class PipelineOrchestrator {
       lemmaRes.translations,
       sentenceRes.translations,
     );
-  }
-
-  private async persistCompletion(
-    db: typeof drizzleDb,
-    videoId: string,
-    targetLang: string,
-    finalSegments: VttSegment[],
-  ): Promise<void> {
-    await db
-      .update(videoProcessing)
-      .set({
-        status: ProcessingStatus.COMPLETED,
-        progressStage: ProgressStage.READY,
-        progressPercent: 100,
-        vttJson: finalSegments,
-      })
-      .where(
-        and(
-          eq(videoProcessing.videoId, videoId),
-          eq(videoProcessing.targetLang, targetLang),
-        ),
-      );
-  }
-
-  private async handleProcessingError(
-    db: typeof drizzleDb,
-    videoId: string,
-    targetLang: string,
-    err: unknown,
-  ): Promise<void> {
-    const message = err instanceof Error ? err.message : String(err);
-    await db
-      .update(videoProcessing)
-      .set({
-        status: ProcessingStatus.ERROR,
-        progressStage: ProgressStage.FAILED,
-      })
-      .where(
-        and(
-          eq(videoProcessing.videoId, videoId),
-          eq(videoProcessing.targetLang, targetLang),
-        ),
-      );
-  }
-
-  private async setStage(
-    db: typeof drizzleDb,
-    videoId: string,
-    targetLang: string,
-    stage: ProgressStageType,
-    percent: number,
-  ): Promise<void> {
-    await db
-      .update(videoProcessing)
-      .set({ progressStage: stage, progressPercent: percent })
-      .where(
-        and(
-          eq(videoProcessing.videoId, videoId),
-          eq(videoProcessing.targetLang, targetLang),
-        ),
-      );
-
-    eventBus.emit('video.processing.progress', {
-      videoId,
-      targetLang: targetLang as any,
-      stage,
-      percent,
-    });
   }
 }
 

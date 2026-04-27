@@ -23,6 +23,7 @@ export interface AppEventPayloads {
   'video.processing.completed': {
     videoId: string;
     targetLang: LanguageCode;
+    vttJson: unknown;
   };
   'video.processing.failed': {
     videoId: string;
