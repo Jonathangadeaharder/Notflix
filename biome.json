@@ -39,6 +39,16 @@
   },
   "overrides": [
     {
+      "includes": ["**/*.svelte"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noAssignInExpressions": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": [
         "**/*.test.ts",
         "**/*.spec.ts",
