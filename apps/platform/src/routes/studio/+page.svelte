@@ -1,25 +1,59 @@
 <script lang="ts">
-  import { resolve } from "$app/paths";
+  import Languages from "lucide-svelte/icons/languages";
+  import Mic from "lucide-svelte/icons/mic";
+  import Play from "lucide-svelte/icons/play";
+  import Plus from "lucide-svelte/icons/plus";
+  import RotateCw from "lucide-svelte/icons/rotate-cw";
+  import Settings from "lucide-svelte/icons/settings";
+  import Trash2 from "lucide-svelte/icons/trash-2";
+  import Upload from "lucide-svelte/icons/upload";
   import { enhance } from "$app/forms";
   import { invalidate } from "$app/navigation";
-  import Plus from "lucide-svelte/icons/plus";
-  import Play from "lucide-svelte/icons/play";
-  import RotateCw from "lucide-svelte/icons/rotate-cw";
-  import Mic from "lucide-svelte/icons/mic";
-  import Languages from "lucide-svelte/icons/languages";
-  import Trash2 from "lucide-svelte/icons/trash-2";
-  import Settings from "lucide-svelte/icons/settings";
-  import Upload from "lucide-svelte/icons/upload";
+  import { resolve } from "$app/paths";
   import Poster from "$lib/components/brand/Poster.svelte";
 
   let { data } = $props();
   let submittingId = $state<string | null>(null);
 
+  // Local state for real-time progress updates
+  let progressUpdates = $state<
+    Record<
+      string,
+      { status: string; progressStage: string; progressPercent: number }
+    >
+  >({});
+
   const POLLING_INTERVAL_MS = 3000;
 
+  async function fetchProgress(id: string) {
+    try {
+      const resp = await fetch(`/api/videos/${id}/progress?targetLang=${data.userTargetLang}`);
+      if (!resp.ok) return;
+      const json = await resp.json();
+      
+      // If completed, we should invalidate the whole list to move it to library
+      if (json.status === "COMPLETED" || json.status === "ERROR") {
+        invalidate("app:videos");
+        delete progressUpdates[id];
+        return;
+      }
+      
+      progressUpdates[id] = {
+        status: json.status,
+        progressStage: json.progressStage,
+        progressPercent: json.progressPercent
+      };
+    } catch (e) {
+      console.error("Failed to fetch progress", e);
+    }
+  }
+
   $effect(() => {
-    const hasPending = data.videos.some((v) => v.status === "PENDING");
-    if (!hasPending) return;
+    const activeIds = data.videos
+      .filter((v) => v.status === "PENDING" || v.status === "PROCESSING")
+      .map((v) => v.id);
+      
+    if (activeIds.length === 0) return;
 
     const interval = setInterval(() => {
       if (
@@ -27,11 +61,29 @@
         !(window as unknown as Record<string, unknown>).__e2e
       )
         return;
-      invalidate("app:videos");
+        
+      activeIds.forEach(fetchProgress);
     }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
   });
+
+  interface VideoItem {
+    id: string;
+    title: string;
+    status: string | null;
+    progressStage: string | null;
+    progressPercent: number | null;
+    createdAt: string;
+    thumbnailPath: string;
+    hasAnyTranscription: boolean;
+  }
+
+  function getEffectiveVideo(v: VideoItem): VideoItem {
+    const update = progressUpdates[v.id];
+    if (!update) return v;
+    return { ...v, ...update } as VideoItem;
+  }
 
   const STUDIO_HASH_PRIME = 31;
   const STUDIO_HUE_MAX = 360;
@@ -44,7 +96,8 @@
 
   function statusKey(status: string | null | undefined): StatusKey {
     if (status === "COMPLETED") return "ready";
-    if (status === "PENDING") return "processing";
+    if (status === "PROCESSING") return "processing";
+    if (status === "PENDING") return "pending";
     if (status === "ERROR") return "error";
     return "untracked";
   }
@@ -65,8 +118,8 @@
     },
     pending: {
       label: "Queued",
-      color: DIM_FG,
-      bg: DIM_BG,
+      color: "var(--fg-3)",
+      bg: "rgba(255,255,255,0.04)",
     },
     error: {
       label: "Error",
@@ -124,7 +177,9 @@
 
   const totalVideos = $derived(data.videos.length);
   const inProgress = $derived(
-    data.videos.filter((v) => v.status === "PENDING"),
+    data.videos.filter(
+      (v) => v.status === "PENDING" || v.status === "PROCESSING",
+    ),
   );
   const library = $derived(
     data.videos.filter(
@@ -167,7 +222,12 @@
         </p>
       </div>
       <div class="flex gap-2.5">
-        <button class="nx-btn nx-btn-ghost" disabled title="Coming soon">
+        <button
+          type="button"
+          class="nx-btn nx-btn-ghost"
+          disabled
+          title="Coming soon"
+        >
           <Settings class="h-3.5 w-3.5" /> Pipeline
         </button>
         <a
@@ -298,7 +358,8 @@
         In progress · {inProgress.length}
       </h2>
       <div class="flex flex-col gap-3 mb-9">
-        {#each inProgress as v (v.id)}
+        {#each inProgress as rawV (rawV.id)}
+          {@const v = getEffectiveVideo(rawV)}
           {@const stepIdx = pipeStepIndex(v.progressStage)}
           <div
             class="rounded-[12px]"
@@ -577,6 +638,7 @@
                 </a>
               {/if}
               <button
+                type="button"
                 class="rounded-full w-8 h-8 grid place-items-center hover:bg-white/5"
                 style:color="var(--fg-3)"
                 aria-label="Delete {v.title}"
