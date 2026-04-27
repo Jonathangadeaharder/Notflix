@@ -1,44 +1,44 @@
-import { fail, redirect } from "@sveltejs/kit";
-import { db } from "$lib/server/infrastructure/database";
-import { video } from "$lib/server/db/schema";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import crypto from "crypto";
-import { CONFIG } from "$lib/server/infrastructure/config";
-import { z } from "zod";
-import { processVideo } from "$lib/server/services/video-pipeline";
-
-import { HTTP_STATUS, LIMITS } from "$lib/constants";
+import { fail, redirect } from '@sveltejs/kit';
+import crypto from 'crypto';
+import { mkdir, writeFile } from 'fs/promises';
+import { join } from 'path';
+import { z } from 'zod';
+import { HTTP_STATUS, LIMITS } from '$lib/constants';
+import { video } from '$lib/server/db/schema';
+import { CONFIG } from '$lib/server/infrastructure/config';
+import { db } from '$lib/server/infrastructure/database';
+import { eventBus } from '$lib/server/infrastructure/event-bus';
+import type { LanguageCode } from '$lib/types';
 
 const MIN_LANG_LEN = 2;
 const MAX_LANG_LEN = 5;
 
 // Define schema for validation
 const uploadSchema = z.object({
-  title: z.string().min(1, "Title is required").max(LIMITS.MAX_TITLE_LENGTH),
-  targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("es"),
+  title: z.string().min(1, 'Title is required').max(LIMITS.MAX_TITLE_LENGTH),
+  targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default('es'),
   nativeLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).optional(),
 });
 
 export const load = async () => {
   return {
     initialData: {
-      title: "",
-      targetLang: "es",
-      nativeLang: "en",
+      title: '',
+      targetLang: 'es',
+      nativeLang: 'en',
     },
   };
 };
 
 function parseUploadForm(formData: FormData) {
-  const rawTitle = formData.get("title");
-  const rawTargetLang = formData.get("targetLang");
-  const rawNativeLang = formData.get("nativeLang");
-  const rawFile = formData.get("file");
+  const rawTitle = formData.get('title');
+  const rawTargetLang = formData.get('targetLang');
+  const rawNativeLang = formData.get('nativeLang');
+  const rawFile = formData.get('file');
 
-  const title = typeof rawTitle === "string" ? rawTitle : "";
-  const targetLang = typeof rawTargetLang === "string" ? rawTargetLang : "";
-  const nativeLang = typeof rawNativeLang === "string" ? rawNativeLang : "";
+  const title = typeof rawTitle === 'string' ? rawTitle : '';
+  const targetLang = typeof rawTargetLang === 'string' ? rawTargetLang : '';
+  const nativeLang = typeof rawNativeLang === 'string' ? rawNativeLang : '';
   const file = rawFile instanceof File ? rawFile : null;
 
   const result = uploadSchema.safeParse({ title, targetLang, nativeLang });
@@ -54,7 +54,7 @@ function validateUploadForm(
 ) {
   if (result.success && file && file.size !== 0) return null;
   const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
-  const fileErrors = !file || file.size === 0 ? ["File is required"] : [];
+  const fileErrors = !file || file.size === 0 ? ['File is required'] : [];
   return fail(HTTP_STATUS.BAD_REQUEST, {
     errors: {
       ...fieldErrors,
@@ -67,7 +67,7 @@ function validateUploadForm(
 export const actions = {
   upload: async ({ request, locals }) => {
     const session = await locals.auth();
-    if (!session) throw redirect(HTTP_STATUS.SEE_OTHER, "/login");
+    if (!session) throw redirect(HTTP_STATUS.SEE_OTHER, '/login');
     const formData = await request.formData();
 
     const { title, targetLang, nativeLang, file, result } =
@@ -91,24 +91,25 @@ export const actions = {
       id: videoId,
       title: result.data.title,
       filePath: filePath,
-      thumbnailPath: "/placeholder.jpg",
+      thumbnailPath: '/placeholder.jpg',
       views: 0,
       published: true,
     });
 
-    processVideo({
-      videoId,
-      targetLang: result.data.targetLang,
-      nativeLang:
-        result.data.nativeLang ??
-        session.user.nativeLang ??
-        CONFIG.DEFAULT_NATIVE_LANG,
-      userId: session.user.id,
-    }).catch((err) =>
-      console.error(`[Pipeline] Background error for ${videoId}:`, err),
-    );
+    eventBus
+      .emitAsync('video.processing.started', {
+        videoId,
+        targetLang: result.data.targetLang as LanguageCode,
+        nativeLang: (result.data.nativeLang ??
+          session.user.nativeLang ??
+          CONFIG.DEFAULT_NATIVE_LANG) as LanguageCode,
+        userId: session.user.id,
+      })
+      .catch((err) =>
+        console.error(`[Pipeline] Background error for ${videoId}:`, err),
+      );
 
-    throw redirect(HTTP_STATUS.SEE_OTHER, "/studio");
+    throw redirect(HTTP_STATUS.SEE_OTHER, '/studio');
   },
 };
 
@@ -116,7 +117,7 @@ async function saveUploadedFile(file: File, videoId: string): Promise<string> {
   const targetDir = CONFIG.RESOLVED_UPLOAD_DIR;
   await mkdir(targetDir, { recursive: true });
 
-  const ext = file.name.split(".").pop();
+  const ext = file.name.split('.').pop();
   const fileName = `${videoId}.${ext}`;
   const filePath = join(targetDir, fileName);
 

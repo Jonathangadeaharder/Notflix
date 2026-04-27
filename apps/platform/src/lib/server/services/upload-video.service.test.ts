@@ -1,90 +1,85 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { join } from "node:path";
-import { handleVideoUpload } from "./upload-video.service";
+import { join } from 'node:path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { handleVideoUpload } from './upload-video.service';
 
-const TEST_UPLOAD_DIR = join(process.cwd(), ".test-uploads");
-const DEFAULT_NATIVE_LANG = "en";
+const TEST_UPLOAD_DIR = join(process.cwd(), '.test-uploads');
+const DEFAULT_NATIVE_LANG = 'en';
 
 function createSessionUser() {
-  return { id: "user-1", nativeLang: "de" } as never;
+  return { id: 'user-1', nativeLang: 'de' } as never;
 }
 
 async function validateMissingFileScenario() {
   const deps = createDependencies();
   const result = await handleVideoUpload(
-    { title: "My Video", targetLang: "es", file: null },
+    { title: 'My Video', targetLang: 'es', file: null },
     createSessionUser(),
     deps,
   );
 
   expect(result.ok).toBe(false);
   if (result.ok) {
-    throw new Error("Expected upload validation failure.");
+    throw new Error('Expected upload validation failure.');
   }
 
-  expect(result.value.errors.file).toEqual(["File is required"]);
+  expect(result.value.errors.file).toEqual(['File is required']);
   expect(deps.saveFileToStorage).not.toHaveBeenCalled();
   expect(deps.insertVideo).not.toHaveBeenCalled();
-  expect(deps.queueTask).not.toHaveBeenCalled();
+  expect(deps.queueProcessingEvent).not.toHaveBeenCalled();
 }
 
 async function validateAuthenticatedUploadScenario() {
   const deps = createDependencies();
-  const file = new File(["audio-content"], "clip.mp3", { type: "audio/mpeg" });
+  const file = new File(['audio-content'], 'clip.mp3', { type: 'audio/mpeg' });
   const result = await handleVideoUpload(
-    { title: "Spanish Drill", targetLang: "es", file },
+    { title: 'Spanish Drill', targetLang: 'es', file },
     createSessionUser(),
     deps,
   );
 
   expect(result.ok).toBe(true);
-  const expectedFilePath = join(TEST_UPLOAD_DIR, "video-123.mp3");
+  const expectedFilePath = join(TEST_UPLOAD_DIR, 'video-123.mp3');
   expect(deps.saveFileToStorage).toHaveBeenCalledWith(file, expectedFilePath);
   expect(deps.insertVideo).toHaveBeenCalledWith(
     expect.objectContaining({
-      id: "video-123",
-      title: "Spanish Drill",
+      id: 'video-123',
+      title: 'Spanish Drill',
       filePath: expectedFilePath,
-      thumbnailPath: "/placeholder.jpg",
+      thumbnailPath: '/placeholder.jpg',
       published: true,
       views: 0,
     }),
   );
-  expect(deps.processVideo).toHaveBeenCalledWith({
-    videoId: "video-123",
-    targetLang: "es",
-    nativeLang: "de",
-    userId: "user-1",
+  expect(deps.queueProcessingEvent).toHaveBeenCalledWith({
+    videoId: 'video-123',
+    targetLang: 'es',
+    nativeLang: 'de',
+    userId: 'user-1',
   });
-  expect(deps.queueTask).toHaveBeenCalledWith(
-    "processVideo:video-123",
-    expect.any(Promise),
-  );
 }
 
 function createDependencies() {
   return {
     uploadDir: TEST_UPLOAD_DIR,
     defaultNativeLang: DEFAULT_NATIVE_LANG,
-    createVideoId: vi.fn().mockReturnValue("video-123"),
+    createVideoId: vi.fn().mockReturnValue('video-123'),
     saveFileToStorage: vi.fn().mockResolvedValue(undefined),
     insertVideo: vi.fn().mockResolvedValue(undefined),
-    queueTask: vi.fn(),
-    processVideo: vi.fn().mockResolvedValue(undefined),
+    queueProcessingEvent: vi.fn().mockResolvedValue(undefined),
   };
 }
 
-describe("handleVideoUpload", () => {
+describe('handleVideoUpload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns validation errors when file is missing", async () => {
+  it('returns validation errors when file is missing', async () => {
     expect.hasAssertions();
     await validateMissingFileScenario();
   });
 
-  it("persists the video and queues processing for authenticated users", async () => {
+  it('persists the video and queues processing for authenticated users', async () => {
     expect.hasAssertions();
     await validateAuthenticatedUploadScenario();
   });
