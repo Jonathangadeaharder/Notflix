@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AppEventBus, eventBus } from './event-bus';
+import { AppEventBus, type AppEventPayloads, eventBus } from './event-bus';
 
 describe('AppEventBus', () => {
   it('should emit and receive strongly typed events', () => {
@@ -39,7 +39,9 @@ describe('AppEventBus', () => {
     const bus = new AppEventBus();
 
     let result = '';
-    const listener = async (payload: { videoId: string; targetLang: 'es' }) => {
+    const listener = async (
+      payload: AppEventPayloads['video.processing.completed'],
+    ) => {
       await new Promise((resolve) => setTimeout(resolve, 10));
       result = payload.videoId;
     };
@@ -48,7 +50,7 @@ describe('AppEventBus', () => {
 
     const success = await bus.emitAsync('video.processing.completed', {
       videoId: 'async-123',
-      targetLang: 'es',
+      targetLang: 'es' as const,
     });
 
     expect(success).toBe(true);
@@ -59,7 +61,7 @@ describe('AppEventBus', () => {
     const bus = new AppEventBus();
     const success = await bus.emitAsync('video.processing.completed', {
       videoId: 'v-123',
-      targetLang: 'es',
+      targetLang: 'es' as const,
     });
     expect(success).toBe(false);
   });
