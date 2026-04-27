@@ -1,35 +1,37 @@
-import type { NewVideo } from "$lib/server/db/schema";
-import { LIMITS } from "$lib/constants";
-import type { User } from "$lib/server/infrastructure/auth";
-import crypto from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import { dirname, extname, join } from "path";
-import { z } from "zod";
+import crypto from 'crypto';
+import { mkdir, writeFile } from 'fs/promises';
+import { dirname, extname, join } from 'path';
+import { z } from 'zod';
+import { LIMITS } from '$lib/constants';
+import type { NewVideo } from '$lib/server/db/schema';
+import type { User } from '$lib/server/infrastructure/auth';
+import { eventBus } from '$lib/server/infrastructure/event-bus';
+import type { LanguageCode } from '$lib/types';
 
 const BYTES_PER_KB = 1024;
 const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB;
 const MIN_LANG_LEN = 2;
 const MAX_LANG_LEN = 5;
-const FALLBACK_FILE_EXTENSION = ".bin";
-const PLACEHOLDER_THUMBNAIL = "/placeholder.jpg";
+const FALLBACK_FILE_EXTENSION = '.bin';
+const PLACEHOLDER_THUMBNAIL = '/placeholder.jpg';
 const DEFAULT_MAX_FILE_SIZE_MB = 500;
 const DEFAULT_MAX_FILE_SIZE_BYTES = DEFAULT_MAX_FILE_SIZE_MB * BYTES_PER_MB;
 const ALLOWED_EXTENSIONS = new Set([
-  "mp4",
-  "mp3",
-  "wav",
-  "webm",
-  "ogg",
-  "m4a",
-  "aac",
-  "mkv",
-  "avi",
-  "mov",
+  'mp4',
+  'mp3',
+  'wav',
+  'webm',
+  'ogg',
+  'm4a',
+  'aac',
+  'mkv',
+  'avi',
+  'mov',
 ]);
 
 const uploadSchema = z.object({
-  title: z.string().min(1, "Title is required").max(LIMITS.MAX_TITLE_LENGTH),
-  targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default("es"),
+  title: z.string().min(1, 'Title is required').max(LIMITS.MAX_TITLE_LENGTH),
+  targetLang: z.string().min(MIN_LANG_LEN).max(MAX_LANG_LEN).default('es'),
 });
 
 type UploadErrors = {
@@ -68,8 +70,7 @@ type UploadDependencies = {
   createVideoId: () => string;
   saveFileToStorage: (file: File, filePath: string) => Promise<void>;
   insertVideo: (record: NewVideo) => Promise<unknown>;
-  queueTask: (name: string, task: Promise<unknown>) => void;
-  processVideo: (opts: {
+  queueProcessingEvent: (opts: {
     videoId: string;
     targetLang: string;
     nativeLang: string;
@@ -78,13 +79,23 @@ type UploadDependencies = {
 };
 
 const defaultDependencies: UploadDependencies = {
-  uploadDir: "",
-  defaultNativeLang: "en",
+  uploadDir: '',
+  defaultNativeLang: 'en',
   createVideoId: () => crypto.randomUUID(),
   saveFileToStorage: saveUploadedFileToDisk,
   insertVideo: async () => undefined,
-  queueTask: () => undefined,
-  processVideo: async () => undefined,
+  queueProcessingEvent: async (opts) => {
+    eventBus
+      .emitAsync('video.processing.started', {
+        videoId: opts.videoId,
+        targetLang: opts.targetLang as LanguageCode,
+        nativeLang: opts.nativeLang as LanguageCode,
+        userId: opts.userId,
+      })
+      .catch((err) =>
+        console.error(`[Pipeline] Background error for ${opts.videoId}:`, err),
+      );
+  },
 };
 
 export async function handleVideoUpload(
@@ -119,15 +130,12 @@ export async function handleVideoUpload(
     views: 0,
   });
 
-  dependencies.queueTask(
-    `processVideo:${videoId}`,
-    dependencies.processVideo({
-      videoId,
-      targetLang: validation.data.targetLang,
-      nativeLang: user.nativeLang || dependencies.defaultNativeLang,
-      userId: user.id,
-    }),
-  );
+  dependencies.queueProcessingEvent({
+    videoId,
+    targetLang: validation.data.targetLang,
+    nativeLang: user.nativeLang || dependencies.defaultNativeLang,
+    userId: user.id,
+  });
 
   return {
     ok: true,
@@ -149,7 +157,7 @@ async function saveUploadedFileToDisk(
 }
 
 const FILE_TYPE_NOT_ALLOWED_MSG =
-  "File type not allowed. Accepted: " + [...ALLOWED_EXTENSIONS].join(", ");
+  'File type not allowed. Accepted: ' + [...ALLOWED_EXTENSIONS].join(', ');
 
 function makeValidationFailure(
   errors: UploadErrors,
@@ -163,7 +171,7 @@ function makeValidationFailure(
 }
 
 function extractFileExtension(filename: string): string | null {
-  const lastDotIndex = filename.lastIndexOf(".");
+  const lastDotIndex = filename.lastIndexOf('.');
   return lastDotIndex > 0
     ? filename.slice(lastDotIndex + 1).toLowerCase()
     : null;
@@ -178,7 +186,7 @@ function validateSchemaAndFile(
   if (parsed.success && payload.file && payload.file.size !== 0) return null;
   const fieldErrors = parsed.success ? {} : parsed.error.flatten().fieldErrors;
   const fileErrors =
-    !payload.file || payload.file.size === 0 ? ["File is required"] : undefined;
+    !payload.file || payload.file.size === 0 ? ['File is required'] : undefined;
   return makeValidationFailure(
     { ...fieldErrors, file: fileErrors },
     payload.title,
@@ -233,7 +241,7 @@ function validateUploadPayload(
 
   if (!parsed.success || !payload.file) {
     return makeValidationFailure(
-      { file: ["File is required"] },
+      { file: ['File is required'] },
       payload.title,
       payload.targetLang,
     );

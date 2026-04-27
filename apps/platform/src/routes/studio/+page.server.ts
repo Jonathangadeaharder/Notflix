@@ -1,11 +1,12 @@
-import { fail } from "@sveltejs/kit";
-import { db } from "$lib/server/infrastructure/database";
-import { video, videoProcessing } from "$lib/server/db/schema";
-import { eq, desc, and, inArray } from "drizzle-orm";
-import { CONFIG, ProcessingStatus } from "$lib/server/infrastructure/config";
-import { processVideo } from "$lib/server/services/video-pipeline";
-import { toMediaUrl } from "$lib/server/utils/media-utils";
-import { HTTP_STATUS } from "$lib/constants";
+import { fail } from '@sveltejs/kit';
+import { and, desc, eq, inArray } from 'drizzle-orm';
+import { HTTP_STATUS } from '$lib/constants';
+import { video, videoProcessing } from '$lib/server/db/schema';
+import { CONFIG, ProcessingStatus } from '$lib/server/infrastructure/config';
+import { db } from '$lib/server/infrastructure/database';
+import { eventBus } from '$lib/server/infrastructure/event-bus';
+import { toMediaUrl } from '$lib/server/utils/media-utils';
+import type { LanguageCode } from '$lib/types';
 
 async function fetchCompletedVideoIds(
   videoIds: string[],
@@ -24,7 +25,7 @@ async function fetchCompletedVideoIds(
 }
 
 export const load = async ({ depends, locals }) => {
-  depends("app:videos");
+  depends('app:videos');
   const session = await locals.auth();
   const userTargetLang = session?.user.targetLang || CONFIG.DEFAULT_TARGET_LANG;
 
@@ -64,25 +65,28 @@ export const actions = {
   reprocess: async ({ request, locals }) => {
     const session = await locals.auth();
     const formData = await request.formData();
-    const id = formData.get("id") as string;
+    const id = formData.get('id') as string;
     const targetLang =
-      (formData.get("targetLang") as string) ||
+      (formData.get('targetLang') as string) ||
       session?.user.targetLang ||
       CONFIG.DEFAULT_TARGET_LANG;
 
     if (!session)
-      return fail(HTTP_STATUS.UNAUTHORIZED, { error: "Not authenticated" });
+      return fail(HTTP_STATUS.UNAUTHORIZED, { error: 'Not authenticated' });
     if (!id)
-      return fail(HTTP_STATUS.BAD_REQUEST, { error: "Video ID is required" });
+      return fail(HTTP_STATUS.BAD_REQUEST, { error: 'Video ID is required' });
 
-    processVideo({
-      videoId: id,
-      targetLang,
-      nativeLang: session.user.nativeLang || CONFIG.DEFAULT_NATIVE_LANG,
-      userId: session.user.id,
-    }).catch((err) =>
-      console.error(`[Pipeline] Background error for ${id}:`, err),
-    );
+    eventBus
+      .emitAsync('video.processing.started', {
+        videoId: id,
+        targetLang: targetLang as LanguageCode,
+        nativeLang: (session.user.nativeLang ||
+          CONFIG.DEFAULT_NATIVE_LANG) as LanguageCode,
+        userId: session.user.id,
+      })
+      .catch((err) =>
+        console.error(`[Pipeline] Background error for ${id}:`, err),
+      );
 
     return { success: true };
   },
