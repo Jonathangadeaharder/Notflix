@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "plane": {
+      "command": "uvx",
+      "args": [
+        "plane-mcp-server",
+        "stdio"
+      ],
+      "env": {
+        "PLANE_API_KEY": "plane_api_6f1bf19d2c394c00b966f76d926bb0d7",
+        "PLANE_WORKSPACE_SLUG": "my-projects",
+        "PLANE_BASE_URL": "http://localhost:8080"
+      }
+    }
+  }
+}
