@@ -3,6 +3,7 @@ import { video, videoProcessing } from '$lib/server/db/schema';
 import { ProcessingStatus } from '../infrastructure/config';
 import { db } from '../infrastructure/database';
 import { eventBus } from '../infrastructure/event-bus';
+import { mediaChunker } from './media-chunker.service';
 import { orchestrator } from './pipeline-orchestrator';
 
 // Mock infrastructure and database
@@ -52,6 +53,13 @@ vi.mock('./linguistic-filter.service', () => ({
   }),
 }));
 
+vi.mock('./media-chunker.service', () => ({
+  mediaChunker: {
+    extractAudio: vi.fn().mockResolvedValue(undefined),
+    splitIntoAudioChunks: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 describe('PipelineOrchestrator Unit', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -78,6 +86,8 @@ describe('PipelineOrchestrator Unit', () => {
 
     await completedPromise;
 
+    // Verify media chunker call
+    expect(mediaChunker.extractAudio).toHaveBeenCalled();
     // Verify DB calls
     expect(db.insert).toHaveBeenCalledWith(videoProcessing);
     expect(db.update).toHaveBeenCalledWith(videoProcessing);
