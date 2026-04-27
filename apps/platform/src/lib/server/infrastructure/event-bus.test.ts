@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ProgressStage } from '$lib/types';
 import { AppEventBus, eventBus } from './event-bus';
 
 describe('AppEventBus', () => {
@@ -11,8 +10,8 @@ describe('AppEventBus', () => {
 
     const payload = {
       videoId: 'v-123',
-      targetLang: 'es',
-      nativeLang: 'en',
+      targetLang: 'es' as const,
+      nativeLang: 'en' as const,
       userId: 'u-123',
     };
 
@@ -30,10 +29,39 @@ describe('AppEventBus', () => {
 
     bus.emit('video.processing.completed', {
       videoId: 'v-123',
-      targetLang: 'es',
+      targetLang: 'es' as const,
     });
 
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('should support async emission with emitAsync', async () => {
+    const bus = new AppEventBus();
+
+    let result = '';
+    const listener = async (payload: { videoId: string; targetLang: 'es' }) => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      result = payload.videoId;
+    };
+
+    bus.on('video.processing.completed', listener);
+
+    const success = await bus.emitAsync('video.processing.completed', {
+      videoId: 'async-123',
+      targetLang: 'es',
+    });
+
+    expect(success).toBe(true);
+    expect(result).toBe('async-123');
+  });
+
+  it('emitAsync returns false when no listeners are registered', async () => {
+    const bus = new AppEventBus();
+    const success = await bus.emitAsync('video.processing.completed', {
+      videoId: 'v-123',
+      targetLang: 'es',
+    });
+    expect(success).toBe(false);
   });
 
   it('should expose a global singleton', () => {

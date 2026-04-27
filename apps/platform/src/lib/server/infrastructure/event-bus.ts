@@ -1,32 +1,32 @@
 import { EventEmitter } from 'events';
-import type { ProgressStageType } from '$lib/types';
+import type { LanguageCode, ProgressStageType } from '$lib/types';
 
 export interface AppEventPayloads {
   'video.upload.completed': {
     videoId: string;
-    targetLang: string;
-    nativeLang: string;
+    targetLang: LanguageCode;
+    nativeLang: LanguageCode;
     userId: string;
   };
   'video.processing.started': {
     videoId: string;
-    targetLang: string;
-    nativeLang: string;
+    targetLang: LanguageCode;
+    nativeLang: LanguageCode;
     userId: string;
   };
   'video.processing.progress': {
     videoId: string;
-    targetLang: string;
+    targetLang: LanguageCode;
     stage: ProgressStageType;
     percent: number;
   };
   'video.processing.completed': {
     videoId: string;
-    targetLang: string;
+    targetLang: LanguageCode;
   };
   'video.processing.failed': {
     videoId: string;
-    targetLang: string;
+    targetLang: LanguageCode;
     error: string;
   };
 }
@@ -47,6 +47,10 @@ export interface TypedEventEmitter {
     listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
   ): this;
   emit<K extends EventKey>(event: K, payload: AppEventPayloads[K]): boolean;
+  emitAsync<K extends EventKey>(
+    event: K,
+    payload: AppEventPayloads[K],
+  ): Promise<boolean>;
 }
 
 export class AppEventBus extends EventEmitter implements TypedEventEmitter {
@@ -54,6 +58,50 @@ export class AppEventBus extends EventEmitter implements TypedEventEmitter {
     super();
     // Allow enough listeners per event without throwing memory leak warnings
     this.setMaxListeners(20);
+  }
+
+  override on<K extends EventKey>(
+    event: K,
+    listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
+  ): this {
+    return super.on(event, listener);
+  }
+
+  override once<K extends EventKey>(
+    event: K,
+    listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
+  ): this {
+    return super.once(event, listener);
+  }
+
+  override off<K extends EventKey>(
+    event: K,
+    listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
+  ): this {
+    return super.off(event, listener);
+  }
+
+  override emit<K extends EventKey>(
+    event: K,
+    payload: AppEventPayloads[K],
+  ): boolean {
+    return super.emit(event, payload);
+  }
+
+  async emitAsync<K extends EventKey>(
+    event: K,
+    payload: AppEventPayloads[K],
+  ): Promise<boolean> {
+    const listeners = this.listeners(event) as Array<
+      (payload: AppEventPayloads[K]) => void | Promise<void>
+    >;
+
+    if (listeners.length === 0) {
+      return false;
+    }
+
+    await Promise.all(listeners.map((listener) => listener(payload)));
+    return true;
   }
 }
 
