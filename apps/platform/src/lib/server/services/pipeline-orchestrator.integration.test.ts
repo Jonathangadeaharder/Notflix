@@ -1,4 +1,7 @@
 import { eq } from 'drizzle-orm';
+import { mkdtemp, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { video, videoProcessing } from '$lib/server/db/schema';
 import { db } from '../infrastructure/database';
@@ -37,6 +40,14 @@ vi.mock('../adapters/real-ai-gateway', () => ({
   }),
 }));
 
+// Mock media-chunker to avoid requiring ffmpeg in CI
+vi.mock('./media-chunker.service', () => ({
+  mediaChunker: {
+    extractAudio: vi.fn().mockResolvedValue(undefined),
+    splitIntoAudioChunks: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 // Mock SmartFilter to avoid real DB knowledge lookups
 vi.mock('./linguistic-filter.service', () => ({
   SmartFilter: vi.fn().mockImplementation(function (this: any) {
@@ -59,9 +70,12 @@ vi.mock('./linguistic-filter.service', () => ({
 
 describe('Pipeline Orchestrator Integration', () => {
   const testVideoId = crypto.randomUUID();
-  const testFilePath = '/app/media/test_vid.mp4';
+  let testDir: string;
+  let testFilePath: string;
 
   beforeAll(async () => {
+    testDir = await mkdtemp(join(tmpdir(), 'notflix-test-'));
+    testFilePath = join(testDir, 'test_vid.mp4');
     await db.insert(video).values({
       id: testVideoId,
       title: 'Pipeline Integration Test Video',
@@ -74,6 +88,7 @@ describe('Pipeline Orchestrator Integration', () => {
       .delete(videoProcessing)
       .where(eq(videoProcessing.videoId, testVideoId));
     await db.delete(video).where(eq(video.id, testVideoId));
+    await rm(testDir, { recursive: true, force: true });
   });
 
   it('should process a video through the full pipeline when event is emitted', async () => {
