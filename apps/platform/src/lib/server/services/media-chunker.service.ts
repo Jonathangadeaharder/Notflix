@@ -1,7 +1,6 @@
 import { spawn } from 'child_process';
 import { mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
-import { CONFIG } from '../infrastructure/config';
 
 export interface ChunkMetadata {
   index: number;
@@ -29,6 +28,7 @@ export class MediaChunkerService {
 
     return new Promise((resolve, reject) => {
       // ffmpeg -i input.mp4 -f segment -segment_time 300 -c:a libmp3lame -ar 16000 chunk_%03d.mp3
+      // eslint-disable-next-line sonarjs/no-os-command-from-path
       const ffmpeg = spawn('ffmpeg', [
         '-i',
         inputFilePath,
@@ -75,6 +75,7 @@ export class MediaChunkerService {
     await mkdir(dirname(outputFilePath), { recursive: true });
 
     return new Promise((resolve, reject) => {
+      // eslint-disable-next-line sonarjs/no-os-command-from-path
       const ffmpeg = spawn('ffmpeg', [
         '-i',
         inputFilePath,

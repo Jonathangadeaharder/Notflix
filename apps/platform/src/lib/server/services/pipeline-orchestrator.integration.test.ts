@@ -62,9 +62,6 @@ describe('Pipeline Orchestrator Integration', () => {
   const testFilePath = '/app/media/test_vid.mp4';
 
   beforeAll(async () => {
-    // The import at the top registers the listener
-    expect(orchestrator).toBeDefined();
-
     await db.insert(video).values({
       id: testVideoId,
       title: 'Pipeline Integration Test Video',
@@ -80,6 +77,9 @@ describe('Pipeline Orchestrator Integration', () => {
   });
 
   it('should process a video through the full pipeline when event is emitted', async () => {
+    // The import at the top registers the listener
+    expect(orchestrator).toBeDefined();
+
     const processCompleted = new Promise<void>((resolve) => {
       eventBus.once('video.processing.completed', (payload) => {
         if (payload.videoId === testVideoId) {

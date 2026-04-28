@@ -43,7 +43,6 @@ vi.mock('../infrastructure/database', () => ({
 }));
 
 // Import after mocking so the singleton wires listeners onto the mocked DB.
-// eslint-disable-next-line import/first
 import { progressPersistence } from './progress-persistence';
 
 const VIDEO_ID = 'v-persist-001';
@@ -73,7 +72,8 @@ describe('ProgressPersistenceService', () => {
       userId: 'u-1',
     });
 
-    expect(mockInsert).toHaveBeenCalled();
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(mockValues).toHaveBeenCalledTimes(1);
     expect(mockValues).toHaveBeenCalledWith(
       expect.objectContaining({
         videoId: VIDEO_ID,
@@ -83,6 +83,7 @@ describe('ProgressPersistenceService', () => {
         progressPercent: 0,
       }),
     );
+    expect(mockOnConflictDoUpdate).toHaveBeenCalledTimes(1);
     expect(mockOnConflictDoUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         set: expect.objectContaining({
@@ -101,7 +102,8 @@ describe('ProgressPersistenceService', () => {
       percent: 45,
     });
 
-    expect(mockUpdate).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockSet).toHaveBeenCalledTimes(1);
     expect(mockSet).toHaveBeenCalledWith(
       expect.objectContaining({
         status: ProcessingStatus.PROCESSING,
@@ -109,7 +111,7 @@ describe('ProgressPersistenceService', () => {
         progressPercent: 45,
       }),
     );
-    expect(mockWhere).toHaveBeenCalled();
+    expect(mockWhere).toHaveBeenCalledTimes(1);
   });
 
   it('marks status COMPLETED and progressStage READY on video.processing.completed', async () => {
@@ -119,7 +121,8 @@ describe('ProgressPersistenceService', () => {
       vttJson: [],
     });
 
-    expect(mockUpdate).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockSet).toHaveBeenCalledTimes(1);
     expect(mockSet).toHaveBeenCalledWith(
       expect.objectContaining({
         status: ProcessingStatus.COMPLETED,
@@ -137,7 +140,8 @@ describe('ProgressPersistenceService', () => {
       error: 'transcription timeout',
     });
 
-    expect(mockUpdate).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockSet).toHaveBeenCalledTimes(1);
     expect(mockSet).toHaveBeenCalledWith(
       expect.objectContaining({
         status: ProcessingStatus.ERROR,
