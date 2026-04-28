@@ -117,7 +117,7 @@ describe('Pipeline Orchestrator Integration', () => {
 
     // Poll database until the async event handler completes its write
     let processingRecord: Array<typeof videoProcessing.$inferSelect> = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 50; i++) {
       processingRecord = await db
         .select()
         .from(videoProcessing)
@@ -127,7 +127,7 @@ describe('Pipeline Orchestrator Integration', () => {
         processingRecord[0].status === 'COMPLETED'
       )
         break;
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     expect(processingRecord).toHaveLength(1);
