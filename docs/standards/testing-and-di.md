@@ -29,8 +29,9 @@ The following patterns are **rejected on review**:
 2. Importing production singletons (`orchestrator`, `progressPersistence`, etc.) inside unit tests. Construct a fresh instance with a fresh `AppEventBus` per test.
 3. `beforeEach(() => { vi.resetModules(); vi.restoreAllMocks(); })` as a fix for cross-file flakiness. Surface the real coupling.
 4. Assuming `emitAsync` runs listeners in parallel. It is sequential, in registration order. Handlers other listeners depend on must register with `prependListener`.
+5. Sync `eventBus.emit(...)` for events that trigger DB writes. Use `await eventBus.emitAsync(...)` — fire-and-forget emits race with completion handlers. See ADR-009.
 
-See ADR-008 for the reviewer checklist and rationale.
+See ADR-008 for the reviewer checklist and rationale. See ADR-009 for the async emission race condition.
 
 ## 5. Scope
 
