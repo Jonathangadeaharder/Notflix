@@ -1,9 +1,11 @@
-import { db } from "$lib/server/infrastructure/database";
-import { videoProcessing, type DbTokenAnalysis } from "$lib/server/db/schema";
-import { and, eq } from "drizzle-orm";
-import type { VttSegment } from "../domain/translation-core";
-import { getKnownLemmas } from "./knowledge.service";
-import { INDICES } from "$lib/constants";
+import { and, eq } from 'drizzle-orm';
+import { INDICES } from '$lib/constants';
+import { type DbTokenAnalysis, videoProcessing } from '$lib/server/db/schema';
+import { db as defaultDb } from '$lib/server/infrastructure/database';
+import type { VttSegment } from '../domain/translation-core';
+import { getKnownLemmas } from './knowledge.service';
+
+type Db = typeof defaultDb;
 
 // Types for our deck
 export type GameCard = {
@@ -27,14 +29,20 @@ export async function generateDeck(
   endTime: number,
   targetLang: string,
   limit = DEFAULT_DECK_LIMIT,
+  database: Db = defaultDb,
 ): Promise<GameCard[]> {
-  const vttData = await fetchVttData(videoId, targetLang);
+  const vttData = await fetchVttData(videoId, targetLang, database);
   if (!vttData) return [];
 
   const candidates = extractCandidates(vttData, startTime, endTime);
   if (candidates.length === 0) return [];
 
-  const knownSet = await fetchKnownLemmas(userId, targetLang, candidates);
+  const knownSet = await fetchKnownLemmas(
+    userId,
+    targetLang,
+    candidates,
+    database,
+  );
   const deck = buildUniqueCards(candidates, knownSet, targetLang);
 
   return sortAndSliceDeck(deck, limit);
@@ -43,8 +51,9 @@ export async function generateDeck(
 async function fetchVttData(
   videoId: string,
   targetLang: string,
+  database: Db,
 ): Promise<VttSegment[] | null> {
-  const [processing] = await db
+  const [processing] = await database
     .select()
     .from(videoProcessing)
     .where(
@@ -65,7 +74,7 @@ function extractCandidates(
   endTime: number,
 ): CandidateWithMetadata[] {
   const candidates: CandidateWithMetadata[] = [];
-  const CONTENT_POS = ["NOUN", "VERB", "ADJ"];
+  const CONTENT_POS = ['NOUN', 'VERB', 'ADJ'];
 
   // Optimization: find start index efficiently or just iterate until end
   // Assuming vttData is sorted by start time (standard VTT)
@@ -95,9 +104,10 @@ async function fetchKnownLemmas(
   userId: string,
   targetLang: string,
   candidates: CandidateWithMetadata[],
+  database: Db,
 ): Promise<Set<string>> {
   const lemmaArray = Array.from(new Set(candidates.map((c) => c.lemma)));
-  return getKnownLemmas(userId, targetLang, lemmaArray, db);
+  return getKnownLemmas(userId, targetLang, lemmaArray, database);
 }
 
 function buildUniqueCards(
@@ -114,8 +124,8 @@ function buildUniqueCards(
         lang: targetLang,
         original: c.text,
         contextSentence: c.context,
-        cefr: "?",
-        translation: c.translation || "...",
+        cefr: '?',
+        translation: c.translation || '...',
         isKnown: knownSet.has(c.lemma),
       });
     }

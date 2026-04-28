@@ -89,9 +89,7 @@ describe('Pipeline Orchestrator Integration', () => {
     await rm(testDir, { recursive: true, force: true });
   });
 
-  it('should process a video through the full pipeline when event is emitted', {
-    timeout: 15000,
-  }, async () => {
+  it('should process a video through the full pipeline when event is emitted', async () => {
     expect(orchestrator).toBeDefined();
     expect(progressPersistence).toBeDefined();
 
@@ -102,24 +100,10 @@ describe('Pipeline Orchestrator Integration', () => {
       userId: 'test-user-id',
     });
 
-    // Poll database for completed state instead of waiting for event
-    // This avoids race conditions with async event handlers
-    let processingRecord: Array<typeof videoProcessing.$inferSelect> = [];
-    for (let attempt = 0; attempt < 100; attempt++) {
-      processingRecord = await db
-        .select()
-        .from(videoProcessing)
-        .where(eq(videoProcessing.videoId, testVideoId));
-
-      if (
-        processingRecord.length > 0 &&
-        processingRecord[0].status === 'COMPLETED'
-      ) {
-        break;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    const processingRecord = await db
+      .select()
+      .from(videoProcessing)
+      .where(eq(videoProcessing.videoId, testVideoId));
 
     expect(processingRecord).toHaveLength(1);
     expect(processingRecord[0].status).toBe('COMPLETED');

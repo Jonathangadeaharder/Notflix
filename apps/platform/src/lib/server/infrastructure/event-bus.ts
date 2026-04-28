@@ -39,6 +39,10 @@ export interface TypedEventEmitter {
     event: K,
     listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
   ): this;
+  prependListener<K extends EventKey>(
+    event: K,
+    listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
+  ): this;
   once<K extends EventKey>(
     event: K,
     listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
@@ -66,6 +70,13 @@ export class AppEventBus extends EventEmitter implements TypedEventEmitter {
     listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
   ): this {
     return super.on(event, listener);
+  }
+
+  override prependListener<K extends EventKey>(
+    event: K,
+    listener: (payload: AppEventPayloads[K]) => void | Promise<void>,
+  ): this {
+    return super.prependListener(event, listener);
   }
 
   override once<K extends EventKey>(
@@ -101,7 +112,11 @@ export class AppEventBus extends EventEmitter implements TypedEventEmitter {
       return false;
     }
 
-    await Promise.all(listeners.map((listener) => listener(payload)));
+    // Sequential, in registration order — persistence handlers must finish
+    // before downstream pipeline handlers emit follow-up events.
+    for (const listener of listeners) {
+      await listener(payload);
+    }
     return true;
   }
 }

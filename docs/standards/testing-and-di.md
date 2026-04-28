@@ -21,6 +21,17 @@
 - Integration or manual tests may exercise real models explicitly when validating model-backed behavior.
 - Prefer gold fixtures, fake gateways, or mocked adapter responses for fast feedback on orchestration and UI flows.
 
-## 4. Scope
+## 4. Banned Test Patterns (see ADR-008)
+
+The following patterns are **rejected on review**:
+
+1. `vi.mock('../infrastructure/database')` — or any module-level mock of an infrastructure singleton (db, eventBus, container). Use constructor DI with a fake instead.
+2. Importing production singletons (`orchestrator`, `progressPersistence`, etc.) inside unit tests. Construct a fresh instance with a fresh `AppEventBus` per test.
+3. `beforeEach(() => { vi.resetModules(); vi.restoreAllMocks(); })` as a fix for cross-file flakiness. Surface the real coupling.
+4. Assuming `emitAsync` runs listeners in parallel. It is sequential, in registration order. Handlers other listeners depend on must register with `prependListener`.
+
+See ADR-008 for the reviewer checklist and rationale.
+
+## 5. Scope
 
 This document is normative for testing workflow and DI usage. Architectural motivation stays in the ADRs; everyday testing rules live here.

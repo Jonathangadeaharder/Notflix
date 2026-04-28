@@ -15,8 +15,11 @@ import {
   mapTranslationsToSegments,
 } from '../domain/translation-core';
 import { toAiServicePath } from '../infrastructure/config';
-import { db as drizzleDb } from '../infrastructure/database';
-import { eventBus } from '../infrastructure/event-bus';
+import { db as defaultDb } from '../infrastructure/database';
+import {
+  type AppEventBus,
+  eventBus as defaultEventBus,
+} from '../infrastructure/event-bus';
 import { SmartFilter } from './linguistic-filter.service';
 import { mediaChunker } from './media-chunker.service';
 
@@ -25,11 +28,18 @@ const TRANSCRIBE_PROGRESS_CAP_PERCENT = 80;
 const ANALYZE_START_PERCENT = 85;
 const TRANSLATE_START_PERCENT = 93;
 
-class PipelineOrchestrator {
-  private aiGateway = new RealAiGateway();
-  private filter = new SmartFilter(drizzleDb);
+type Db = typeof defaultDb;
 
-  constructor() {
+export class PipelineOrchestrator {
+  private aiGateway = new RealAiGateway();
+  private filter: SmartFilter;
+  private readonly db: Db;
+  private readonly eventBus: AppEventBus;
+
+  constructor(db: Db = defaultDb, eventBus: AppEventBus = defaultEventBus) {
+    this.db = db;
+    this.eventBus = eventBus;
+    this.filter = new SmartFilter(db);
     eventBus.on(
       'video.processing.started',
       this.handleVideoProcessingStarted.bind(this),
@@ -44,7 +54,7 @@ class PipelineOrchestrator {
   }) {
     const { videoId, targetLang, nativeLang, userId } = payload;
     try {
-      const [record] = await drizzleDb
+      const [record] = await this.db
         .select()
         .from(video)
         .where(eq(video.id, videoId))
@@ -83,7 +93,7 @@ class PipelineOrchestrator {
         finalSegments,
       );
 
-      eventBus.emit('video.processing.completed', {
+      await this.eventBus.emitAsync('video.processing.completed', {
         videoId,
         targetLang,
         vttJson: translated,
@@ -91,7 +101,7 @@ class PipelineOrchestrator {
 
       console.log(`[Pipeline] Processing fully complete for: ${videoId}.`);
     } catch (err) {
-      eventBus.emit('video.processing.failed', {
+      await this.eventBus.emitAsync('video.processing.failed', {
         videoId,
         targetLang,
         error: err instanceof Error ? err.message : String(err),
@@ -106,7 +116,7 @@ class PipelineOrchestrator {
     stage: ProgressStageType,
     percent: number,
   ) {
-    eventBus.emit('video.processing.progress', {
+    this.eventBus.emit('video.processing.progress', {
       videoId,
       targetLang,
       stage,
@@ -174,7 +184,7 @@ class PipelineOrchestrator {
     this.aiGateway
       .generateThumbnail(aiPath)
       .then(async (res) => {
-        await drizzleDb
+        await this.db
           .update(video)
           .set({ thumbnailPath: res.thumbnail_path })
           .where(eq(video.id, videoId));

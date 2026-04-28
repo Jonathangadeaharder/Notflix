@@ -1,36 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { video, videoProcessing } from '$lib/server/db/schema';
-import { ProcessingStatus } from '../infrastructure/config';
-import { db } from '../infrastructure/database';
-import { eventBus } from '../infrastructure/event-bus';
+import { videoProcessing } from '$lib/server/db/schema';
+import { AppEventBus } from '../infrastructure/event-bus';
 import { mediaChunker } from './media-chunker.service';
-import { orchestrator } from './pipeline-orchestrator';
-import { progressPersistence } from './progress-persistence';
-
-// Mock infrastructure and database
-vi.mock('../infrastructure/database', () => ({
-  db: {
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockReturnValue({
-        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
-      }),
-    }),
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi
-            .fn()
-            .mockResolvedValue([{ id: 'v1', filePath: 'test.mp4' }]),
-        }),
-      }),
-    }),
-    update: vi.fn().mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      }),
-    }),
-  },
-}));
+import { PipelineOrchestrator } from './pipeline-orchestrator';
+import { ProgressPersistenceService } from './progress-persistence';
 
 vi.mock('../adapters/real-ai-gateway', () => ({
   RealAiGateway: vi.fn().mockImplementation(function (this: any) {
@@ -62,23 +35,56 @@ vi.mock('./media-chunker.service', () => ({
 }));
 
 describe('PipelineOrchestrator Unit', () => {
+  let bus: AppEventBus;
+  let mockDb: any;
+  let dbInsert: ReturnType<typeof vi.fn>;
+  let dbUpdate: ReturnType<typeof vi.fn>;
+  let dbSelect: ReturnType<typeof vi.fn>;
+  let orchestrator: PipelineOrchestrator;
+
   beforeEach(() => {
     vi.clearAllMocks();
+
+    dbInsert = vi.fn().mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+    dbSelect = vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi
+            .fn()
+            .mockResolvedValue([{ id: 'v1', filePath: 'test.mp4' }]),
+        }),
+      }),
+    });
+    dbUpdate = vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    mockDb = { insert: dbInsert, select: dbSelect, update: dbUpdate };
+    bus = new AppEventBus();
+    orchestrator = new PipelineOrchestrator(mockDb, bus);
+    new ProgressPersistenceService(mockDb, bus);
   });
 
   it('registers a listener on video.processing.started', () => {
     expect(orchestrator).toBeDefined();
+    expect(bus.listenerCount('video.processing.started')).toBeGreaterThan(0);
   });
 
   it('coordinates the pipeline steps when processing starts', async () => {
     const videoId = 'video-123';
     const completedPromise = new Promise<void>((resolve) => {
-      eventBus.once('video.processing.completed', (payload) => {
+      bus.once('video.processing.completed', (payload) => {
         if (payload.videoId === videoId) resolve();
       });
     });
 
-    await eventBus.emitAsync('video.processing.started', {
+    await bus.emitAsync('video.processing.started', {
       videoId,
       targetLang: 'es' as any,
       nativeLang: 'en' as any,
@@ -87,10 +93,8 @@ describe('PipelineOrchestrator Unit', () => {
 
     await completedPromise;
 
-    // Verify media chunker call
     expect(mediaChunker.extractAudio).toHaveBeenCalled();
-    // Verify DB calls
-    expect(db.insert).toHaveBeenCalledWith(videoProcessing);
-    expect(db.update).toHaveBeenCalledWith(videoProcessing);
+    expect(dbInsert).toHaveBeenCalledWith(videoProcessing);
+    expect(dbUpdate).toHaveBeenCalledWith(videoProcessing);
   });
 });

@@ -1,71 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProgressStage } from '$lib/types';
 import { ProcessingStatus } from '../infrastructure/config';
-import { eventBus } from '../infrastructure/event-bus';
-
-// ── DB mock ─────────────────────────────────────────────────────────────────
-// vi.mock factories are hoisted to the top of the file, so we cannot reference
-// variables declared at module scope inside them.  Use vi.hoisted() to create
-// the spy references before hoisting occurs.
-const {
-  mockInsert,
-  mockValues,
-  mockOnConflictDoUpdate,
-  mockUpdate,
-  mockSet,
-  mockWhere,
-} = vi.hoisted(() => {
-  const mockOnConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
-  const mockValues = vi.fn().mockReturnValue({
-    onConflictDoUpdate: mockOnConflictDoUpdate,
-  });
-  const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
-
-  const mockWhere = vi.fn().mockResolvedValue(undefined);
-  const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
-  const mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
-
-  return {
-    mockInsert,
-    mockValues,
-    mockOnConflictDoUpdate,
-    mockUpdate,
-    mockSet,
-    mockWhere,
-  };
-});
-
-vi.mock('../infrastructure/database', () => ({
-  db: {
-    insert: mockInsert,
-    update: mockUpdate,
-  },
-}));
-
-// Import after mocking so the singleton wires listeners onto the mocked DB.
-import { progressPersistence } from './progress-persistence';
+import { AppEventBus } from '../infrastructure/event-bus';
+import { ProgressPersistenceService } from './progress-persistence';
 
 const VIDEO_ID = 'v-persist-001';
 const TARGET_LANG = 'es' as const;
 
 describe('ProgressPersistenceService', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Restore mock return values after clearAllMocks
-    mockOnConflictDoUpdate.mockResolvedValue(undefined);
-    mockValues.mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
-    mockInsert.mockReturnValue({ values: mockValues });
-    mockWhere.mockResolvedValue(undefined);
-    mockSet.mockReturnValue({ where: mockWhere });
-    mockUpdate.mockReturnValue({ set: mockSet });
-  });
+  let bus: AppEventBus;
+  let mockInsert: ReturnType<typeof vi.fn>;
+  let mockValues: ReturnType<typeof vi.fn>;
+  let mockOnConflictDoUpdate: ReturnType<typeof vi.fn>;
+  let mockUpdate: ReturnType<typeof vi.fn>;
+  let mockSet: ReturnType<typeof vi.fn>;
+  let mockWhere: ReturnType<typeof vi.fn>;
 
-  it('should be instantiated (singleton exported)', () => {
-    expect(progressPersistence).toBeDefined();
+  beforeEach(() => {
+    mockOnConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+    mockValues = vi
+      .fn()
+      .mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
+    mockInsert = vi.fn().mockReturnValue({ values: mockValues });
+
+    mockWhere = vi.fn().mockResolvedValue(undefined);
+    mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+    mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
+
+    const mockDb = { insert: mockInsert, update: mockUpdate } as any;
+    bus = new AppEventBus();
+    new ProgressPersistenceService(mockDb, bus);
   });
 
   it('inserts PROCESSING/QUEUED row on video.processing.started', async () => {
-    await eventBus.emitAsync('video.processing.started', {
+    await bus.emitAsync('video.processing.started', {
       videoId: VIDEO_ID,
       targetLang: TARGET_LANG,
       nativeLang: 'en' as const,
@@ -95,7 +63,7 @@ describe('ProgressPersistenceService', () => {
   });
 
   it('updates progressStage and progressPercent on video.processing.progress (E2.4)', async () => {
-    await eventBus.emitAsync('video.processing.progress', {
+    await bus.emitAsync('video.processing.progress', {
       videoId: VIDEO_ID,
       targetLang: TARGET_LANG,
       stage: ProgressStage.TRANSCRIBING,
@@ -115,7 +83,7 @@ describe('ProgressPersistenceService', () => {
   });
 
   it('marks status COMPLETED and progressStage READY on video.processing.completed', async () => {
-    await eventBus.emitAsync('video.processing.completed', {
+    await bus.emitAsync('video.processing.completed', {
       videoId: VIDEO_ID,
       targetLang: TARGET_LANG,
       vttJson: [],
@@ -134,7 +102,7 @@ describe('ProgressPersistenceService', () => {
   });
 
   it('marks status ERROR and progressStage FAILED on video.processing.failed', async () => {
-    await eventBus.emitAsync('video.processing.failed', {
+    await bus.emitAsync('video.processing.failed', {
       videoId: VIDEO_ID,
       targetLang: TARGET_LANG,
       error: 'transcription timeout',
