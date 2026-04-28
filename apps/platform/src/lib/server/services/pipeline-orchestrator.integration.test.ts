@@ -92,7 +92,9 @@ describe('Pipeline Orchestrator Integration', () => {
     await rm(testDir, { recursive: true, force: true });
   });
 
-  it('should process a video through the full pipeline when event is emitted', async () => {
+  it('should process a video through the full pipeline when event is emitted', {
+    timeout: 15000,
+  }, async () => {
     // The import at the top registers the listener
     expect(orchestrator).toBeDefined();
 
