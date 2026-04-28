@@ -6,9 +6,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { video, videoProcessing } from '$lib/server/db/schema';
 import { db } from '../infrastructure/database';
 import { eventBus } from '../infrastructure/event-bus';
-import { orchestrator } from './pipeline-orchestrator'; // Ensure it's imported to register the listener
+import { orchestrator } from './pipeline-orchestrator';
+import { progressPersistence } from './progress-persistence';
 
-// Mock the AI gateway used inside PipelineOrchestrator
 vi.mock('../adapters/real-ai-gateway', () => ({
   RealAiGateway: vi.fn().mockImplementation(function (this: any) {
     this.generateThumbnail = vi
@@ -40,7 +40,6 @@ vi.mock('../adapters/real-ai-gateway', () => ({
   }),
 }));
 
-// Mock media-chunker to avoid requiring ffmpeg in CI
 vi.mock('./media-chunker.service', () => ({
   mediaChunker: {
     extractAudio: vi.fn().mockResolvedValue(undefined),
@@ -48,7 +47,6 @@ vi.mock('./media-chunker.service', () => ({
   },
 }));
 
-// Mock SmartFilter to avoid real DB knowledge lookups
 vi.mock('./linguistic-filter.service', () => ({
   SmartFilter: vi.fn().mockImplementation(function (this: any) {
     this.filterBatch = vi.fn().mockResolvedValue([
@@ -94,21 +92,9 @@ describe('Pipeline Orchestrator Integration', () => {
   it('should process a video through the full pipeline when event is emitted', {
     timeout: 15000,
   }, async () => {
-    // The import at the top registers the listener
     expect(orchestrator).toBeDefined();
+    expect(progressPersistence).toBeDefined();
 
-    // Dynamically import progress-persistence to ensure event handlers are registered
-    await import('./progress-persistence');
-
-    const processCompleted = new Promise<void>((resolve) => {
-      eventBus.once('video.processing.completed', (payload) => {
-        if (payload.videoId === testVideoId) {
-          resolve();
-        }
-      });
-    });
-
-    // We emit the event as if a request triggered it
     await eventBus.emitAsync('video.processing.started', {
       videoId: testVideoId,
       targetLang: 'es',
@@ -116,21 +102,22 @@ describe('Pipeline Orchestrator Integration', () => {
       userId: 'test-user-id',
     });
 
-    // Wait for the pipeline to finish processing
-    await processCompleted;
-
-    // Poll database until the async event handler completes its write
+    // Poll database for completed state instead of waiting for event
+    // This avoids race conditions with async event handlers
     let processingRecord: Array<typeof videoProcessing.$inferSelect> = [];
-    for (let i = 0; i < 50; i++) {
+    for (let attempt = 0; attempt < 100; attempt++) {
       processingRecord = await db
         .select()
         .from(videoProcessing)
         .where(eq(videoProcessing.videoId, testVideoId));
+
       if (
         processingRecord.length > 0 &&
         processingRecord[0].status === 'COMPLETED'
-      )
+      ) {
         break;
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
