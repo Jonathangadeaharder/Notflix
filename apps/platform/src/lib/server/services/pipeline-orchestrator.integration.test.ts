@@ -7,7 +7,6 @@ import { video, videoProcessing } from '$lib/server/db/schema';
 import { db } from '../infrastructure/database';
 import { eventBus } from '../infrastructure/event-bus';
 import { orchestrator } from './pipeline-orchestrator'; // Ensure it's imported to register the listener
-import './progress-persistence'; // Import to register event handlers that create videoProcessing records
 
 // Mock the AI gateway used inside PipelineOrchestrator
 vi.mock('../adapters/real-ai-gateway', () => ({
@@ -97,6 +96,9 @@ describe('Pipeline Orchestrator Integration', () => {
   }, async () => {
     // The import at the top registers the listener
     expect(orchestrator).toBeDefined();
+
+    // Dynamically import progress-persistence to ensure event handlers are registered
+    await import('./progress-persistence');
 
     const processCompleted = new Promise<void>((resolve) => {
       eventBus.once('video.processing.completed', (payload) => {
