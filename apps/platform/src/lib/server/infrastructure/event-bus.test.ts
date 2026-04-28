@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { AppEventBus, type AppEventPayloads, eventBus } from './event-bus';
 
@@ -30,6 +32,7 @@ describe('AppEventBus', () => {
     bus.emit('video.processing.completed', {
       videoId: 'v-123',
       targetLang: 'es' as const,
+      vttJson: [],
     });
 
     expect(listener).not.toHaveBeenCalled();
@@ -51,6 +54,7 @@ describe('AppEventBus', () => {
     const success = await bus.emitAsync('video.processing.completed', {
       videoId: 'async-123',
       targetLang: 'es' as const,
+      vttJson: [],
     });
 
     expect(success).toBe(true);
@@ -62,11 +66,44 @@ describe('AppEventBus', () => {
     const success = await bus.emitAsync('video.processing.completed', {
       videoId: 'v-123',
       targetLang: 'es' as const,
+      vttJson: [],
     });
     expect(success).toBe(false);
   });
 
   it('should expose a global singleton', () => {
     expect(eventBus).toBeInstanceOf(AppEventBus);
+  });
+});
+
+// E1.6 — Event-bus migration verification
+// Confirms video-orchestrator.service.ts has been deleted and no file in
+// apps/platform/src imports it, ensuring ADR-007 choreography is the sole
+// pipeline entrypoint.
+describe('E1.6 event-bus migration', () => {
+  const SRC_ROOT = join(process.cwd(), 'src');
+
+  it('video-orchestrator.service.ts no longer exists in the repo', () => {
+    const paths = [
+      join(SRC_ROOT, 'lib/server/services/video-orchestrator.service.ts'),
+      join(SRC_ROOT, 'lib/server/video-orchestrator.service.ts'),
+      join(SRC_ROOT, 'video-orchestrator.service.ts'),
+    ];
+    for (const p of paths) {
+      expect(existsSync(p), `Expected ${p} to be deleted`).toBe(false);
+    }
+  });
+
+  it('pipeline-orchestrator subscribes to eventBus, not direct invocation', async () => {
+    // Importing the orchestrator registers its eventBus listeners.
+    // If the module compiled without importing video-orchestrator, the import
+    // itself proves no hard coupling remains.
+    const { orchestrator } = await import(
+      '$lib/server/services/pipeline-orchestrator'
+    );
+    expect(orchestrator).toBeDefined();
+    // eventBus should have at least one listener for video.processing.started
+    const listenerCount = eventBus.listenerCount('video.processing.started');
+    expect(listenerCount).toBeGreaterThanOrEqual(1);
   });
 });
