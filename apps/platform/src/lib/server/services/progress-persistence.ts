@@ -2,22 +2,42 @@ import { and, eq } from 'drizzle-orm';
 import { videoProcessing } from '$lib/server/db/schema';
 import { ProgressStage } from '$lib/types';
 import { ProcessingStatus } from '../infrastructure/config';
-import { db } from '../infrastructure/database';
-import { eventBus } from '../infrastructure/event-bus';
+import { db as defaultDb } from '../infrastructure/database';
+import {
+  type AppEventBus,
+  eventBus as defaultEventBus,
+} from '../infrastructure/event-bus';
 
-class ProgressPersistenceService {
-  constructor() {
-    eventBus.on('video.processing.started', this.handleStarted.bind(this));
-    eventBus.on('video.processing.progress', this.handleProgress.bind(this));
-    eventBus.on('video.processing.completed', this.handleCompleted.bind(this));
-    eventBus.on('video.processing.failed', this.handleFailed.bind(this));
+type Db = typeof defaultDb;
+
+export class ProgressPersistenceService {
+  constructor(
+    private readonly db: Db = defaultDb,
+    eventBus: AppEventBus = defaultEventBus,
+  ) {
+    eventBus.prependListener(
+      'video.processing.started',
+      this.handleStarted.bind(this),
+    );
+    eventBus.prependListener(
+      'video.processing.progress',
+      this.handleProgress.bind(this),
+    );
+    eventBus.prependListener(
+      'video.processing.completed',
+      this.handleCompleted.bind(this),
+    );
+    eventBus.prependListener(
+      'video.processing.failed',
+      this.handleFailed.bind(this),
+    );
   }
 
   private async handleStarted(payload: {
     videoId: string;
     targetLang: string;
   }) {
-    await db
+    await this.db
       .insert(videoProcessing)
       .values({
         videoId: payload.videoId,
@@ -43,7 +63,7 @@ class ProgressPersistenceService {
     stage: string;
     percent: number;
   }) {
-    await db
+    await this.db
       .update(videoProcessing)
       .set({
         status: ProcessingStatus.PROCESSING,
@@ -63,7 +83,7 @@ class ProgressPersistenceService {
     targetLang: string;
     vttJson: any;
   }) {
-    await db
+    await this.db
       .update(videoProcessing)
       .set({
         status: ProcessingStatus.COMPLETED,
@@ -84,7 +104,7 @@ class ProgressPersistenceService {
     targetLang: string;
     error: string;
   }) {
-    await db
+    await this.db
       .update(videoProcessing)
       .set({
         status: ProcessingStatus.ERROR,

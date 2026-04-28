@@ -1,11 +1,14 @@
 import { eq } from 'drizzle-orm';
+import { mkdtemp, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { video, videoProcessing } from '$lib/server/db/schema';
 import { db } from '../infrastructure/database';
 import { eventBus } from '../infrastructure/event-bus';
-import { orchestrator } from './pipeline-orchestrator'; // Ensure it's imported to register the listener
+import { orchestrator } from './pipeline-orchestrator';
+import { progressPersistence } from './progress-persistence';
 
-// Mock the AI gateway used inside PipelineOrchestrator
 vi.mock('../adapters/real-ai-gateway', () => ({
   RealAiGateway: vi.fn().mockImplementation(function (this: any) {
     this.generateThumbnail = vi
@@ -37,7 +40,13 @@ vi.mock('../adapters/real-ai-gateway', () => ({
   }),
 }));
 
-// Mock SmartFilter to avoid real DB knowledge lookups
+vi.mock('./media-chunker.service', () => ({
+  mediaChunker: {
+    extractAudio: vi.fn().mockResolvedValue(undefined),
+    splitIntoAudioChunks: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 vi.mock('./linguistic-filter.service', () => ({
   SmartFilter: vi.fn().mockImplementation(function (this: any) {
     this.filterBatch = vi.fn().mockResolvedValue([
@@ -59,12 +68,12 @@ vi.mock('./linguistic-filter.service', () => ({
 
 describe('Pipeline Orchestrator Integration', () => {
   const testVideoId = crypto.randomUUID();
-  const testFilePath = '/app/media/test_vid.mp4';
+  let testDir: string;
+  let testFilePath: string;
 
   beforeAll(async () => {
-    // The import at the top registers the listener
-    expect(orchestrator).toBeDefined();
-
+    testDir = await mkdtemp(join(tmpdir(), 'notflix-test-'));
+    testFilePath = join(testDir, 'test_vid.mp4');
     await db.insert(video).values({
       id: testVideoId,
       title: 'Pipeline Integration Test Video',
@@ -77,27 +86,19 @@ describe('Pipeline Orchestrator Integration', () => {
       .delete(videoProcessing)
       .where(eq(videoProcessing.videoId, testVideoId));
     await db.delete(video).where(eq(video.id, testVideoId));
+    await rm(testDir, { recursive: true, force: true });
   });
 
   it('should process a video through the full pipeline when event is emitted', async () => {
-    const processCompleted = new Promise<void>((resolve) => {
-      eventBus.once('video.processing.completed', (payload) => {
-        if (payload.videoId === testVideoId) {
-          resolve();
-        }
-      });
-    });
+    expect(orchestrator).toBeDefined();
+    expect(progressPersistence).toBeDefined();
 
-    // We emit the event as if a request triggered it
     await eventBus.emitAsync('video.processing.started', {
       videoId: testVideoId,
       targetLang: 'es',
       nativeLang: 'en',
       userId: 'test-user-id',
     });
-
-    // Wait for the pipeline to finish processing
-    await processCompleted;
 
     const processingRecord = await db
       .select()
