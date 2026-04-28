@@ -55,6 +55,7 @@ export const load = async ({ depends, locals }) => {
     userTargetLang,
     videos: videos.map((v) => ({
       ...v,
+      createdAt: v.createdAt.toISOString(),
       thumbnailPath: toMediaUrl(v.thumbnailPath),
       hasAnyTranscription: completedIds.has(v.id),
     })),

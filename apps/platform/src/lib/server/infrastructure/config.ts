@@ -1,7 +1,5 @@
 import path from 'path';
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error SvelteKit virtual module not resolvable outside Vite context
 import { env } from '$env/dynamic/private';
 
 const DEFAULT_AI_TIMEOUT_MS = 15_000;
