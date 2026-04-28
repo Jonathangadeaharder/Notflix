@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { AppEventBus, type AppEventPayloads, eventBus } from './event-bus';
 
@@ -81,7 +82,7 @@ describe('AppEventBus', () => {
 // apps/platform/src imports it, ensuring ADR-007 choreography is the sole
 // pipeline entrypoint.
 describe('E1.6 event-bus migration', () => {
-  const SRC_ROOT = join(process.cwd(), 'src');
+  const SRC_ROOT = new URL('../../..', import.meta.url).pathname;
 
   it('video-orchestrator.service.ts no longer exists in the repo', () => {
     const paths = [
@@ -98,12 +99,21 @@ describe('E1.6 event-bus migration', () => {
     // Importing the orchestrator registers its eventBus listeners.
     // If the module compiled without importing video-orchestrator, the import
     // itself proves no hard coupling remains.
+    const before = eventBus.listenerCount('video.processing.started');
+    const onSpy = vi.spyOn(eventBus, 'on');
+
     const { orchestrator } = await import(
       '$lib/server/services/pipeline-orchestrator'
     );
     expect(orchestrator).toBeDefined();
+
     // eventBus should have at least one listener for video.processing.started
-    const listenerCount = eventBus.listenerCount('video.processing.started');
-    expect(listenerCount).toBeGreaterThanOrEqual(1);
+    expect(onSpy).toHaveBeenCalledWith(
+      'video.processing.started',
+      expect.any(Function),
+    );
+    expect(eventBus.listenerCount('video.processing.started')).toBeGreaterThan(
+      before,
+    );
   });
 });

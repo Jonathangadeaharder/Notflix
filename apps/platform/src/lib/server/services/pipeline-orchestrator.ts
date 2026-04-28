@@ -66,7 +66,12 @@ export class PipelineOrchestrator {
       const audioPath = isAudio
         ? record.filePath
         : join(dirname(record.filePath), `${videoId}.mp3`);
-      this.emitProgress(videoId, targetLang, ProgressStage.TRANSCRIBING, 0);
+      await this.emitProgress(
+        videoId,
+        targetLang,
+        ProgressStage.TRANSCRIBING,
+        0,
+      );
       if (!isAudio) {
         await mediaChunker.extractAudio(record.filePath, audioPath);
       }
@@ -110,13 +115,13 @@ export class PipelineOrchestrator {
     }
   }
 
-  private emitProgress(
+  private async emitProgress(
     videoId: string,
     targetLang: LanguageCode,
     stage: ProgressStageType,
     percent: number,
   ) {
-    this.eventBus.emit('video.processing.progress', {
+    await this.eventBus.emitAsync('video.processing.progress', {
       videoId,
       targetLang,
       stage,
@@ -142,7 +147,7 @@ export class PipelineOrchestrator {
       lastPersistedPercent = clamped;
       lastPersistedAt = now;
       console.log(`[Pipeline] Transcription progress: ${clamped}%`);
-      this.emitProgress(
+      await this.emitProgress(
         videoId,
         targetLang,
         ProgressStage.TRANSCRIBING,
@@ -166,7 +171,7 @@ export class PipelineOrchestrator {
       onProgress,
     );
 
-    this.emitProgress(
+    await this.emitProgress(
       videoId,
       targetLang,
       ProgressStage.TRANSCRIBING,
@@ -197,7 +202,7 @@ export class PipelineOrchestrator {
     targetLang: LanguageCode,
     transcription: TranscriptionResponse,
   ): Promise<VttSegment[]> {
-    this.emitProgress(
+    await this.emitProgress(
       videoId,
       targetLang,
       ProgressStage.ANALYZING,
@@ -219,7 +224,7 @@ export class PipelineOrchestrator {
     userId: string,
     finalSegments: VttSegment[],
   ): Promise<VttSegment[]> {
-    this.emitProgress(
+    await this.emitProgress(
       videoId,
       targetLang,
       ProgressStage.TRANSLATING,
