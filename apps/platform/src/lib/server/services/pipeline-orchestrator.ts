@@ -51,10 +51,15 @@ class PipelineOrchestrator {
         .limit(1);
       if (!record) throw new Error(`Video not found: ${videoId}`);
 
-      // Extract audio first
-      const audioPath = join(dirname(record.filePath), `${videoId}.mp3`);
+      // Extract audio first (skip if already an audio file)
+      const isAudio = record.filePath.match(/\.(mp3|wav|m4a|aac|ogg)$/i);
+      const audioPath = isAudio
+        ? record.filePath
+        : join(dirname(record.filePath), `${videoId}.mp3`);
       this.emitProgress(videoId, targetLang, ProgressStage.TRANSCRIBING, 0);
-      await mediaChunker.extractAudio(record.filePath, audioPath);
+      if (!isAudio) {
+        await mediaChunker.extractAudio(record.filePath, audioPath);
+      }
 
       const transcription = await this.transcribeWithProgress(
         videoId,
