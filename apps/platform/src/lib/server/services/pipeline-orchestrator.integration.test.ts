@@ -115,13 +115,20 @@ describe('Pipeline Orchestrator Integration', () => {
     // Wait for the pipeline to finish processing
     await processCompleted;
 
-    // Allow async event handlers to complete their database writes
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    const processingRecord = await db
-      .select()
-      .from(videoProcessing)
-      .where(eq(videoProcessing.videoId, testVideoId));
+    // Poll database until the async event handler completes its write
+    let processingRecord: Array<typeof videoProcessing.$inferSelect> = [];
+    for (let i = 0; i < 20; i++) {
+      processingRecord = await db
+        .select()
+        .from(videoProcessing)
+        .where(eq(videoProcessing.videoId, testVideoId));
+      if (
+        processingRecord.length > 0 &&
+        processingRecord[0].status === 'COMPLETED'
+      )
+        break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
 
     expect(processingRecord).toHaveLength(1);
     expect(processingRecord[0].status).toBe('COMPLETED');
