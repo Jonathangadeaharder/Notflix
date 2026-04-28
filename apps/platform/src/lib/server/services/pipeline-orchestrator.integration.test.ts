@@ -115,6 +115,9 @@ describe('Pipeline Orchestrator Integration', () => {
     // Wait for the pipeline to finish processing
     await processCompleted;
 
+    // Allow async event handlers to complete their database writes
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     const processingRecord = await db
       .select()
       .from(videoProcessing)
