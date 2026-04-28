@@ -29,7 +29,9 @@ describe('ProgressPersistenceService', () => {
 
     const mockDb = { insert: mockInsert, update: mockUpdate } as any;
     bus = new AppEventBus();
-    new ProgressPersistenceService(mockDb, bus);
+    // Instance is intentionally unused — constructor wires handlers onto bus.
+    const persistence = new ProgressPersistenceService(mockDb, bus);
+    expect(persistence).toBeDefined();
   });
 
   it('inserts PROCESSING/QUEUED row on video.processing.started', async () => {

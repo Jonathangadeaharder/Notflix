@@ -68,7 +68,9 @@ describe('PipelineOrchestrator Unit', () => {
     mockDb = { insert: dbInsert, select: dbSelect, update: dbUpdate };
     bus = new AppEventBus();
     orchestrator = new PipelineOrchestrator(mockDb, bus);
-    new ProgressPersistenceService(mockDb, bus);
+    // Instance is intentionally unused — constructor wires handlers onto bus.
+    const persistence = new ProgressPersistenceService(mockDb, bus);
+    expect(persistence).toBeDefined();
   });
 
   it('registers a listener on video.processing.started', () => {
