@@ -17,7 +17,7 @@ test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
     const uniqueTitle = `E2E Creator Flow ${Date.now()}`;
     const audioPath = path.resolve(
       process.cwd(),
-      '../../../media',
+      '../../media',
       'test_audio.mp3',
     );
 
