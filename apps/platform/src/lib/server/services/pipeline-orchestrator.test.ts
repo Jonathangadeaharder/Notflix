@@ -68,9 +68,9 @@ describe('PipelineOrchestrator Unit', () => {
     mockDb = { insert: dbInsert, select: dbSelect, update: dbUpdate };
     bus = new AppEventBus();
     orchestrator = new PipelineOrchestrator(mockDb, bus);
-    // Instance is intentionally unused — constructor wires handlers onto bus.
-    const persistence = new ProgressPersistenceService(mockDb, bus);
-    expect(persistence).toBeDefined();
+    // Constructor side effect (registering handlers on bus) is the goal.
+    // eslint-disable-next-line sonarjs/constructor-for-side-effects
+    new ProgressPersistenceService(mockDb, bus);
   });
 
   it('registers a listener on video.processing.started', () => {
