@@ -139,25 +139,25 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* Notflix Ember utilities — usable as bg-brand, text-fg-2, border-line-2, etc. */
-  --color-brand:      var(--brand);
-  --color-brand-hi:   var(--brand-hi);
-  --color-brand-lo:   var(--brand-lo);
-  --color-learn:      var(--learn);
-  --color-learn-hi:   var(--learn-hi);
+  --color-brand: var(--brand);
+  --color-brand-hi: var(--brand-hi);
+  --color-brand-lo: var(--brand-lo);
+  --color-learn: var(--learn);
+  --color-learn-hi: var(--learn-hi);
   --color-learn-soft: var(--learn-soft);
-  --color-known:      var(--known);
-  --color-hard:       var(--hard);
-  --color-bg:         var(--bg);
-  --color-surface:    var(--surface);
-  --color-surface-2:  var(--surface-2);
-  --color-fg:         var(--fg);
-  --color-fg-2:       var(--fg-2);
-  --color-fg-3:       var(--fg-3);
-  --color-line:       var(--line);
-  --color-line-2:     var(--line-2);
+  --color-known: var(--known);
+  --color-hard: var(--hard);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
 
   /* Magenta tokens kept for legacy components (existing shadcn references) */
-  --color-magenta-50:  #fcf0f5;
+  --color-magenta-50: #fcf0f5;
   --color-magenta-100: #f9e2ed;
   --color-magenta-200: #f3c5dc;
   --color-magenta-300: #eaa3c8;

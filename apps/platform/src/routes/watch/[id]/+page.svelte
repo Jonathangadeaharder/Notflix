@@ -95,13 +95,17 @@
 
   onMount(() => {
     if (typeof window !== "undefined" && env.PUBLIC_PLAYWRIGHT_TEST === "true") {
-      (window as any).__e2eTriggerGameInterrupt = ((cards: GameCard[]) => {
+      (
+        window as unknown as {
+          __e2eTriggerGameInterrupt?: E2ETriggerGameInterrupt;
+        }
+      ).__e2eTriggerGameInterrupt = (cards) => {
         gameCards = cards;
-      }) satisfies E2ETriggerGameInterrupt;
+      };
     }
     return () => {
       if (typeof window !== "undefined") {
-        delete (window as any).__e2eTriggerGameInterrupt;
+        delete (window as unknown as Record<string, unknown>).__e2eTriggerGameInterrupt;
       }
     };
   });

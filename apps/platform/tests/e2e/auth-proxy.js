@@ -21,6 +21,30 @@ const HTTP_INTERNAL_ERROR = 500;
 const HTTP_BAD_GATEWAY = 502;
 const HTTP_NO_CONTENT = 204;
 
+function buildCorsHeaders(req) {
+  return {
+    'Access-Control-Allow-Origin': req.headers.origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+  };
+}
+
+function handleProxyResponse(req, res, proxyRes) {
+  const responseHeaders = { ...buildCorsHeaders(req) };
+  for (const [key, value] of Object.entries(proxyRes.headers)) {
+    const lower = key.toLowerCase();
+    if (lower.startsWith('access-control-')) continue;
+    if (lower === 'transfer-encoding') continue;
+    responseHeaders[key] = value;
+  }
+
+  res.writeHead(proxyRes.statusCode || HTTP_INTERNAL_ERROR, responseHeaders);
+  proxyRes.pipe(res);
+}
+
 function proxyRequest(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const { pathname, search } = url;
@@ -42,35 +66,8 @@ function proxyRequest(req, res) {
 
   const proxyReq = http.request(
     targetUrl,
-    {
-      method: req.method,
-      headers: proxyHeaders,
-    },
-    (proxyRes) => {
-      const corsHeaders = {
-        'Access-Control-Allow-Origin': req.headers.origin || '*',
-        'Access-Control-Allow-Methods':
-          'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers':
-          'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Max-Age': '86400',
-      };
-
-      const responseHeaders = { ...corsHeaders };
-      for (const [key, value] of Object.entries(proxyRes.headers)) {
-        const lower = key.toLowerCase();
-        if (lower.startsWith('access-control-')) continue;
-        if (lower === 'transfer-encoding') continue;
-        responseHeaders[key] = value;
-      }
-
-      res.writeHead(
-        proxyRes.statusCode || HTTP_INTERNAL_ERROR,
-        responseHeaders,
-      );
-      proxyRes.pipe(res);
-    },
+    { method: req.method, headers: proxyHeaders },
+    (proxyRes) => handleProxyResponse(req, res, proxyRes),
   );
 
   proxyReq.on('error', (err) => {
@@ -86,14 +83,7 @@ function proxyRequest(req, res) {
 
 function handler(req, res) {
   if (req.method === 'OPTIONS') {
-    res.writeHead(HTTP_NO_CONTENT, {
-      'Access-Control-Allow-Origin': req.headers.origin || '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers':
-        'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
-      'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Max-Age': '86400',
-    });
+    res.writeHead(HTTP_NO_CONTENT, buildCorsHeaders(req));
     res.end();
     return;
   }
