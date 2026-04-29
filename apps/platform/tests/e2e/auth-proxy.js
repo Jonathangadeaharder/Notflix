@@ -22,8 +22,14 @@ const HTTP_BAD_GATEWAY = 502;
 const HTTP_NO_CONTENT = 204;
 
 function buildCorsHeaders(req) {
+  const origin = req.headers.origin || '*';
+  const allowed =
+    origin !== '*' &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ? origin
+      : '*';
   return {
-    'Access-Control-Allow-Origin': req.headers.origin || '*',
+    'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers':
       'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
