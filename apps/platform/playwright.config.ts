@@ -1,5 +1,7 @@
 import type { PlaywrightTestConfig } from '@playwright/test';
 
+process.env.PLAYWRIGHT_TEST = 'true';
+
 const MOCK_AI_PORT = '8001';
 const E2E_SERVER_TIMEOUT_SEC = 120;
 const MS_PER_SEC = 1000;

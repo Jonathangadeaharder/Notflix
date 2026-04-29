@@ -12,7 +12,7 @@ export class ProfilePage {
     this.page = page;
     this.heading = page.locator('h1');
     this.gameIntervalInput = page.locator('input[name="gameInterval"]');
-    this.saveButton = page.locator('button[type="submit"]');
+    this.saveButton = page.getByRole('button', { name: 'Save settings' });
     this.successIndicator = page.locator('text=saved');
   }
 
