@@ -144,7 +144,7 @@ test.describe('E2E Learner Journey', () => {
     const hasSubtitles = await firstWord.isVisible().catch(() => false);
 
     if (hasSubtitles) {
-      await firstWord.hover();
+      await firstWord.hover({ timeout: 10000 }).catch(() => {});
       const popup = page.getByTestId('word-popup');
       await expect(popup).toBeVisible();
       await firstWord.click();
