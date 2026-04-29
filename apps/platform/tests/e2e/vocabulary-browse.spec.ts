@@ -1,7 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, request, test } from '@playwright/test';
 
 test.describe('Vocabulary: Browse and Filter', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
+
+  test.afterAll(async () => {
+    const ctx = await request.newContext({
+      baseURL: 'http://localhost:5173',
+    });
+    await ctx.post('/api/words/known', {
+      data: { lemma: 'hola', lang: 'es' },
+    });
+    await ctx.dispose();
+  });
 
   test('displays vocabulary page with words and level filters', async ({
     page,

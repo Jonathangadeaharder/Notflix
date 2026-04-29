@@ -3,12 +3,15 @@
   import FileText from "lucide-svelte/icons/file-text";
   import Settings from "lucide-svelte/icons/settings";
   import Sparkles from "lucide-svelte/icons/sparkles";
+  import { onMount } from "svelte";
   import { base, resolve } from "$app/paths";
+  import { PUBLIC_PLAYWRIGHT_TEST } from "$env/static/public";
   import Chip from "$lib/components/brand/Chip.svelte";
   import ComprehensionRing from "$lib/components/brand/ComprehensionRing.svelte";
   import type { PlayerSettings, PlayerVideo } from "$lib/components/player/types";
   import VideoPlayer from "$lib/components/player/VideoPlayer.svelte";
   import { GAME } from "$lib/constants";
+  import type { E2ETriggerGameInterrupt } from "$lib/e2e-hooks";
   import type { GameCard } from "$lib/types";
 
   let { data } = $props();
@@ -89,6 +92,19 @@
   function handleProgressUpdate(progress: { currentTime: number; duration: number; progressPercent: number }) {
     currentPlayerProgress = progress;
   }
+
+  onMount(() => {
+    if (typeof window !== "undefined" && PUBLIC_PLAYWRIGHT_TEST === "true") {
+      (window as any).__e2eTriggerGameInterrupt = ((cards: GameCard[]) => {
+        gameCards = cards;
+      }) satisfies E2ETriggerGameInterrupt;
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        delete (window as any).__e2eTriggerGameInterrupt;
+      }
+    };
+  });
 
   // Heatmap and Comprehension Logic
   type HeatmapSegment = { start: number; end: number; type: string };

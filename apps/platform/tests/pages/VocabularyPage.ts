@@ -5,7 +5,6 @@ export class VocabularyPage {
   readonly searchInput: Locator;
   readonly searchButton: Locator;
   readonly clearSearchButton: Locator;
-  readonly wordRows: Locator;
   readonly heading: Locator;
   readonly prevButton: Locator;
   readonly nextButton: Locator;
@@ -13,11 +12,12 @@ export class VocabularyPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.searchInput = page.locator('input[placeholder="Search words..."]');
-    this.searchButton = page.getByRole('button', { name: 'Search' });
+    this.searchInput = page.locator('input[placeholder="Search lemmas…"]');
+    this.searchButton = page.getByRole('button', {
+      name: 'Search',
+      exact: true,
+    });
     this.clearSearchButton = page.getByRole('button', { name: 'Clear' });
-    // Words are in a divide-y list, each row has a span.text-white.font-medium
-    this.wordRows = page.locator('div.divide-y > div');
     this.heading = page.locator('h1');
     this.prevButton = page.getByRole('button', { name: /previous/i });
     this.nextButton = page.getByRole('button', { name: /next/i });
@@ -51,20 +51,20 @@ export class VocabularyPage {
 
   async filterByLevel(level: string) {
     const badge = this.page
-      .locator('button', { hasText: new RegExp(`^${level}\\b`) })
+      .getByRole('button', { name: new RegExp(level) })
       .first();
-    await Promise.all([
-      this.page.waitForURL(
-        (url) =>
-          url.pathname === '/vocabulary' &&
-          url.searchParams.get('level') === level,
-      ),
-      badge.click(),
-    ]);
+    await badge.waitFor({ state: 'visible', timeout: 10000 });
+    await badge.click();
+    await this.page.waitForURL(
+      (url) =>
+        url.pathname === '/vocabulary' &&
+        url.searchParams.get('level') === level,
+      { timeout: 10000 },
+    );
   }
 
   async getVisibleWordTexts(): Promise<string[]> {
-    const wordSpans = this.page.locator('div.divide-y > div span.font-medium');
+    const wordSpans = this.page.locator('span.font-semibold');
     const texts = await wordSpans.allTextContents();
     return texts.map((t) => t.trim()).filter(Boolean);
   }

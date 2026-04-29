@@ -1,9 +1,11 @@
 import path from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, request, test } from '@playwright/test';
 import { StudioPage } from '../pages/StudioPage';
 import { UploadPage } from '../pages/UploadPage';
 
 const COMPLETED_TIMEOUT_MS = 60000;
+
+let uploadedVideoId: string | undefined;
 
 test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
   test('Should upload video and handle processing status transitions', async ({
@@ -47,5 +49,22 @@ test.describe('Creator Journey: Asynchronous Media Pipeline', () => {
     );
     const watchLink = videoCard.locator('a[href^="/watch/"]').first();
     await expect(watchLink).toBeVisible();
+
+    const href = await watchLink.getAttribute('href');
+    uploadedVideoId = href?.split('/watch/')[1];
+  });
+
+  test.afterAll(async () => {
+    if (!uploadedVideoId) return;
+    const ctx = await request.newContext({
+      baseURL: 'http://localhost:5173',
+    });
+    const resp = await ctx.delete(`/api/videos/${uploadedVideoId}`);
+    if (!resp.ok()) {
+      console.warn(
+        `[Cleanup] Failed to delete uploaded video ${uploadedVideoId}: ${resp.status()}`,
+      );
+    }
+    await ctx.dispose();
   });
 });

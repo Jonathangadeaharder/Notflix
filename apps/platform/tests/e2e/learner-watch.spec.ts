@@ -87,6 +87,12 @@ test.describe('Learner Journey: Interactive Video Player', () => {
     await playerPage.playRound(1);
     await expect(playerPage.gameOverlay).not.toBeVisible();
 
+    // Wait for loading spinner to disappear before interacting with subtitles
+    const spinner = page.locator('.spinner');
+    await expect(spinner)
+      .toHaveCount(0, { timeout: 10000 })
+      .catch(() => {});
+
     // 7. Verify interactive subtitles (optional — depends on pipeline having generated VTT)
     const firstWord = page.getByTestId('subtitle-word').first();
     const hasSubtitles = await firstWord.isVisible().catch(() => false);
