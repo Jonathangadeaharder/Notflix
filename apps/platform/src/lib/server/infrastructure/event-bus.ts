@@ -58,11 +58,12 @@ export interface TypedEventEmitter {
   ): Promise<boolean>;
 }
 
+const MAX_EVENT_LISTENERS = 20;
+
 export class AppEventBus extends EventEmitter implements TypedEventEmitter {
   constructor() {
     super();
-    // Allow enough listeners per event without throwing memory leak warnings
-    this.setMaxListeners(20);
+    this.setMaxListeners(MAX_EVENT_LISTENERS);
   }
 
   override on<K extends EventKey>(

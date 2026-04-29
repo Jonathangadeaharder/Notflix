@@ -140,6 +140,143 @@ const KNOWN_WORDS_SEED = [
   { userId: E2E_USER_ID, lemma: 'comer', lang: 'es', level: 'A1' as const },
 ];
 
+type SeedDb = ReturnType<typeof drizzle>;
+
+async function cleanupE2eData(db: SeedDb) {
+  console.log('[E2E Seed] Cleaning up previous E2E data...');
+  await db.delete(knownWords).where(eq(knownWords.userId, E2E_USER_ID));
+  await db.delete(watchProgress).where(eq(watchProgress.userId, E2E_USER_ID));
+  await db
+    .delete(videoProcessing)
+    .where(inArray(videoProcessing.videoId, E2E_VIDEO_IDS));
+  await db.delete(video).where(inArray(video.id, E2E_VIDEO_IDS));
+  for (const v of VOCAB_SEED) {
+    await db
+      .delete(vocabReference)
+      .where(
+        and(eq(vocabReference.lemma, v.lemma), eq(vocabReference.lang, v.lang)),
+      );
+  }
+}
+
+function prepareTestVideo(): string {
+  const mediaRoot =
+    process.env.MEDIA_ROOT_INTERNAL ||
+    resolve(process.cwd(), '../../media/uploads');
+  const videoFilePath = `${mediaRoot}/e2e-test-video.webm`;
+  const sourceVideoPath = resolve(process.cwd(), 'static/test-video.webm');
+
+  if (!existsSync(sourceVideoPath)) {
+    throw new Error(
+      `[E2E Seed] Required test video not found at ${sourceVideoPath}`,
+    );
+  }
+  mkdirSync(dirname(videoFilePath), { recursive: true });
+  copyFileSync(sourceVideoPath, videoFilePath);
+  console.log(`[E2E Seed] Copied test video to ${videoFilePath}`);
+  return videoFilePath;
+}
+
+async function insertTestVideos(db: SeedDb, videoFilePath: string, now: Date) {
+  console.log('[E2E Seed] Inserting test videos...');
+  await db.insert(video).values([
+    {
+      id: E2E_VIDEO_1,
+      title: 'E2E Completed Video',
+      filePath: videoFilePath,
+      thumbnailPath: null,
+      duration: 6,
+      createdAt: now,
+      updatedAt: now,
+      views: 0,
+      published: false,
+    },
+    {
+      id: E2E_VIDEO_2,
+      title: 'E2E Pending Video',
+      filePath: videoFilePath,
+      thumbnailPath: null,
+      duration: null,
+      createdAt: now,
+      updatedAt: now,
+      views: 0,
+      published: false,
+    },
+    {
+      id: E2E_VIDEO_3,
+      title: 'E2E Unprocessed Video',
+      filePath: videoFilePath,
+      thumbnailPath: null,
+      duration: null,
+      createdAt: now,
+      updatedAt: now,
+      views: 0,
+      published: false,
+    },
+  ]);
+}
+
+async function insertProcessingRecords(db: SeedDb, now: Date) {
+  console.log('[E2E Seed] Inserting processing records...');
+  await db.insert(videoProcessing).values([
+    {
+      videoId: E2E_VIDEO_1,
+      targetLang: 'es',
+      status: 'COMPLETED',
+      progressStage: 'READY',
+      progressPercent: 100,
+      vttJson: VTT_JSON,
+      createdAt: now,
+    },
+    {
+      videoId: E2E_VIDEO_2,
+      targetLang: 'es',
+      status: 'PENDING',
+      progressStage: 'QUEUED',
+      progressPercent: 0,
+      vttJson: null,
+      createdAt: now,
+    },
+  ]);
+}
+
+async function insertRelatedData(db: SeedDb, now: Date) {
+  console.log('[E2E Seed] Inserting vocabulary reference data...');
+  await db.insert(vocabReference).values(VOCAB_SEED).onConflictDoNothing();
+
+  console.log('[E2E Seed] Ensuring E2E user exists...');
+  await db
+    .insert(user)
+    .values({
+      id: E2E_USER_ID,
+      name: 'E2E Test User',
+      email: 'e2e@test.local',
+      emailVerified: true,
+      nativeLang: 'en',
+      targetLang: 'es',
+      gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing();
+
+  console.log('[E2E Seed] Inserting known words...');
+  await db.insert(knownWords).values(KNOWN_WORDS_SEED).onConflictDoNothing();
+
+  console.log('[E2E Seed] Inserting watch progress...');
+  await db
+    .insert(watchProgress)
+    .values({
+      userId: E2E_USER_ID,
+      videoId: E2E_VIDEO_1,
+      currentTime: 3,
+      duration: 6,
+      progressPercent: 50,
+      updatedAt: now,
+    })
+    .onConflictDoNothing();
+}
+
 export default async function globalSetup() {
   const databaseUrl = process.env.E2E_DATABASE_URL || process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -153,144 +290,12 @@ export default async function globalSetup() {
   const db = drizzle(client);
 
   try {
-    // ─── Clean up any leftover E2E data (idempotent) ───
-    console.log('[E2E Seed] Cleaning up previous E2E data...');
-    await db.delete(knownWords).where(eq(knownWords.userId, E2E_USER_ID));
-    await db.delete(watchProgress).where(eq(watchProgress.userId, E2E_USER_ID));
-    await db
-      .delete(videoProcessing)
-      .where(inArray(videoProcessing.videoId, E2E_VIDEO_IDS));
-    await db.delete(video).where(inArray(video.id, E2E_VIDEO_IDS));
-    // Only delete vocab we seeded (by lemma+lang)
-    for (const v of VOCAB_SEED) {
-      await db
-        .delete(vocabReference)
-        .where(
-          and(
-            eq(vocabReference.lemma, v.lemma),
-            eq(vocabReference.lang, v.lang),
-          ),
-        );
-    }
-
-    // ─── Copy test video to media path ───
-    const mediaRoot =
-      process.env.MEDIA_ROOT_INTERNAL ||
-      resolve(process.cwd(), '../../media/uploads');
-    const videoFilePath = `${mediaRoot}/e2e-test-video.webm`;
-    const sourceVideoPath = resolve(process.cwd(), 'static/test-video.webm');
-
-    if (existsSync(sourceVideoPath)) {
-      mkdirSync(dirname(videoFilePath), { recursive: true });
-      copyFileSync(sourceVideoPath, videoFilePath);
-      console.log(`[E2E Seed] Copied test video to ${videoFilePath}`);
-    } else {
-      throw new Error(
-        `[E2E Seed] Required test video not found at ${sourceVideoPath}`,
-      );
-    }
-
-    // ─── Insert videos ───
-    console.log('[E2E Seed] Inserting test videos...');
+    await cleanupE2eData(db);
+    const videoFilePath = prepareTestVideo();
     const now = new Date();
-    await db.insert(video).values([
-      {
-        id: E2E_VIDEO_1,
-        title: 'E2E Completed Video',
-        filePath: videoFilePath,
-        thumbnailPath: null,
-        duration: 6,
-        createdAt: now,
-        updatedAt: now,
-        views: 0,
-        published: false,
-      },
-      {
-        id: E2E_VIDEO_2,
-        title: 'E2E Pending Video',
-        filePath: videoFilePath,
-        thumbnailPath: null,
-        duration: null,
-        createdAt: now,
-        updatedAt: now,
-        views: 0,
-        published: false,
-      },
-      {
-        id: E2E_VIDEO_3,
-        title: 'E2E Unprocessed Video',
-        filePath: videoFilePath,
-        thumbnailPath: null,
-        duration: null,
-        createdAt: now,
-        updatedAt: now,
-        views: 0,
-        published: false,
-      },
-    ]);
-
-    // ─── Insert processing records ───
-    console.log('[E2E Seed] Inserting processing records...');
-    await db.insert(videoProcessing).values([
-      {
-        videoId: E2E_VIDEO_1,
-        targetLang: 'es',
-        status: 'COMPLETED',
-        progressStage: 'READY',
-        progressPercent: 100,
-        vttJson: VTT_JSON,
-        createdAt: now,
-      },
-      {
-        videoId: E2E_VIDEO_2,
-        targetLang: 'es',
-        status: 'PENDING',
-        progressStage: 'QUEUED',
-        progressPercent: 0,
-        vttJson: null,
-        createdAt: now,
-      },
-    ]);
-
-    // ─── Insert vocab reference ───
-    console.log('[E2E Seed] Inserting vocabulary reference data...');
-    await db.insert(vocabReference).values(VOCAB_SEED).onConflictDoNothing();
-
-    // ─── Ensure E2E user exists (needed for FK on known_words / watch_progress) ───
-    console.log('[E2E Seed] Ensuring E2E user exists...');
-    await db
-      .insert(user)
-      .values({
-        id: E2E_USER_ID,
-        name: 'E2E Test User',
-        email: 'e2e@test.local',
-        emailVerified: true,
-        nativeLang: 'en',
-        targetLang: 'es',
-        gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoNothing();
-
-    // ─── Insert known words for E2E user ───
-    console.log('[E2E Seed] Inserting known words...');
-    await db.insert(knownWords).values(KNOWN_WORDS_SEED).onConflictDoNothing();
-
-    // ─── Insert watch progress ───
-    console.log('[E2E Seed] Inserting watch progress...');
-    await db
-      .insert(watchProgress)
-      .values({
-        userId: E2E_USER_ID,
-        videoId: E2E_VIDEO_1,
-        currentTime: 3,
-        duration: 6,
-        progressPercent: 50,
-        updatedAt: now,
-      })
-      .onConflictDoNothing();
-
+    await insertTestVideos(db, videoFilePath, now);
+    await insertProcessingRecords(db, now);
+    await insertRelatedData(db, now);
     console.log('[E2E Seed] ✓ Seed data inserted successfully');
   } catch (error) {
     console.error('[E2E Seed] ✗ Failed to seed data:', error);

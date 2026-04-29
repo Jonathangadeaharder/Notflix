@@ -20,7 +20,7 @@ type ParseResult =
   | { ok: true; lemma: string; lang: string };
 
 async function parseKnownWordRequest(request: Request): Promise<ParseResult> {
-  let body;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {

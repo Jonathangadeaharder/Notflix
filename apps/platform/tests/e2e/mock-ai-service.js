@@ -14,6 +14,11 @@ import http from 'node:http';
 const PORT = parseInt(process.argv[2] || '8001', 10);
 const API_KEY = process.env.AI_SERVICE_API_KEY || 'dev_secret_key';
 
+const HTTP_OK = 200;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_NOT_FOUND = 404;
+const SSE_STREAM_INTERVAL_MS = 50;
+
 // ---------- Canned responses ----------
 
 const TRANSCRIPTION_RESPONSE = {
@@ -136,7 +141,7 @@ function readBody(req) {
 // ---------- SSE streaming for /transcribe/stream ----------
 
 function handleTranscribeStream(req, res) {
-  res.writeHead(200, {
+  res.writeHead(HTTP_OK, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
@@ -164,77 +169,84 @@ function handleTranscribeStream(req, res) {
       clearInterval(interval);
       res.end();
     }
-  }, 50);
+  }, SSE_STREAM_INTERVAL_MS);
   req.on('close', () => {
     cleanedUp = true;
     clearInterval(interval);
   });
 }
 
-// ---------- Route handler ----------
+// ---------- Route handlers ----------
+
+function handleHealth(_req, res) {
+  json(res, HTTP_OK, { status: 'ai_service_active', gpu: false });
+}
+
+function handleTranscribe(_req, res) {
+  json(res, HTTP_OK, TRANSCRIPTION_RESPONSE);
+}
+
+async function handleFilter(req, res) {
+  const body = await readBody(req);
+  const texts = body.texts || [];
+  const results = texts.map(
+    (_, i) => FILTER_RESPONSE.results[i % FILTER_RESPONSE.results.length],
+  );
+  json(res, HTTP_OK, { results });
+}
+
+async function handleTranslate(req, res) {
+  const body = await readBody(req);
+  const texts = body.texts || [];
+  const translations = texts.map(
+    (_, i) =>
+      TRANSLATE_RESPONSE.translations[
+        i % TRANSLATE_RESPONSE.translations.length
+      ],
+  );
+  json(res, HTTP_OK, { translations });
+}
+
+function handleThumbnail(_req, res) {
+  json(res, HTTP_OK, THUMBNAIL_RESPONSE);
+}
+
+// ---------- Main handler ----------
 
 async function handler(req, res) {
   const { method } = req;
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const path = url.pathname;
 
-  // Health — no auth required
   if (method === 'GET' && path === '/health') {
-    json(res, 200, { status: 'ai_service_active', gpu: false });
-    return;
+    return handleHealth(req, res);
   }
 
-  // Auth check for everything else
   if (!authenticate(req)) {
-    json(res, 401, { detail: 'Invalid API key' });
-    return;
+    return json(res, HTTP_UNAUTHORIZED, { detail: 'Invalid API key' });
   }
 
-  // Transcribe (JSON)
   if (method === 'POST' && path === '/transcribe') {
-    json(res, 200, TRANSCRIPTION_RESPONSE);
-    return;
+    return handleTranscribe(req, res);
   }
 
-  // Transcribe with SSE streaming
   if (method === 'POST' && path === '/transcribe/stream') {
-    handleTranscribeStream(req, res);
-    return;
+    return handleTranscribeStream(req, res);
   }
 
-  // Filter (analyze batch)
   if (method === 'POST' && path === '/filter') {
-    const body = await readBody(req);
-    const texts = body.texts || [];
-    // Return one filter result per input text
-    const results = texts.map(
-      (_, i) => FILTER_RESPONSE.results[i % FILTER_RESPONSE.results.length],
-    );
-    json(res, 200, { results });
-    return;
+    return await handleFilter(req, res);
   }
 
-  // Translate
   if (method === 'POST' && path === '/translate') {
-    const body = await readBody(req);
-    const texts = body.texts || [];
-    const translations = texts.map(
-      (_, i) =>
-        TRANSLATE_RESPONSE.translations[
-          i % TRANSLATE_RESPONSE.translations.length
-        ],
-    );
-    json(res, 200, { translations });
-    return;
+    return await handleTranslate(req, res);
   }
 
-  // Generate thumbnail
   if (method === 'POST' && path === '/generate_thumbnail') {
-    json(res, 200, THUMBNAIL_RESPONSE);
-    return;
+    return handleThumbnail(req, res);
   }
 
-  json(res, 404, { detail: 'Not found' });
+  json(res, HTTP_NOT_FOUND, { detail: 'Not found' });
 }
 
 // ---------- Start ----------

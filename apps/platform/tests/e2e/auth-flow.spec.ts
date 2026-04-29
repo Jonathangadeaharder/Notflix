@@ -6,9 +6,11 @@ const TEST_NAME = 'E2E Auth Test';
 
 test.describe('Auth Flow: Register → Login → Logout → Login', () => {
   test('should complete full auth cycle', async ({ page }) => {
-    if (process.env.PLAYWRIGHT_TEST === 'true' || process.env.CI) {
-      test.skip();
-    }
+    // biome-ignore lint/suspicious/noSkippedTests: intentionally skipped in CI/Playwright environments
+    test.skip(
+      process.env.PLAYWRIGHT_TEST === 'true' || !!process.env.CI,
+      'Skipped in CI/Playwright environments',
+    );
     test.setTimeout(120_000);
 
     page.on('console', (msg) => {

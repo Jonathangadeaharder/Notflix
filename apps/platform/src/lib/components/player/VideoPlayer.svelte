@@ -2,6 +2,7 @@
   import { onMount, untrack } from "svelte";
   import GameOverlay from "$lib/components/GameOverlay.svelte";
   import { GAME } from "$lib/constants";
+  import type { GameCard } from "$lib/types";
   import { getUpcomingGameWindow } from "$lib/utils/game-window";
   import SubtitleDisplay from "./SubtitleDisplay.svelte";
   import type {
@@ -36,7 +37,7 @@
     video: PlayerVideo;
     subtitles: Subtitle[];
     settings: PlayerSettings;
-    gameCards: any[];
+    gameCards: GameCard[];
     onRequestGameCards?: (
       chunkIndex: number,
       start: number,

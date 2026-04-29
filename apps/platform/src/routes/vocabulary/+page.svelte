@@ -12,7 +12,7 @@
 
   let { data }: { data: PageData } = $props();
 
-  let searchInput = $state(data.filters.search ?? "");
+  let searchInput = $state("");
   const togglingWords = new SvelteSet<string>();
 
   const COLOR_KNOWN = "var(--known)";

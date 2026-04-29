@@ -9,10 +9,11 @@
   import type { PlayerSettings, PlayerVideo } from "$lib/components/player/types";
   import VideoPlayer from "$lib/components/player/VideoPlayer.svelte";
   import { GAME } from "$lib/constants";
+  import type { GameCard } from "$lib/types";
 
   let { data } = $props();
 
-  let gameCards = $state<any[]>([]);
+  let gameCards = $state<GameCard[]>([]);
   let currentPlayerProgress = $state({ currentTime: 0, duration: 1, progressPercent: 0 });
   let videoReady = $state(false);
   let playerError = $state<{ code: number; message: string } | null>(null);
@@ -95,6 +96,20 @@
   type HeatLevel = "easy" | "learn" | "hard" | "empty";
   const HEAT_MIN_WEIGHT = 0.1;
 
+  function classifySegmentType(type: string): "easy" | "learn" | "hard" {
+    if (type === "EASY") return "easy";
+    if (type === "LEARNING") return "learn";
+    return "hard";
+  }
+
+  function resolveDominantLevel(c: HeatBucket): HeatLevel {
+    const max = Math.max(c.easy, c.learn, c.hard);
+    if (max === 0) return "empty";
+    if (max === c.hard) return "hard";
+    if (max === c.learn) return "learn";
+    return "easy";
+  }
+
   function buildHeatmapBuckets(heatmap: HeatmapSegment[], totalDuration: number): HeatLevel[] {
     const buckets: HeatLevel[] = Array(HEATMAP_SEGMENTS).fill("empty");
     if (!heatmap || heatmap.length === 0 || totalDuration <= 0) return buckets;
@@ -104,22 +119,14 @@
     for (const seg of heatmap) {
       const startIdx = Math.min(HEATMAP_SEGMENTS - 1, Math.max(0, Math.floor(seg.start / bucketSize)));
       const endIdx = Math.min(HEATMAP_SEGMENTS - 1, Math.max(0, Math.floor(seg.end / bucketSize)));
-      const level = seg.type === "EASY" ? "easy" : seg.type === "LEARNING" ? "learn" : "hard";
+      const level = classifySegmentType(seg.type);
       for (let b = startIdx; b <= endIdx; b++) {
         const overlap = Math.min(seg.end, (b + 1) * bucketSize) - Math.max(seg.start, b * bucketSize);
         counts[b][level] += Math.max(HEAT_MIN_WEIGHT, overlap);
       }
     }
 
-    for (let i = 0; i < HEATMAP_SEGMENTS; i++) {
-      const c = counts[i];
-      const max = Math.max(c.easy, c.learn, c.hard);
-      if (max === 0) buckets[i] = "empty";
-      else if (max === c.hard) buckets[i] = "hard";
-      else if (max === c.learn) buckets[i] = "learn";
-      else buckets[i] = "easy";
-    }
-    return buckets;
+    return counts.map(resolveDominantLevel);
   }
 
   const totalDuration = $derived(currentPlayerProgress.duration);

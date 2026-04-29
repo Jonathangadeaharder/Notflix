@@ -2,6 +2,7 @@
   import { base } from "$app/paths";
   import type { Subtitle } from "$lib/components/player/types";
   import VideoPlayer from "$lib/components/player/VideoPlayer.svelte";
+  import type { GameCard } from "$lib/types";
 
   const video = {
     id: "mock-video-id",
@@ -57,13 +58,21 @@
   };
 
   const MOCK_GAME_CARD_DELAY_MS = 100;
-  let gameCards: { type: string; front: string; back: string }[] = [];
+  let gameCards: GameCard[] = [];
 
   // prettier-ignore
   function handleRequestGameCards(chunkIndex: number, _start: number, _end: number) {
     console.log("Mock Request Game Cards", chunkIndex);
     setTimeout(() => {
-      gameCards = [{ type: "card", front: "Test", back: "Prueba" }];
+      gameCards = [{
+        lemma: "prueba",
+        lang: "es",
+        original: "prueba",
+        contextSentence: "Esta es una prueba",
+        cefr: "A2",
+        translation: "test",
+        isKnown: false,
+      }];
     }, MOCK_GAME_CARD_DELAY_MS);
   }
 </script>

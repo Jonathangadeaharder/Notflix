@@ -10,10 +10,13 @@
 
   let { data, form }: Props = $props();
 
-  const initialInterval = data.initialData.gameInterval;
-  let gameInterval = $state(initialInterval);
+  let gameInterval = $state("");
   let isSubmitting = $state(false);
   let isSubmittingLangs = $state(false);
+
+  $effect(() => {
+    gameInterval = data.initialData.gameInterval;
+  });
 
   const languages = [
     { value: "en", label: "English" },
@@ -24,12 +27,15 @@
     { value: "pt", label: "Portuguese" },
   ];
 
-  const profileTargetLang =
-    (data.profile as unknown as { targetLang?: string })?.targetLang || "es";
-  const profileNativeLang =
-    (data.profile as unknown as { nativeLang?: string })?.nativeLang || "en";
-  let targetLang = $state(profileTargetLang);
-  let nativeLang = $state(profileNativeLang);
+  let targetLang = $state("es");
+  let nativeLang = $state("en");
+
+  $effect(() => {
+    targetLang =
+      (data.profile as unknown as { targetLang?: string })?.targetLang || "es";
+    nativeLang =
+      (data.profile as unknown as { nativeLang?: string })?.nativeLang || "en";
+  });
 
   // Pre-defined interrupt presets — design uses 5/10/15/Off
   const intervalPresets: { v: string; label: string }[] = [
@@ -291,7 +297,7 @@
           >
             {isSubmittingLangs ? "Saving…" : "Save languages"}
           </button>
-          {#if (form?.data as any)?.nativeLang || (form?.data as any)?.targetLang}
+          {#if (form?.data as Record<string, string>)?.nativeLang || (form?.data as Record<string, string>)?.targetLang}
             <span
               class="flex items-center gap-1.5 text-sm"
               style:color="var(--known)"

@@ -4,10 +4,12 @@ import { GET } from '../../src/routes/api/videos/[id]/subtitles/+server';
 
 const VIDEO_ID = 'video-1';
 
-const MockSubtitleService = vi.hoisted(() => vi.fn());
+const mockGenerateVtt = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/server/services/subtitle.service', () => ({
-  SubtitleService: MockSubtitleService,
+  SubtitleService: class {
+    generateVtt = mockGenerateVtt;
+  },
 }));
 
 describe('GET /api/videos/[id]/subtitles', () => {
@@ -16,8 +18,7 @@ describe('GET /api/videos/[id]/subtitles', () => {
   });
 
   it('returns subtitle response when available', async () => {
-    const generateVtt = vi.fn().mockResolvedValue('WEBVTT\n');
-    MockSubtitleService.mockImplementationOnce(() => ({ generateVtt }));
+    mockGenerateVtt.mockResolvedValue('WEBVTT\n');
 
     const response = await GET({
       params: { id: VIDEO_ID },
@@ -30,9 +31,7 @@ describe('GET /api/videos/[id]/subtitles', () => {
   });
 
   it('maps errors to 404', async () => {
-    MockSubtitleService.mockImplementationOnce(() => ({
-      generateVtt: vi.fn().mockRejectedValue(new Error('not found')),
-    }));
+    mockGenerateVtt.mockRejectedValue(new Error('not found'));
 
     await expect(
       GET({

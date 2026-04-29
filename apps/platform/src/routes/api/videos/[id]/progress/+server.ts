@@ -111,7 +111,7 @@ export const POST = async ({ params, request, locals }: RequestEvent) => {
 };
 
 async function parseProgressBody(request: Request) {
-  let body;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {

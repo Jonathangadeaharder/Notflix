@@ -14,7 +14,9 @@ import { db } from './database';
 
 export type User = DbUser;
 
-const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_EXPIRY_DAYS = 7;
+const MS_PER_DAY = 86_400_000;
+const SESSION_EXPIRY_MS = SESSION_EXPIRY_DAYS * MS_PER_DAY;
 
 export interface Session {
   user: User;
@@ -118,7 +120,7 @@ async function upsertProfile(authUser: SupabaseAuthUser): Promise<User | null> {
     .values({
       id: authUser.id,
       name,
-      email: authUser.email!,
+      email: authUser.email ?? '',
       emailVerified: authUser.email_confirmed_at != null,
       nativeLang: 'en',
       targetLang: 'es',

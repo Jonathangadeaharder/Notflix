@@ -1,9 +1,10 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { goto } from '$app/navigation';
 import { env as publicEnv } from '$env/dynamic/public';
 
-let _supabase: any = null;
+let _supabase: SupabaseClient | null = null;
 
-async function getSupabaseClient() {
+async function getSupabaseClient(): Promise<SupabaseClient> {
   if (!_supabase) {
     const { createBrowserClient } = await import('@supabase/ssr');
     _supabase = createBrowserClient(
