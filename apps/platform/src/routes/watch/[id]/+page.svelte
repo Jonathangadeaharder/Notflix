@@ -5,7 +5,7 @@
   import Sparkles from "lucide-svelte/icons/sparkles";
   import { onMount } from "svelte";
   import { base, resolve } from "$app/paths";
-  import { PUBLIC_PLAYWRIGHT_TEST } from "$env/static/public";
+  import { env } from "$env/dynamic/public";
   import Chip from "$lib/components/brand/Chip.svelte";
   import ComprehensionRing from "$lib/components/brand/ComprehensionRing.svelte";
   import type { PlayerSettings, PlayerVideo } from "$lib/components/player/types";
@@ -94,7 +94,7 @@
   }
 
   onMount(() => {
-    if (typeof window !== "undefined" && PUBLIC_PLAYWRIGHT_TEST === "true") {
+    if (typeof window !== "undefined" && env.PUBLIC_PLAYWRIGHT_TEST === "true") {
       (window as any).__e2eTriggerGameInterrupt = ((cards: GameCard[]) => {
         gameCards = cards;
       }) satisfies E2ETriggerGameInterrupt;
