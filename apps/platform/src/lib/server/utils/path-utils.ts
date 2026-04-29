@@ -1,4 +1,4 @@
-import path from "path";
+import path from 'node:path';
 
 export function isPathWithinRoot(
   candidatePath: string,
@@ -9,8 +9,8 @@ export function isPathWithinRoot(
   const relativePath = path.relative(resolvedRoot, resolvedCandidate);
 
   return (
-    relativePath === "" ||
-    (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
+    relativePath === '' ||
+    (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
   );
 }
 
@@ -24,9 +24,9 @@ export function toRelativePathFromRoot(
 
   return path
     .relative(path.resolve(rootPath), path.resolve(candidatePath))
-    .replace(/\\/g, "/");
+    .replace(/\\/g, '/');
 }
 
 export function toPosixPath(filePath: string): string {
-  return filePath.replace(/\\/g, "/");
+  return filePath.replace(/\\/g, '/');
 }

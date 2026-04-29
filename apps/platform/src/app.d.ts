@@ -1,7 +1,7 @@
 import type {
   Session as BaseSession,
   User as BaseUser,
-} from "$lib/server/infrastructure/auth";
+} from '$lib/server/infrastructure/auth';
 
 declare global {
   namespace App {
@@ -11,7 +11,7 @@ declare global {
     }
     interface Locals {
       auth: () => Promise<BaseSession | null>;
-      db: typeof import("$lib/server/infrastructure/database").db;
+      db: typeof import('$lib/server/infrastructure/database').db;
     }
     interface PageData {
       user: BaseUser | null;
@@ -27,5 +27,3 @@ declare global {
     }
   }
 }
-
-export {};

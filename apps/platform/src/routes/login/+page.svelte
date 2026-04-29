@@ -1,10 +1,10 @@
 <script lang="ts">
+  import ArrowRight from "lucide-svelte/icons/arrow-right";
   import Play from "lucide-svelte/icons/play";
   import Sparkles from "lucide-svelte/icons/sparkles";
-  import ArrowRight from "lucide-svelte/icons/arrow-right";
-  import { signInEmail, signUpEmail } from "$lib/auth-client";
-  import { page } from "$app/stores";
   import { resolve } from "$app/paths";
+  import { page } from "$app/stores";
+  import { signInEmail, signUpEmail } from "$lib/auth-client";
 
   let isLoading = $state(false);
   let email = $state("");
@@ -30,7 +30,6 @@
     errorMessage = "";
 
     const errors: { email?: string; password?: string } = {};
-    /* eslint-disable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
     if (!email.trim()) errors.email = "Email is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errors.email = "Please enter a valid email address.";
@@ -38,7 +37,6 @@
     if (!password) errors.password = "Password is required.";
     else if (password.length < MIN_PASSWORD_LENGTH)
       errors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
-    /* eslint-enable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
 
     if (Object.keys(errors).length > 0) {
       fieldErrors = errors;

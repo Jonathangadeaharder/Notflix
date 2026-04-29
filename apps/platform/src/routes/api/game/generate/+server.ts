@@ -1,7 +1,7 @@
-import { json } from "@sveltejs/kit";
-import { generateDeck } from "$lib/server/services/chunker.service";
-import type { RequestHandler } from "./$types";
-import { HTTP_STATUS } from "$lib/constants";
+import { json } from '@sveltejs/kit';
+import { HTTP_STATUS } from '$lib/constants';
+import { generateDeck } from '$lib/server/services/chunker.service';
+import type { RequestHandler } from './$types';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,30 +11,30 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   const session = await locals.auth();
   if (!session?.user) {
     return json(
-      { error: "Unauthorized" },
+      { error: 'Unauthorized' },
       { status: HTTP_STATUS.UNAUTHORIZED },
     );
   }
   const userId = session.user.id;
 
-  const videoId = url.searchParams.get("videoId");
-  const start = parseInt(url.searchParams.get("start") || "0", 10);
+  const videoId = url.searchParams.get('videoId');
+  const start = parseInt(url.searchParams.get('start') || '0', 10);
   const end = parseInt(
-    url.searchParams.get("end") || DEFAULT_END_TIME.toString(),
+    url.searchParams.get('end') || DEFAULT_END_TIME.toString(),
     10,
   );
-  const targetLang = url.searchParams.get("targetLang") || "es";
+  const targetLang = url.searchParams.get('targetLang') || 'es';
 
   if (!videoId) {
     return json(
-      { error: "Missing videoId" },
+      { error: 'Missing videoId' },
       { status: HTTP_STATUS.BAD_REQUEST },
     );
   }
 
   if (!UUID_RE.test(videoId)) {
     return json(
-      { error: "videoId must be a valid UUID" },
+      { error: 'videoId must be a valid UUID' },
       { status: HTTP_STATUS.BAD_REQUEST },
     );
   }

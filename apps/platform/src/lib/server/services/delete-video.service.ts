@@ -1,7 +1,7 @@
-import { db as defaultDb } from "$lib/server/infrastructure/database";
-import { video, videoProcessing } from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import { unlink } from "fs/promises";
+import { unlink } from 'node:fs/promises';
+import { eq } from 'drizzle-orm';
+import { video, videoProcessing } from '$lib/server/db/schema';
+import { db as defaultDb } from '$lib/server/infrastructure/database';
 
 type VideoRecord = {
   filePath: string;
@@ -15,7 +15,7 @@ type DeleteVideoDependencies = {
   deleteFile: (path: string) => Promise<void>;
 };
 
-type DeleteVideoResult = { ok: true } | { ok: false; reason: "NOT_FOUND" };
+type DeleteVideoResult = { ok: true } | { ok: false; reason: 'NOT_FOUND' };
 
 const defaultDependencies: DeleteVideoDependencies = {
   getVideoById: async (videoId) => {
@@ -48,7 +48,7 @@ export async function deleteVideoAndAssets(
   const dependencies = { ...defaultDependencies, ...overrides };
   const videoRecord = await dependencies.getVideoById(videoId);
   if (!videoRecord) {
-    return { ok: false, reason: "NOT_FOUND" };
+    return { ok: false, reason: 'NOT_FOUND' };
   }
 
   await dependencies.deleteVideoProcessingById(videoId);

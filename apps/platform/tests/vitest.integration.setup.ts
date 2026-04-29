@@ -1,19 +1,20 @@
-/* eslint-disable sonarjs/os-command, sonarjs/no-os-command-from-path */
-import { execSync } from "node:child_process";
+import { execSync } from 'node:child_process';
 
-const PROJECT_CONTAINER = "notflix-db";
+const PROJECT_CONTAINER = 'notflix-db';
 const PROJECT_PORT = 5432;
-const TEST_CONTAINER = "notflix-test-db";
+const TEST_CONTAINER = 'notflix-test-db';
 const TEST_PORT = 5433;
 const DEFAULT_LOCAL_URL = `postgres://postgres:password@127.0.0.1:${PROJECT_PORT}/postgres`;
 
 function docker(args: string, timeout = 5_000): string {
-  return execSync(`docker ${args}`, { stdio: "pipe", timeout }).toString().trim();
+  return execSync(`docker ${args}`, { stdio: 'pipe', timeout })
+    .toString()
+    .trim();
 }
 
 function isDockerAvailable(): boolean {
   try {
-    docker("info", 5_000);
+    docker('info', 5_000);
     return true;
   } catch {
     return false;
@@ -26,11 +27,14 @@ function waitForPort(port: number, maxMs = 20_000): boolean {
     try {
       execSync(
         `node -e "const net=require('net');const s=net.createConnection(${port},'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),1000)"`,
-        { stdio: "pipe", timeout: 3_000 },
+        { stdio: 'pipe', timeout: 3_000 },
       );
       return true;
     } catch {
-      execSync('node -e "setTimeout(() => {}, 1000)"', { stdio: "pipe", timeout: 2_000 });
+      execSync('node -e "setTimeout(() => {}, 1000)"', {
+        stdio: 'pipe',
+        timeout: 2_000,
+      });
     }
   }
   return false;
@@ -38,7 +42,7 @@ function waitForPort(port: number, maxMs = 20_000): boolean {
 
 function isContainerRunning(name: string): boolean {
   try {
-    return docker(`inspect -f '{{.State.Running}}' ${name}`) === "true";
+    return docker(`inspect -f '{{.State.Running}}' ${name}`) === 'true';
   } catch {
     return false;
   }
@@ -87,14 +91,14 @@ function removeContainer(name: string): void {
 }
 
 function pushSchema(dbUrl: string): void {
-  console.log("[Integration] Pushing schema...");
-  execSync("pnpm exec drizzle-kit push --force", {
-    stdio: "pipe",
+  console.log('[Integration] Pushing schema...');
+  execSync('pnpm exec drizzle-kit push --force', {
+    stdio: 'pipe',
     timeout: 30_000,
     cwd: process.cwd(),
     env: { ...process.env, DATABASE_URL: dbUrl },
   });
-  console.log("[Integration] Schema applied.");
+  console.log('[Integration] Schema applied.');
 }
 
 function skip(msg: string): never {
@@ -109,17 +113,18 @@ function skip(msg: string): never {
   process.exit(0);
 }
 
-let dbUrl = "";
-let cleanupContainer = "";
+let dbUrl = '';
+let cleanupContainer = '';
 
 async function setup() {
-  process.env.RUNNING_IN_DOCKER = process.env.RUNNING_IN_DOCKER || "false";
+  process.env.RUNNING_IN_DOCKER = process.env.RUNNING_IN_DOCKER || 'false';
 
-  if (process.env.SKIP_INTEGRATION_TESTS === "true") {
-    skip("Skipping (SKIP_INTEGRATION_TESTS=true)");
+  if (process.env.SKIP_INTEGRATION_TESTS === 'true') {
+    skip('Skipping (SKIP_INTEGRATION_TESTS=true)');
   }
 
-  const explicitUrl = process.env.INTEGRATION_DATABASE_URL || process.env.DATABASE_URL;
+  const explicitUrl =
+    process.env.INTEGRATION_DATABASE_URL || process.env.DATABASE_URL;
   const userProvidedUrl = explicitUrl && explicitUrl !== DEFAULT_LOCAL_URL;
 
   if (userProvidedUrl) {
@@ -128,27 +133,62 @@ async function setup() {
     try {
       pushSchema(dbUrl);
     } catch {
-      console.warn("[Integration] Warning: could not push schema to provided DATABASE_URL.");
+      console.warn(
+        '[Integration] Warning: could not push schema to provided DATABASE_URL.',
+      );
     }
     process.env.DATABASE_URL = dbUrl;
     return;
   }
 
   if (isDockerAvailable()) {
-    const candidates: { name: string; url: string; port: number; cleanup: string; created: boolean }[] = [];
+    const candidates: {
+      name: string;
+      url: string;
+      port: number;
+      cleanup: string;
+      created: boolean;
+    }[] = [];
 
     if (isContainerRunning(PROJECT_CONTAINER)) {
-      candidates.push({ name: PROJECT_CONTAINER, url: DEFAULT_LOCAL_URL, port: PROJECT_PORT, cleanup: "", created: false });
-    } else if (containerExists(PROJECT_CONTAINER) && startExisting(PROJECT_CONTAINER)) {
-      candidates.push({ name: PROJECT_CONTAINER, url: DEFAULT_LOCAL_URL, port: PROJECT_PORT, cleanup: PROJECT_CONTAINER, created: true });
+      candidates.push({
+        name: PROJECT_CONTAINER,
+        url: DEFAULT_LOCAL_URL,
+        port: PROJECT_PORT,
+        cleanup: '',
+        created: false,
+      });
+    } else if (
+      containerExists(PROJECT_CONTAINER) &&
+      startExisting(PROJECT_CONTAINER)
+    ) {
+      candidates.push({
+        name: PROJECT_CONTAINER,
+        url: DEFAULT_LOCAL_URL,
+        port: PROJECT_PORT,
+        cleanup: PROJECT_CONTAINER,
+        created: true,
+      });
     }
 
     if (isContainerRunning(TEST_CONTAINER)) {
-      candidates.push({ name: TEST_CONTAINER, url: `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`, port: TEST_PORT, cleanup: "", created: false });
+      candidates.push({
+        name: TEST_CONTAINER,
+        url: `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`,
+        port: TEST_PORT,
+        cleanup: '',
+        created: false,
+      });
     } else {
       removeContainer(TEST_CONTAINER);
       if (createTestContainer()) {
-        candidates.push({ name: TEST_CONTAINER, url: `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`, port: TEST_PORT, cleanup: TEST_CONTAINER, created: true });
+        candidates.push({
+          name: TEST_CONTAINER,
+          url: `postgres://postgres:password@127.0.0.1:${TEST_PORT}/postgres`,
+          port: TEST_PORT,
+          cleanup: TEST_CONTAINER,
+          created: true,
+        });
       }
     }
 
@@ -160,7 +200,9 @@ async function setup() {
         try {
           pushSchema(c.url);
         } catch {
-          console.warn(`[Integration] Warning: could not push schema to "${c.name}".`);
+          console.warn(
+            `[Integration] Warning: could not push schema to "${c.name}".`,
+          );
         }
         return;
       }
@@ -171,24 +213,28 @@ async function setup() {
           // best effort
         }
       }
-      console.warn(`[Integration] "${c.name}" started but port ${c.port} not reachable.`);
+      console.warn(
+        `[Integration] "${c.name}" started but port ${c.port} not reachable.`,
+      );
     }
   }
 
   if (waitForPort(PROJECT_PORT, 2_000)) {
     dbUrl = DEFAULT_LOCAL_URL;
     process.env.DATABASE_URL = dbUrl;
-    console.log("[Integration] Found Postgres on default port without Docker.");
+    console.log('[Integration] Found Postgres on default port without Docker.');
     try {
       pushSchema(dbUrl);
     } catch {
-      console.warn("[Integration] Postgres reachable but schema push failed. Tests may fail.");
+      console.warn(
+        '[Integration] Postgres reachable but schema push failed. Tests may fail.',
+      );
     }
     return;
   }
 
   skip(
-    "No Postgres available. Start one with: docker compose up db, or set DATABASE_URL.",
+    'No Postgres available. Start one with: docker compose up db, or set DATABASE_URL.',
   );
 }
 

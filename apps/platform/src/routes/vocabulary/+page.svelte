@@ -1,19 +1,17 @@
 <script lang="ts">
-  import Search from "lucide-svelte/icons/search";
+  import BookOpen from "lucide-svelte/icons/book-open";
   import ChevronLeft from "lucide-svelte/icons/chevron-left";
   import ChevronRight from "lucide-svelte/icons/chevron-right";
-  import BookOpen from "lucide-svelte/icons/book-open";
   import Download from "lucide-svelte/icons/download";
+  import Search from "lucide-svelte/icons/search";
   import Sparkles from "lucide-svelte/icons/sparkles";
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
-  import { invalidateAll } from "$app/navigation";
   import { SvelteSet } from "svelte/reactivity";
+  import { goto, invalidateAll } from "$app/navigation";
+  import { page } from "$app/stores";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
 
-  // eslint-disable-next-line svelte/prefer-writable-derived
   let searchInput = $state(data.filters.search ?? "");
   const togglingWords = new SvelteSet<string>();
 
@@ -57,7 +55,6 @@
     if (key !== "page") {
       url.searchParams.set("page", "1");
     }
-    /* eslint-disable-next-line svelte/no-navigation-without-resolve */
     goto(url.toString(), { replaceState: true, invalidateAll: true });
   }
 

@@ -1,6 +1,6 @@
-import { db } from "../infrastructure/database";
-import { knownWords } from "$lib/server/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { and, eq, inArray } from 'drizzle-orm';
+import { knownWords } from '$lib/server/db/schema';
+import { db } from '../infrastructure/database';
 
 export async function getKnownLemmas(
   userId: string,

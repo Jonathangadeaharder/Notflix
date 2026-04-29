@@ -1,10 +1,10 @@
-import { json } from "@sveltejs/kit";
-import { logger } from "$lib/logger";
-import type { RequestHandler } from "./$types";
-import { HTTP_STATUS } from "$lib/constants";
-import { redact } from "$lib/server/utils/redact";
+import { json } from '@sveltejs/kit';
+import { HTTP_STATUS } from '$lib/constants';
+import { logger } from '$lib/logger';
+import { redact } from '$lib/server/utils/redact';
+import type { RequestHandler } from './$types';
 
-const INVALID_LOG_FORMAT = "Invalid log format";
+const INVALID_LOG_FORMAT = 'Invalid log format';
 
 interface LogRequest {
   level?: string;
@@ -24,7 +24,7 @@ const LOG_MAP: Record<string, (obj: object, msg: string) => void> = {
 export const POST: RequestHandler = async ({ request }) => {
   try {
     const body = (await request.json()) as LogRequest;
-    if (!body || typeof body !== "object") {
+    if (!body || typeof body !== 'object') {
       return json(
         { success: false, error: INVALID_LOG_FORMAT },
         { status: HTTP_STATUS.BAD_REQUEST },
@@ -32,7 +32,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
     const { level, message, ...rest } = body;
 
-    if (typeof message !== "string" || message.trim().length === 0) {
+    if (typeof message !== 'string' || message.trim().length === 0) {
       return json(
         { success: false, error: INVALID_LOG_FORMAT },
         { status: HTTP_STATUS.BAD_REQUEST },
@@ -40,13 +40,13 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     const normalizedLevel =
-      typeof level === "string" ? level.toLowerCase() : "info";
+      typeof level === 'string' ? level.toLowerCase() : 'info';
     const logFn = LOG_MAP[normalizedLevel] ?? LOG_MAP.info;
     logFn(redact(rest), message);
 
     return json({ success: true });
   } catch (err) {
-    console.error("Failed to process client log", err);
+    console.error('Failed to process client log', err);
     return json(
       { success: false, error: INVALID_LOG_FORMAT },
       { status: HTTP_STATUS.BAD_REQUEST },

@@ -30,7 +30,6 @@ describe('ProgressPersistenceService', () => {
     const mockDb = { insert: mockInsert, update: mockUpdate } as any;
     bus = new AppEventBus();
     // Constructor side effect (registering handlers on bus) is the goal.
-    // eslint-disable-next-line sonarjs/constructor-for-side-effects
     new ProgressPersistenceService(mockDb, bus);
   });
 

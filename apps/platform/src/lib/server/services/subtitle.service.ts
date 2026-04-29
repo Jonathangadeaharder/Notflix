@@ -1,20 +1,20 @@
-import { db as defaultDb } from "../infrastructure/database";
+import { eq } from 'drizzle-orm';
 import {
-  videoProcessing,
-  type DbVttSegment,
   type DbTokenAnalysis,
-} from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import { generateVtt, secondsToSrtTime } from "../utils/subtitle-utils";
+  type DbVttSegment,
+  videoProcessing,
+} from '$lib/server/db/schema';
+import { db as defaultDb } from '../infrastructure/database';
+import { generateVtt, secondsToSrtTime } from '../utils/subtitle-utils';
 
-export type SubtitleMode = "native" | "translated" | "bilingual";
+export type SubtitleMode = 'native' | 'translated' | 'bilingual';
 
 export class SubtitleService {
   constructor(private db = defaultDb) {}
 
   async generateVtt(
     videoId: string,
-    mode: SubtitleMode = "native",
+    mode: SubtitleMode = 'native',
   ): Promise<string | null> {
     const [processing] = await this.db
       .select()
@@ -22,7 +22,7 @@ export class SubtitleService {
       .where(eq(videoProcessing.videoId, videoId))
       .limit(1);
 
-    if (!processing || !processing.vttJson) {
+    if (!processing?.vttJson) {
       return null;
     }
 
@@ -37,16 +37,16 @@ export class SubtitleService {
         seg.tokens
           .map(
             (t: DbTokenAnalysis & { translation?: string }) =>
-              (t.translation || t.text) + (t.whitespace || ""),
+              (t.translation || t.text) + (t.whitespace || ''),
           )
-          .join("");
+          .join('');
 
-      let text = "";
-      if (mode === "native") {
+      let text = '';
+      if (mode === 'native') {
         text = nativeText;
-      } else if (mode === "translated") {
+      } else if (mode === 'translated') {
         text = translatedText;
-      } else if (mode === "bilingual") {
+      } else if (mode === 'bilingual') {
         text = `${nativeText}\n${translatedText}`;
       }
 

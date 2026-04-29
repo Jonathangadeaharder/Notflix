@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { page } from "$app/state";
+  import { AlertTriangle, ArrowLeft, Home } from "lucide-svelte";
   import { base } from "$app/paths";
+  import { page } from "$app/state";
   import { Button } from "$lib/components/ui/button";
-  import { AlertTriangle, Home, ArrowLeft } from "lucide-svelte";
   import { HTTP_STATUS } from "$lib/constants";
 </script>
 

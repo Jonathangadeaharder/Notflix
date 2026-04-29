@@ -50,9 +50,9 @@ export interface ThumbnailResponse {
 
 // --- Processing Status ---
 export const ProcessingStatus = {
-  PENDING: "PENDING",
-  COMPLETED: "COMPLETED",
-  ERROR: "ERROR",
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  ERROR: 'ERROR',
 } as const;
 
 export type ProcessingStatusType =
@@ -60,12 +60,12 @@ export type ProcessingStatusType =
 
 // --- Progress Stage ---
 export const ProgressStage = {
-  QUEUED: "QUEUED",
-  TRANSCRIBING: "TRANSCRIBING",
-  ANALYZING: "ANALYZING",
-  TRANSLATING: "TRANSLATING",
-  READY: "READY",
-  FAILED: "FAILED",
+  QUEUED: 'QUEUED',
+  TRANSCRIBING: 'TRANSCRIBING',
+  ANALYZING: 'ANALYZING',
+  TRANSLATING: 'TRANSLATING',
+  READY: 'READY',
+  FAILED: 'FAILED',
 } as const;
 
 export type ProgressStageType =
@@ -73,9 +73,9 @@ export type ProgressStageType =
 
 // --- Segment Classification ---
 export const SegmentClassification = {
-  EASY: "EASY",
-  LEARNING: "LEARNING",
-  HARD: "HARD",
+  EASY: 'EASY',
+  LEARNING: 'LEARNING',
+  HARD: 'HARD',
 } as const;
 
 export type SegmentClassificationType =
@@ -83,18 +83,18 @@ export type SegmentClassificationType =
 
 // --- Language Codes ---
 export const Languages = {
-  SPANISH: "es",
-  ENGLISH: "en",
-  FRENCH: "fr",
-  GERMAN: "de",
-  ITALIAN: "it",
-  PORTUGUESE: "pt",
+  SPANISH: 'es',
+  ENGLISH: 'en',
+  FRENCH: 'fr',
+  GERMAN: 'de',
+  ITALIAN: 'it',
+  PORTUGUESE: 'pt',
 } as const;
 
 export type LanguageCode = (typeof Languages)[keyof typeof Languages];
 
 // --- CEFR Levels ---
-export const CefrLevels = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+export const CefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 export type CefrLevel = (typeof CefrLevels)[number];
 
 // --- Game Card ---

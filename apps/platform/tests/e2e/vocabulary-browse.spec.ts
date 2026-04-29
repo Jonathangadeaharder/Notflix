@@ -1,16 +1,16 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from '@playwright/test';
 
-test.describe("Vocabulary: Browse and Filter", () => {
+test.describe('Vocabulary: Browse and Filter', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test("displays vocabulary page with words and level filters", async ({
+  test('displays vocabulary page with words and level filters', async ({
     page,
   }) => {
-    await page.goto("/vocabulary");
-    await page.waitForLoadState("load");
+    await page.goto('/vocabulary');
+    await page.waitForLoadState('load');
 
     // Page heading
-    await expect(page.locator("h1")).toContainText("vocabulary");
+    await expect(page.locator('h1')).toContainText('vocabulary');
 
     // Level filter buttons should be visible
     await expect(
@@ -39,9 +39,9 @@ test.describe("Vocabulary: Browse and Filter", () => {
     expect(await toggleButtons.count()).toBeGreaterThan(0);
   });
 
-  test("navigates to level-filtered view via URL", async ({ page }) => {
-    await page.goto("/vocabulary?level=A1&page=1");
-    await page.waitForLoadState("load");
+  test('navigates to level-filtered view via URL', async ({ page }) => {
+    await page.goto('/vocabulary?level=A1&page=1');
+    await page.waitForLoadState('load');
 
     const a1Button = page.locator("button:has-text('A1 · Beginner')");
     await expect(a1Button).toBeVisible();
@@ -52,44 +52,46 @@ test.describe("Vocabulary: Browse and Filter", () => {
     expect(wordCount).toBeGreaterThan(0);
   });
 
-  test("navigates to search results view via URL", async ({ page }) => {
+  test('navigates to search results view via URL', async ({ page }) => {
     // Test the SSR path directly
-    await page.goto("/vocabulary?search=hola&page=1");
-    await page.waitForLoadState("load");
+    await page.goto('/vocabulary?search=hola&page=1');
+    await page.waitForLoadState('load');
 
     // Search input should show the search term
-    const searchInput = page.locator(
-      'input[placeholder="Search lemmas…"]',
-    );
-    await expect(searchInput).toHaveValue("hola");
+    const searchInput = page.locator('input[placeholder="Search lemmas…"]');
+    await expect(searchInput).toHaveValue('hola');
   });
 
-  test("toggles word known status via button", async ({ page }) => {
-    await page.goto("/vocabulary?search=hola&page=1");
-    await page.waitForLoadState("networkidle");
+  test('toggles word known status via button', async ({ page }) => {
+    await page.goto('/vocabulary?search=hola&page=1');
+    await page.waitForLoadState('networkidle');
 
-    const toggleBtn = page.getByTestId("toggle-known-hola");
+    const toggleBtn = page.getByTestId('toggle-known-hola');
 
-    await expect(toggleBtn).toContainText("Unmark", { timeout: 10_000 });
+    await expect(toggleBtn).toContainText('Unmark', { timeout: 10_000 });
 
     const deleteResponse = page.waitForResponse(
-      (resp) => resp.url().includes("/api/words/known") && resp.request().method() === "DELETE",
+      (resp) =>
+        resp.url().includes('/api/words/known') &&
+        resp.request().method() === 'DELETE',
     );
     await toggleBtn.click();
     const delResp = await deleteResponse;
     expect(delResp.ok()).toBeTruthy();
     await expect(toggleBtn).toBeEnabled({ timeout: 10_000 });
 
-    await expect(toggleBtn).toContainText("Mark known", { timeout: 15_000 });
+    await expect(toggleBtn).toContainText('Mark known', { timeout: 15_000 });
 
     const postResponse = page.waitForResponse(
-      (resp) => resp.url().includes("/api/words/known") && resp.request().method() === "POST",
+      (resp) =>
+        resp.url().includes('/api/words/known') &&
+        resp.request().method() === 'POST',
     );
     await toggleBtn.click();
     const postResp = await postResponse;
     expect(postResp.ok()).toBeTruthy();
     await expect(toggleBtn).toBeEnabled({ timeout: 10_000 });
 
-    await expect(toggleBtn).toContainText("Unmark", { timeout: 15_000 });
+    await expect(toggleBtn).toContainText('Unmark', { timeout: 15_000 });
   });
 });

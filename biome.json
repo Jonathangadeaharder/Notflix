@@ -2,7 +2,8 @@
   "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "ignoreUnknown": true
+    "ignoreUnknown": true,
+    "experimentalScannerIgnores": ["**/app.css"]
   },
   "formatter": {
     "enabled": true,
@@ -25,12 +26,18 @@
         "noExplicitAny": "warn",
         "noFocusedTests": "error",
         "noSkippedTests": "warn",
-        "noDuplicateTestHooks": "error"
+        "noDuplicateTestHooks": "error",
+        "useIterableCallbackReturn": "off",
+        "noImplicitAnyLet": "warn"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": "warn",
         "noExcessiveLinesPerFunction": "warn",
         "noUselessUndefined": "off"
+      },
+      "a11y": {
+        "useButtonType": "off",
+        "noSvgWithoutTitle": "off"
       },
       "style": {
         "noMagicNumbers": "warn"

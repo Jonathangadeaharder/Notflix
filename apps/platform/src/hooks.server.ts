@@ -1,6 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import type { Handle } from '@sveltejs/kit';
 import { json, redirect } from '@sveltejs/kit';
-import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { building } from '$app/environment';
 import { HTTP_STATUS, INDICES } from '$lib/constants';

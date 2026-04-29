@@ -1,7 +1,7 @@
 <script lang="ts">
-  import VideoPlayer from "$lib/components/player/VideoPlayer.svelte";
-  import type { Subtitle } from "$lib/components/player/types";
   import { base } from "$app/paths";
+  import type { Subtitle } from "$lib/components/player/types";
+  import VideoPlayer from "$lib/components/player/VideoPlayer.svelte";
 
   const video = {
     id: "mock-video-id",
@@ -60,7 +60,6 @@
   let gameCards: { type: string; front: string; back: string }[] = [];
 
   // prettier-ignore
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function handleRequestGameCards(chunkIndex: number, _start: number, _end: number) {
     console.log("Mock Request Game Cards", chunkIndex);
     setTimeout(() => {

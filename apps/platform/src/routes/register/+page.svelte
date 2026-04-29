@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Play from "lucide-svelte/icons/play";
   import ArrowRight from "lucide-svelte/icons/arrow-right";
-  import { signUpEmail } from "$lib/auth-client";
+  import Play from "lucide-svelte/icons/play";
   import { resolve } from "$app/paths";
+  import { signUpEmail } from "$lib/auth-client";
 
   const MIN_PASSWORD_LENGTH = 8;
 
@@ -27,7 +27,6 @@
     errorMessage = "";
 
     const errors: typeof fieldErrors = {};
-    /* eslint-disable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
     if (!name.trim()) errors.name = "Name is required.";
     if (!email.trim()) errors.email = "Email is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -39,7 +38,6 @@
       errors.confirmPassword = "Please confirm your password.";
     else if (password !== confirmPassword)
       errors.confirmPassword = "Passwords do not match.";
-    /* eslint-enable sonarjs/slow-regex, sonarjs/no-hardcoded-passwords */
 
     if (Object.keys(errors).length > 0) {
       fieldErrors = errors;
@@ -47,7 +45,7 @@
     }
 
     isLoading = true;
-    const { error } = await signUpEmail(email, password, name, "/");
+    const { error } = await signUpEmail(email, password, name, "/profile?welcome=1");
     if (error) {
       errorMessage = error;
       isLoading = false;

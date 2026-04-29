@@ -1,21 +1,21 @@
-import { CONFIG } from "../infrastructure/config";
-import { getRequestId } from "../request-context";
 import type {
-  TranscriptionResponse,
   FilterResponse,
-  TranslationResponse,
   ThumbnailResponse,
-} from "$lib/types";
+  TranscriptionResponse,
+  TranslationResponse,
+} from '$lib/types';
+import { CONFIG } from '../infrastructure/config';
+import { getRequestId } from '../request-context';
 
 export type {
-  TranscriptionResponse,
   FilterResponse,
-  TranslationResponse,
   ThumbnailResponse,
+  TranscriptionResponse,
+  TranslationResponse,
 };
 
-const SSE_EVENT_PREFIX = "event:";
-const SSE_DATA_PREFIX = "data:";
+const SSE_EVENT_PREFIX = 'event:';
+const SSE_DATA_PREFIX = 'data:';
 const TRANSCRIBE_PROGRESS_CAP_PERCENT = 80;
 
 export class AiServiceError extends Error {
@@ -24,7 +24,7 @@ export class AiServiceError extends Error {
     message: string,
   ) {
     super(message);
-    this.name = "AiServiceError";
+    this.name = 'AiServiceError';
   }
 }
 
@@ -70,15 +70,15 @@ async function processSSELine(
   state: SSEStreamState,
   onProgress: (percent: number) => void | Promise<void>,
 ): Promise<string> {
-  if (line.startsWith("event:")) {
+  if (line.startsWith('event:')) {
     return line.slice(SSE_EVENT_PREFIX.length).trim();
   }
   if (!line.startsWith(SSE_DATA_PREFIX)) return currentEvent;
   const raw = line.slice(SSE_DATA_PREFIX.length).trim();
-  if (!raw || raw === "[DONE]") return currentEvent;
+  if (!raw || raw === '[DONE]') return currentEvent;
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (currentEvent === "info" || parsed.type === "info") {
+    if (currentEvent === 'info' || parsed.type === 'info') {
       applyInfoEvent(parsed, state);
     } else {
       await applySegmentEvent(parsed, state, onProgress);
@@ -86,7 +86,7 @@ async function processSSELine(
   } catch {
     /* skip */
   }
-  return "";
+  return '';
 }
 
 async function readSSEStream(
@@ -96,16 +96,16 @@ async function readSSEStream(
 ): Promise<void> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
-  let buffer = "";
-  let currentEvent = "";
+  let buffer = '';
+  let currentEvent = '';
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
       for (const line of lines) {
         currentEvent = await processSSELine(
           line,
@@ -130,12 +130,12 @@ export class RealAiGateway {
 
   private getHeaders() {
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-API-Key": CONFIG.AI_SERVICE_API_KEY,
+      'Content-Type': 'application/json',
+      'X-API-Key': CONFIG.AI_SERVICE_API_KEY,
     };
     const requestId = getRequestId();
     if (requestId) {
-      headers["X-Request-ID"] = requestId;
+      headers['X-Request-ID'] = requestId;
     }
     return headers;
   }
@@ -171,12 +171,12 @@ export class RealAiGateway {
     const res = await this.fetchWithTimeout(
       `${CONFIG.AI_SERVICE_URL}/transcribe`,
       {
-        method: "POST",
+        method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({ file_path: filePath, language: lang }),
       },
     );
-    return this.handleResponse(res, "Transcribe");
+    return this.handleResponse(res, 'Transcribe');
   }
 
   async transcribeWithProgress(
@@ -205,7 +205,7 @@ export class RealAiGateway {
       );
     }
 
-    if (!res.body) throw new Error("AI Service response body is null");
+    if (!res.body) throw new Error('AI Service response body is null');
 
     try {
       const result = await this.processTranscriptionSSE(
@@ -229,7 +229,7 @@ export class RealAiGateway {
     signal: AbortSignal,
   ): Promise<Response> {
     return fetch(`${CONFIG.AI_SERVICE_URL}/transcribe/stream`, {
-      method: "POST",
+      method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ file_path: filePath, language: lang }),
       signal,
@@ -264,11 +264,11 @@ export class RealAiGateway {
     lang: string = CONFIG.DEFAULT_TARGET_LANG,
   ): Promise<FilterResponse> {
     const res = await this.fetchWithTimeout(`${CONFIG.AI_SERVICE_URL}/filter`, {
-      method: "POST",
+      method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ texts, language: lang }),
     });
-    return this.handleResponse(res, "Analyze Batch");
+    return this.handleResponse(res, 'Analyze Batch');
   }
 
   async translate(
@@ -279,7 +279,7 @@ export class RealAiGateway {
     const res = await this.fetchWithTimeout(
       `${CONFIG.AI_SERVICE_URL}/translate`,
       {
-        method: "POST",
+        method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({
           texts,
@@ -288,18 +288,18 @@ export class RealAiGateway {
         }),
       },
     );
-    return this.handleResponse(res, "Translate");
+    return this.handleResponse(res, 'Translate');
   }
 
   async generateThumbnail(filePath: string): Promise<ThumbnailResponse> {
     const res = await this.fetchWithTimeout(
       `${CONFIG.AI_SERVICE_URL}/generate_thumbnail`,
       {
-        method: "POST",
+        method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({ file_path: filePath }),
       },
     );
-    return this.handleResponse(res, "Thumbnail");
+    return this.handleResponse(res, 'Thumbnail');
   }
 }

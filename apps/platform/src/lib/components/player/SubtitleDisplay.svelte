@@ -1,6 +1,6 @@
 <script lang="ts">
   import { base } from "$app/paths";
-  import type { Subtitle, WordData, SubtitleMode } from "./types";
+  import type { Subtitle, SubtitleMode, WordData } from "./types";
 
   let {
     subtitle,
@@ -36,7 +36,7 @@
   let hoverOpenTimeout: ReturnType<typeof setTimeout> | undefined;
   let hoverCloseTimeout: ReturnType<typeof setTimeout> | undefined;
 
-  function tokenClass(word: WordData): string {
+  function _tokenClass(word: WordData): string {
     if (mode === "ORIGINAL" || mode === "DUAL") return "tok tok-easy";
     if (word.difficulty === "hard") return "tok tok-hard";
     if (word.difficulty === "learning") return "tok tok-learn-pulse";
@@ -206,7 +206,7 @@
     }
   }
 
-  function getDifficultyChipClass(
+  function _getDifficultyChipClass(
     d: WordData["difficulty"] | undefined,
   ): string {
     if (d === "hard") return "hard";
@@ -237,7 +237,7 @@
           {#each subtitle.words as word, i (i)}
             <button
               type="button"
-              class="{tokenClass(word)} {activeIndex === i ? 'tok-active' : ''}"
+              class="{_tokenClass(word)} {activeIndex === i ? 'tok-active' : ''}"
               onmouseenter={(event) => handleWordEnter(word, i, event)}
               onfocus={(event) => handleWordEnter(word, i, event)}
               onmouseleave={handleWordLeave}
@@ -314,7 +314,7 @@
           </span>
         {/if}
         <span
-          class="chip {getDifficultyChipClass(activeWord.difficulty)} ml-auto"
+          class="chip {_getDifficultyChipClass(activeWord.difficulty)} ml-auto"
           style:font-size="10px"
         >
           {getDifficultyLabel(activeWord.difficulty)}

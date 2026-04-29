@@ -1,8 +1,8 @@
-import * as fs from "node:fs";
-import { INDICES } from "$lib/constants";
+import * as fs from 'node:fs';
+import { INDICES } from '$lib/constants';
 
 export function parseLemmasFromCsv(filePath: string): string[] {
-  const lines = fs.readFileSync(filePath, "utf-8").split("\n");
+  const lines = fs.readFileSync(filePath, 'utf-8').split('\n');
   return lines
     .slice(1) // skip header row
     .map((line) => {
@@ -18,16 +18,16 @@ export function parseLemmasFromCsv(filePath: string): string[] {
 
 export function splitCsvLine(line: string): string[] {
   const cols: string[] = [];
-  let current = "";
+  let current = '';
   let inQuotes = false;
 
   for (const char of line) {
     if (char === '"') {
       inQuotes = !inQuotes;
       current += char;
-    } else if (char === "," && !inQuotes) {
+    } else if (char === ',' && !inQuotes) {
       cols.push(current);
-      current = "";
+      current = '';
     } else {
       current += char;
     }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import CheckCircle2 from "lucide-svelte/icons/check-circle-2";
   import { enhance } from "$app/forms";
-  import type { PageData, ActionData } from "./$types";
+  import type { ActionData, PageData } from "./$types";
 
   interface Props {
     data: PageData & { initialData: { gameInterval: string } };
@@ -13,6 +13,23 @@
   const initialInterval = data.initialData.gameInterval;
   let gameInterval = $state(initialInterval);
   let isSubmitting = $state(false);
+  let isSubmittingLangs = $state(false);
+
+  const languages = [
+    { value: "en", label: "English" },
+    { value: "es", label: "Spanish" },
+    { value: "fr", label: "French" },
+    { value: "de", label: "German" },
+    { value: "it", label: "Italian" },
+    { value: "pt", label: "Portuguese" },
+  ];
+
+  const profileTargetLang =
+    (data.profile as unknown as { targetLang?: string })?.targetLang || "es";
+  const profileNativeLang =
+    (data.profile as unknown as { nativeLang?: string })?.nativeLang || "en";
+  let targetLang = $state(profileTargetLang);
+  let nativeLang = $state(profileNativeLang);
 
   // Pre-defined interrupt presets — design uses 5/10/15/Off
   const intervalPresets: { v: string; label: string }[] = [
@@ -164,6 +181,127 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Language selection -->
+    <div
+      class="rounded-[14px] mb-4"
+      style:padding="24px"
+      style:background="var(--surface)"
+      style:border="1px solid var(--line)"
+    >
+      <div class="flex items-start gap-3 mb-4">
+        <div
+          style:width="3px"
+          style:height="22px"
+          style:background="var(--brand)"
+          style:border-radius="2px"
+          style:margin-top="2px"
+        ></div>
+        <div>
+          <h3
+            class="font-display font-bold"
+            style:font-size="18px"
+            style:letter-spacing="-0.015em"
+            style:margin="0"
+          >
+            Languages
+          </h3>
+          <p
+            class="text-[13px]"
+            style:color="var(--fg-2)"
+            style:margin="4px 0 0"
+          >
+            Set the language you're learning and your native tongue. Notflix
+            uses these to filter subtitles and pick flashcards.
+          </p>
+        </div>
+      </div>
+
+      <form
+        method="POST"
+        action="?/updateLanguages"
+        use:enhance={() => {
+          isSubmittingLangs = true;
+          return async ({ update }) => {
+            await update();
+            isSubmittingLangs = false;
+          };
+        }}
+        class="flex flex-col gap-4"
+      >
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label
+              for="targetLang"
+              class="text-[12px] font-medium block mb-2"
+              style:color="var(--fg-2)"
+            >
+              Target language
+            </label>
+            <select
+              name="targetLang"
+              id="targetLang"
+              bind:value={targetLang}
+              class="rounded-[10px] w-full font-medium"
+              style:padding="12px 14px"
+              style:background="var(--bg)"
+              style:border="1px solid var(--line-2)"
+              style:color="var(--fg)"
+              style:font-size="14px"
+              style:appearance="none"
+            >
+              {#each languages as lang (lang.value)}
+                <option value={lang.value}>{lang.label}</option>
+              {/each}
+            </select>
+          </div>
+          <div>
+            <label
+              for="nativeLang"
+              class="text-[12px] font-medium block mb-2"
+              style:color="var(--fg-2)"
+            >
+              Native language
+            </label>
+            <select
+              name="nativeLang"
+              id="nativeLang"
+              bind:value={nativeLang}
+              class="rounded-[10px] w-full font-medium"
+              style:padding="12px 14px"
+              style:background="var(--bg)"
+              style:border="1px solid var(--line-2)"
+              style:color="var(--fg)"
+              style:font-size="14px"
+              style:appearance="none"
+            >
+              {#each languages as lang (lang.value)}
+                <option value={lang.value}>{lang.label}</option>
+              {/each}
+            </select>
+          </div>
+        </div>
+
+        <div class="flex gap-3 items-center">
+          <button
+            type="submit"
+            class="nx-btn nx-btn-brand"
+            disabled={isSubmittingLangs}
+          >
+            {isSubmittingLangs ? "Saving…" : "Save languages"}
+          </button>
+          {#if (form?.data as any)?.nativeLang || (form?.data as any)?.targetLang}
+            <span
+              class="flex items-center gap-1.5 text-sm"
+              style:color="var(--known)"
+            >
+              <CheckCircle2 class="h-4 w-4" />
+              Saved
+            </span>
+          {/if}
+        </div>
+      </form>
     </div>
 
     <!-- Game & Watch settings -->

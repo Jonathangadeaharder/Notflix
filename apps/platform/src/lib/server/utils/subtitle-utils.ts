@@ -1,4 +1,4 @@
-import { TIME } from "$lib/constants";
+import { TIME } from '$lib/constants';
 
 type SrtSegment = {
   index: number;
@@ -12,13 +12,13 @@ export function parseSrt(srtContent: string): SrtSegment[] {
   const blocks = srtContent.trim().split(/\n\s*\n/);
 
   for (const block of blocks) {
-    const lines = block.split("\n");
+    const lines = block.split('\n');
     const MIN_LINES_PER_BLOCK = 3;
     if (lines.length >= MIN_LINES_PER_BLOCK) {
       const index = parseInt(lines[0], 10);
-      const timeCode = lines[1].split(" --> ");
+      const timeCode = lines[1].split(' --> ');
       const HEADER_LINES = 2;
-      const text = lines.slice(HEADER_LINES).join("\n");
+      const text = lines.slice(HEADER_LINES).join('\n');
       const EXPECTED_TIMECODE_PARTS = 2;
       if (timeCode.length === EXPECTED_TIMECODE_PARTS) {
         segments.push({
@@ -38,22 +38,22 @@ export function generateSrt(segments: SrtSegment[]): string {
     .map((seg) => {
       return `${seg.index}\n${seg.start} --> ${seg.end}\n${seg.text}`;
     })
-    .join("\n\n");
+    .join('\n\n');
 }
 
 export function generateVtt(segments: SrtSegment[]): string {
   const body = segments
     .map((seg) => {
-      const start = seg.start.replace(",", ".");
-      const end = seg.end.replace(",", ".");
+      const start = seg.start.replace(',', '.');
+      const end = seg.end.replace(',', '.');
       return `${start} --> ${end}\n${seg.text}`;
     })
-    .join("\n\n");
+    .join('\n\n');
   return `WEBVTT\n\n${body}`;
 }
 
 export function secondsToSrtTime(seconds: number): string {
-  const pad = (num: number, size: number) => num.toString().padStart(size, "0");
+  const pad = (num: number, size: number) => num.toString().padStart(size, '0');
 
   const SECONDS_IN_HOUR = 3600;
   const MILLISECONDS_IN_SECOND = 1000;

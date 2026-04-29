@@ -1,8 +1,8 @@
 import type {
-  TranscriptionResponse,
   TokenAnalysis,
+  TranscriptionResponse,
   VttSegment,
-} from "$lib/types";
+} from '$lib/types';
 
 export type { TokenAnalysis, VttSegment };
 
@@ -25,7 +25,7 @@ export function extractUniqueLemmas(
   const unique = new Set<string>();
   segments.forEach((seg) =>
     seg.tokens.forEach((t) => {
-      if (!t.is_stop && t.pos !== "PUNCT") unique.add(t.lemma);
+      if (!t.is_stop && t.pos !== 'PUNCT') unique.add(t.lemma);
     }),
   );
   const arr = Array.from(unique);

@@ -1,20 +1,19 @@
-import { createServerClient } from "@supabase/ssr";
-import type { CookieOptions } from "@supabase/ssr";
-import { env } from "$env/dynamic/private";
-import { env as publicEnv } from "$env/dynamic/public";
-import type { RequestEvent } from "@sveltejs/kit";
-import { db } from "./database";
+import type { CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
+import type { RequestEvent } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
+import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
+import { INDICES } from '$lib/constants';
+import type { User as DbUser } from '$lib/server/db/schema';
 import {
-  user as userTable,
   DEFAULT_GAME_INTERVAL_MINUTES,
-} from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import type { User as DbUser } from "$lib/server/db/schema";
-import { INDICES } from "$lib/constants";
+  user as userTable,
+} from '$lib/server/db/schema';
+import { db } from './database';
 
 export type User = DbUser;
 
-// eslint-disable-next-line no-magic-numbers
 const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export interface Session {
@@ -23,7 +22,7 @@ export interface Session {
 }
 
 function extractRequestUrl(input: RequestInfo | URL): string {
-  if (typeof input === "string") return input;
+  if (typeof input === 'string') return input;
   if (input instanceof URL) return input.href;
   return input.url;
 }
@@ -32,7 +31,7 @@ function buildRewrittenRequest(
   input: RequestInfo | URL,
   rewrittenUrl: string,
 ): RequestInfo {
-  if (typeof input === "string" || input instanceof URL) return rewrittenUrl;
+  if (typeof input === 'string' || input instanceof URL) return rewrittenUrl;
   return new Request(rewrittenUrl, input);
 }
 
@@ -66,13 +65,13 @@ function createDockerAwareFetch(
 }
 
 function createSupabaseServerClient(event: RequestEvent) {
-  const publicUrl = publicEnv.PUBLIC_SUPABASE_URL || "";
+  const publicUrl = publicEnv.PUBLIC_SUPABASE_URL || '';
   const internalUrl = env.SUPABASE_URL || publicUrl;
   const customFetch = createDockerAwareFetch(publicUrl, internalUrl);
 
   return createServerClient(
     publicUrl,
-    publicEnv.PUBLIC_SUPABASE_ANON_KEY || "",
+    publicEnv.PUBLIC_SUPABASE_ANON_KEY || '',
     {
       global: { fetch: customFetch },
       cookies: {
@@ -87,7 +86,7 @@ function createSupabaseServerClient(event: RequestEvent) {
           }>,
         ) {
           cookiesToSet.forEach(({ name, value, options }) =>
-            event.cookies.set(name, value, { ...options, path: "/" }),
+            event.cookies.set(name, value, { ...options, path: '/' }),
           );
         },
       },
@@ -113,7 +112,7 @@ async function upsertProfile(authUser: SupabaseAuthUser): Promise<User | null> {
   const name =
     (authUser.user_metadata?.name as string | undefined) ||
     authUser.email ||
-    "User";
+    'User';
   const [created] = await db
     .insert(userTable)
     .values({
@@ -121,8 +120,8 @@ async function upsertProfile(authUser: SupabaseAuthUser): Promise<User | null> {
       name,
       email: authUser.email!,
       emailVerified: authUser.email_confirmed_at != null,
-      nativeLang: "en",
-      targetLang: "es",
+      nativeLang: 'en',
+      targetLang: 'es',
       gameIntervalMinutes: DEFAULT_GAME_INTERVAL_MINUTES,
       createdAt: new Date(),
       updatedAt: new Date(),

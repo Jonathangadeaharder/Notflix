@@ -69,7 +69,6 @@ describe('PipelineOrchestrator Unit', () => {
     bus = new AppEventBus();
     orchestrator = new PipelineOrchestrator(mockDb, bus);
     // Constructor side effect (registering handlers on bus) is the goal.
-    // eslint-disable-next-line sonarjs/constructor-for-side-effects
     new ProgressPersistenceService(mockDb, bus);
   });
 

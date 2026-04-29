@@ -1,6 +1,6 @@
-import crypto from 'crypto';
-import { mkdir, writeFile } from 'fs/promises';
-import { dirname, extname, join } from 'path';
+import crypto from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, extname, join } from 'node:path';
 import { z } from 'zod';
 import { LIMITS } from '$lib/constants';
 import type { NewVideo } from '$lib/server/db/schema';
@@ -156,8 +156,7 @@ async function saveUploadedFileToDisk(
   await writeFile(filePath, Buffer.from(arrayBuffer));
 }
 
-const FILE_TYPE_NOT_ALLOWED_MSG =
-  'File type not allowed. Accepted: ' + [...ALLOWED_EXTENSIONS].join(', ');
+const FILE_TYPE_NOT_ALLOWED_MSG = `File type not allowed. Accepted: ${[...ALLOWED_EXTENSIONS].join(', ')}`;
 
 function makeValidationFailure(
   errors: UploadErrors,

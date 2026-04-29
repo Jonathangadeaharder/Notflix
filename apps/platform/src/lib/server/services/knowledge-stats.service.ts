@@ -1,10 +1,10 @@
-import { db } from "../infrastructure/database";
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import {
   knownWords,
   videoLemmas,
   videoProcessing,
-} from "$lib/server/db/schema";
-import { eq, and, gte, sql, desc, inArray } from "drizzle-orm";
+} from '$lib/server/db/schema';
+import { db } from '../infrastructure/database';
 
 const TREND_DAYS = 14;
 const READY_LEMMAS_LIMIT = 12;
@@ -19,7 +19,7 @@ export interface LemmaTrendPoint {
 
 export interface ReadyLemma {
   word: string;
-  state: "hard" | "learn";
+  state: 'hard' | 'learn';
 }
 
 export interface KnowledgeGapStats {
@@ -30,7 +30,7 @@ export interface KnowledgeGapStats {
 
 export async function getKnowledgeGapStats(
   userId: string | null | undefined,
-  targetLang = "es",
+  targetLang = 'es',
 ): Promise<KnowledgeGapStats> {
   const knownCount = await getKnownCount(userId, targetLang);
   const trend = await getLemmaTrend(targetLang);
@@ -69,7 +69,7 @@ async function getLemmaTrend(targetLang: string): Promise<LemmaTrendPoint[]> {
     .where(
       and(
         eq(videoProcessing.targetLang, targetLang),
-        eq(videoProcessing.status, "COMPLETED"),
+        eq(videoProcessing.status, 'COMPLETED'),
         gte(videoProcessing.createdAt, startDay),
       ),
     )
@@ -130,7 +130,7 @@ async function getReadyLemmas(
   if (!userId || recentLemmas.length === 0) {
     return recentLemmas.slice(0, READY_LEMMAS_LIMIT).map((l) => ({
       word: l.lemma,
-      state: "learn" as const,
+      state: 'learn' as const,
     }));
   }
 
@@ -147,7 +147,7 @@ async function getReadyLemmas(
       word: l.lemma,
       state:
         l.count >= HARD_LEMMA_COUNT_THRESHOLD
-          ? ("hard" as const)
-          : ("learn" as const),
+          ? ('hard' as const)
+          : ('learn' as const),
     }));
 }

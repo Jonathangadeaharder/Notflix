@@ -1,38 +1,38 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET } from "../../src/routes/api/game/generate/+server";
-import { generateDeck } from "$lib/server/services/chunker.service";
-import type { GameCard } from "$lib/server/services/chunker.service";
-import { HTTP_STATUS } from "$lib/constants";
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HTTP_STATUS } from '$lib/constants';
+import type { GameCard } from '$lib/server/services/chunker.service';
+import { generateDeck } from '$lib/server/services/chunker.service';
+import { GET } from '../../src/routes/api/game/generate/+server';
 
 const CHUNK_END_SECONDS = 120;
 
-vi.mock("$lib/server/services/chunker.service", () => ({
+vi.mock('$lib/server/services/chunker.service', () => ({
   generateDeck: vi.fn(),
 }));
 
-describe("GET /api/game/generate", () => {
+describe('GET /api/game/generate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 400 when videoId is missing", async () => {
-    const url = new URL("http://localhost/api/game/generate");
+  it('returns 400 when videoId is missing', async () => {
+    const url = new URL('http://localhost/api/game/generate');
     const response = await GET({
       url,
-      locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
+      locals: { auth: vi.fn().mockResolvedValue({ user: { id: 'u1' } }) },
     } as never);
 
     expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
   });
 
-  it("returns cards for valid requests", async () => {
+  it('returns cards for valid requests', async () => {
     const mockCard: GameCard = {
-      lemma: "gato",
-      lang: "es",
-      original: "gato",
-      contextSentence: "El gato está en la mesa.",
-      cefr: "A1",
-      translation: "cat",
+      lemma: 'gato',
+      lang: 'es',
+      original: 'gato',
+      contextSentence: 'El gato está en la mesa.',
+      cefr: 'A1',
+      translation: 'cat',
       isKnown: false,
     };
     vi.mocked(generateDeck).mockResolvedValueOnce([mockCard]);
@@ -42,7 +42,7 @@ describe("GET /api/game/generate", () => {
     );
     const response = await GET({
       url,
-      locals: { auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) },
+      locals: { auth: vi.fn().mockResolvedValue({ user: { id: 'u1' } }) },
     } as never);
 
     const body = await response.json();
@@ -51,11 +51,11 @@ describe("GET /api/game/generate", () => {
     expect(body.cards).toHaveLength(1);
     expect(body.nextChunkStart).toBe(CHUNK_END_SECONDS);
     expect(generateDeck).toHaveBeenCalledWith(
-      "u1",
-      "550e8400-e29b-41d4-a716-446655440000",
+      'u1',
+      '550e8400-e29b-41d4-a716-446655440000',
       0,
       CHUNK_END_SECONDS,
-      "es",
+      'es',
     );
   });
 });

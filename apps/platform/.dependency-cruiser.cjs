@@ -2,37 +2,37 @@
 module.exports = {
   forbidden: [
     {
-      name: "no-circular",
-      severity: "error",
+      name: 'no-circular',
+      severity: 'error',
       from: {},
       to: {
         circular: true,
       },
     },
     {
-      name: "no-server-imports-from-client",
-      severity: "error",
+      name: 'no-server-imports-from-client',
+      severity: 'error',
       from: {
-        path: "^src/lib/server",
+        path: '^src/lib/server',
       },
       to: {
-        path: "^src/lib/components",
-        pathNot: "^src/lib/server",
+        path: '^src/lib/components',
+        pathNot: '^src/lib/server',
       },
     },
     {
-      name: "no-orphans",
-      severity: "warn",
+      name: 'no-orphans',
+      severity: 'warn',
       from: {
         orphan: true,
         pathNot: [
-          "\\.d\\.ts$",
-          "\\.spec\\.ts$",
-          "\\.test\\.ts$",
-          "app\\.d\\.ts",
-          "hooks\\.server\\.ts",
-          "src/lib/constants\\.ts",
-          "src/lib/index\\.ts",
+          '\\.d\\.ts$',
+          '\\.spec\\.ts$',
+          '\\.test\\.ts$',
+          'app\\.d\\.ts',
+          'hooks\\.server\\.ts',
+          'src/lib/constants\\.ts',
+          'src/lib/index\\.ts',
         ],
       },
       to: {},
@@ -40,16 +40,16 @@ module.exports = {
   ],
   options: {
     doNotFollow: {
-      path: "node_modules",
+      path: 'node_modules',
     },
     tsPreCompilationDeps: true,
     tsConfig: {
-      fileName: "tsconfig.json",
+      fileName: 'tsconfig.json',
     },
     reporterOptions: {
       dot: {
         theme: {
-          graph: { rankdir: "TD" },
+          graph: { rankdir: 'TD' },
         },
       },
     },

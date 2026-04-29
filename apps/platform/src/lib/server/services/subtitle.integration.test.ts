@@ -1,26 +1,24 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { db } from "../infrastructure/database";
+import { eq } from 'drizzle-orm';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  type DbVttSegment,
   video,
   videoProcessing,
-  type DbVttSegment,
-} from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import { SubtitleService } from "./subtitle.service";
+} from '$lib/server/db/schema';
+import { db } from '../infrastructure/database';
+import { SubtitleService } from './subtitle.service';
 
-describe("SubtitleService Integration (Real DB)", () => {
+describe('SubtitleService Integration (Real DB)', () => {
   const testVideoId = crypto.randomUUID();
-  const testTargetLang = "es";
+  const testTargetLang = 'es';
 
   beforeAll(async () => {
     // 1. Create Video
     await db.insert(video).values({
       id: testVideoId,
-      title: "Subtitle Test Video",
-      // eslint-disable-next-line sonarjs/publicly-writable-directories
-      filePath: "/tmp/sub.mp4",
-      // eslint-disable-next-line sonarjs/publicly-writable-directories
-      thumbnailPath: "/tmp/thumb.jpg",
+      title: 'Subtitle Test Video',
+      filePath: '/tmp/sub.mp4',
+      thumbnailPath: '/tmp/thumb.jpg',
       views: 0,
       published: true,
       createdAt: new Date(),
@@ -35,23 +33,23 @@ describe("SubtitleService Integration (Real DB)", () => {
       {
         start: 0,
         end: 2,
-        text: "Hola mundo",
+        text: 'Hola mundo',
         tokens: [
           {
-            text: "Hola",
-            lemma: "hola",
-            pos: "INTJ",
+            text: 'Hola',
+            lemma: 'hola',
+            pos: 'INTJ',
             is_stop: false,
-            translation: "Hello",
+            translation: 'Hello',
             isKnown: true,
           },
-          { text: " ", lemma: " ", pos: "SPACE", is_stop: true, isKnown: true },
+          { text: ' ', lemma: ' ', pos: 'SPACE', is_stop: true, isKnown: true },
           {
-            text: "mundo",
-            lemma: "mundo",
-            pos: "NOUN",
+            text: 'mundo',
+            lemma: 'mundo',
+            pos: 'NOUN',
             is_stop: false,
-            translation: "world",
+            translation: 'world',
             isKnown: false,
           },
         ],
@@ -61,7 +59,7 @@ describe("SubtitleService Integration (Real DB)", () => {
     await db.insert(videoProcessing).values({
       videoId: testVideoId,
       targetLang: testTargetLang,
-      status: "COMPLETED",
+      status: 'COMPLETED',
       vttJson: vttData,
     });
   });
@@ -73,35 +71,35 @@ describe("SubtitleService Integration (Real DB)", () => {
     await db.delete(video).where(eq(video.id, testVideoId));
   });
 
-  it("should generate Native VTT correctly", async () => {
+  it('should generate Native VTT correctly', async () => {
     const service = new SubtitleService(db);
-    const vtt = await service.generateVtt(testVideoId, "native");
+    const vtt = await service.generateVtt(testVideoId, 'native');
 
-    expect(vtt).toContain("WEBVTT");
-    expect(vtt).toContain("00:00:00.000 --> 00:00:02.000");
-    expect(vtt).toContain("Hola mundo");
-    expect(vtt).not.toContain("Hello");
+    expect(vtt).toContain('WEBVTT');
+    expect(vtt).toContain('00:00:00.000 --> 00:00:02.000');
+    expect(vtt).toContain('Hola mundo');
+    expect(vtt).not.toContain('Hello');
   });
 
-  it("should generate Translated VTT correctly (Full Translation)", async () => {
+  it('should generate Translated VTT correctly (Full Translation)', async () => {
     const service = new SubtitleService(db);
-    const vtt = await service.generateVtt(testVideoId, "translated");
+    const vtt = await service.generateVtt(testVideoId, 'translated');
 
     // The translated mode should build translation from tokens
     // or use a segment-level translation if stored elsewhere
     expect(vtt).toBeDefined();
   });
 
-  it("should generate Bilingual VTT correctly", async () => {
+  it('should generate Bilingual VTT correctly', async () => {
     const service = new SubtitleService(db);
-    const vtt = await service.generateVtt(testVideoId, "bilingual");
+    const vtt = await service.generateVtt(testVideoId, 'bilingual');
 
-    expect(vtt).toContain("Hola mundo"); // Native line
+    expect(vtt).toContain('Hola mundo'); // Native line
   });
 
-  it("should return null for non-existent video", async () => {
+  it('should return null for non-existent video', async () => {
     const service = new SubtitleService(db);
-    const vtt = await service.generateVtt(crypto.randomUUID(), "native");
+    const vtt = await service.generateVtt(crypto.randomUUID(), 'native');
     expect(vtt).toBeNull();
   });
 });

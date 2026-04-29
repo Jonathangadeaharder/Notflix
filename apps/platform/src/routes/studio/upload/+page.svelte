@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { resolve } from "$app/paths";
-  import { Input } from "$lib/components/ui/input";
-  import { Button } from "$lib/components/ui/button";
-  import { ChevronLeft, UploadCloud } from "lucide-svelte";
+  import { ChevronLeft, FileVideo, UploadCloud } from "lucide-svelte";
   import { enhance } from "$app/forms";
-  import type { PageData, ActionData } from "./$types";
+  import { goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
+  import { Button } from "$lib/components/ui/button";
+  import { Input } from "$lib/components/ui/input";
   import { INDICES } from "$lib/constants";
+  import type { ActionData, PageData } from "./$types";
 
   interface Props {
     data: PageData & {
@@ -21,6 +22,7 @@
   let nativeLang = $state("en");
   let isSubmitting = $state(false);
   let fileError = $state("");
+  let selectedFile = $state<File | null>(null);
 
   $effect(() => {
     if (data.initialData) {
@@ -31,6 +33,21 @@
   });
 
   let fileInput: HTMLInputElement;
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function handleFileChange() {
+    if (fileInput?.files?.length) {
+      selectedFile = fileInput.files[0];
+      fileError = "";
+    } else {
+      selectedFile = null;
+    }
+  }
 </script>
 
 <div class="max-w-3xl mx-auto p-8">
@@ -62,6 +79,9 @@
         return async ({ update }) => {
           await update();
           isSubmitting = false;
+          if (!form?.errors) {
+            goto(resolve("/studio"));
+          }
         };
       }}
       class="space-y-6"
@@ -78,7 +98,7 @@
           class="bg-black/50 border-zinc-700"
           data-testid="title-input"
         />
-        {#if form?.errors?.title}<p class="text-sm text-magenta-500">
+        {#if form?.errors?.title}<p class="text-xs mt-1" style:color="var(--hard)">
             {form.errors.title[INDICES.FIRST]}
           </p>{/if}
       </div>
@@ -99,7 +119,7 @@
             <option value="de">German (DE)</option>
             <option value="fr">French (FR)</option>
           </select>
-          {#if form?.errors?.targetLang}<p class="text-sm text-magenta-500">
+          {#if form?.errors?.targetLang}<p class="text-xs mt-1" style:color="var(--hard)">
               {form.errors.targetLang[INDICES.FIRST]}
             </p>{/if}
         </div>
@@ -119,7 +139,7 @@
             <option value="de">German (DE)</option>
             <option value="fr">French (FR)</option>
           </select>
-          {#if form?.errors?.nativeLang}<p class="text-sm text-magenta-500">
+          {#if form?.errors?.nativeLang}<p class="text-xs mt-1" style:color="var(--hard)">
               {form.errors.nativeLang[INDICES.FIRST]}
             </p>{/if}
         </div>
@@ -143,6 +163,7 @@
             accept="video/*,audio/*"
             class="hidden"
             bind:this={fileInput}
+            onchange={handleFileChange}
             data-testid="file-input"
           />
           <div
@@ -163,10 +184,23 @@
             </div>
           </div>
         </div>
-        {#if form?.errors?.file}<p class="text-sm text-magenta-500">
+        {#if selectedFile}
+          <div
+            class="flex items-center gap-3 p-3 rounded-lg mt-3"
+            style:background="var(--surface)"
+            style:border="1px solid var(--line-2)"
+          >
+            <span style="color: var(--brand-hi)"><FileVideo class="h-4 w-4 shrink-0" /></span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium truncate" style:color="var(--fg)">{selectedFile.name}</p>
+              <p class="text-xs" style:color="var(--fg-3)">{formatFileSize(selectedFile.size)} · {selectedFile.type || "unknown type"}</p>
+            </div>
+          </div>
+        {/if}
+        {#if form?.errors?.file}<p class="text-xs mt-1" style:color="var(--hard)">
             {form.errors.file[INDICES.FIRST]}
           </p>{/if}
-        {#if fileError}<p class="text-sm text-magenta-500">{fileError}</p>{/if}
+        {#if fileError}<p class="text-xs mt-1" style:color="var(--hard)">{fileError}</p>{/if}
       </div>
 
       <div class="flex justify-end gap-4 pt-4 border-t border-white/5">
@@ -177,7 +211,15 @@
           class="bg-magenta-600 hover:bg-magenta-700 text-white px-8 font-bold"
           data-testid="submit-button"
         >
-          {isSubmitting ? "Uploading..." : "Upload Video"}
+          {#if isSubmitting}
+            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Uploading…
+          {:else}
+            Upload Video
+          {/if}
         </Button>
       </div>
     </form>

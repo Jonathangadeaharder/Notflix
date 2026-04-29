@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
 
 // --- Spec: apps/ai-service/openapi.json ---
 // Smoke test: verifies the OpenAPI schema has expected structure and fields.
@@ -18,63 +18,63 @@ const __dirname = dirname(__filename);
 
 const openApiPath = join(
   __dirname,
-  "../../../../../../apps/ai-service/openapi.json",
+  '../../../../../../apps/ai-service/openapi.json',
 );
 let openApi: OpenApiSchema;
 
 function loadOpenApi(): OpenApiSchema {
   if (!openApi) {
-    openApi = JSON.parse(readFileSync(openApiPath, "utf-8"));
+    openApi = JSON.parse(readFileSync(openApiPath, 'utf-8'));
   }
   return openApi;
 }
 
-describe("AI Service OpenAPI Smoke Test", () => {
-  it("WhenTranscribeResponse_ThenMatchesOpenApiSchema", () => {
+describe('AI Service OpenAPI Smoke Test', () => {
+  it('WhenTranscribeResponse_ThenMatchesOpenApiSchema', () => {
     const schema = loadOpenApi().components.schemas.TranscriptionResponse;
     expect(schema.required).toEqual(
-      expect.arrayContaining(["segments", "language", "language_probability"]),
+      expect.arrayContaining(['segments', 'language', 'language_probability']),
     );
-    expect(schema.properties.segments.type).toBe("array");
-    expect(schema.properties.language.type).toBe("string");
-    expect(schema.properties.language_probability.type).toBe("number");
+    expect(schema.properties.segments.type).toBe('array');
+    expect(schema.properties.language.type).toBe('string');
+    expect(schema.properties.language_probability.type).toBe('number');
   });
 
-  it("WhenFilterResponse_ThenMatchesOpenApiSchema", () => {
+  it('WhenFilterResponse_ThenMatchesOpenApiSchema', () => {
     const schema = loadOpenApi().components.schemas.FilterResponse;
-    expect(schema.required).toEqual(expect.arrayContaining(["results"]));
-    expect(schema.properties.results.type).toBe("array");
+    expect(schema.required).toEqual(expect.arrayContaining(['results']));
+    expect(schema.properties.results.type).toBe('array');
     // results is an array of arrays of TokenAnalysis
-    expect(schema.properties.results.items.type).toBe("array");
+    expect(schema.properties.results.items.type).toBe('array');
   });
 
-  it("WhenTranslateResponse_ThenMatchesOpenApiSchema", () => {
+  it('WhenTranslateResponse_ThenMatchesOpenApiSchema', () => {
     const schema = loadOpenApi().components.schemas.TranslationResponse;
-    expect(schema.required).toEqual(expect.arrayContaining(["translations"]));
-    expect(schema.properties.translations.type).toBe("array");
-    expect(schema.properties.translations.items.type).toBe("string");
+    expect(schema.required).toEqual(expect.arrayContaining(['translations']));
+    expect(schema.properties.translations.type).toBe('array');
+    expect(schema.properties.translations.items.type).toBe('string');
   });
 
-  it("WhenThumbnailResponse_ThenMatchesOpenApiSchema", () => {
+  it('WhenThumbnailResponse_ThenMatchesOpenApiSchema', () => {
     const schema = loadOpenApi().components.schemas.ThumbnailResponse;
-    expect(schema.required).toEqual(expect.arrayContaining(["thumbnail_path"]));
-    expect(schema.properties.thumbnail_path.type).toBe("string");
+    expect(schema.required).toEqual(expect.arrayContaining(['thumbnail_path']));
+    expect(schema.properties.thumbnail_path.type).toBe('string');
   });
 
-  it("WhenTokenAnalysis_ThenHasRequiredFields", () => {
+  it('WhenTokenAnalysis_ThenHasRequiredFields', () => {
     const schema = loadOpenApi().components.schemas.TokenAnalysis;
     expect(schema.required).toEqual(
-      expect.arrayContaining(["text", "lemma", "pos", "is_stop"]),
+      expect.arrayContaining(['text', 'lemma', 'pos', 'is_stop']),
     );
   });
 
-  it("WhenSegment_ThenHasRequiredFields", () => {
+  it('WhenSegment_ThenHasRequiredFields', () => {
     const schema = loadOpenApi().components.schemas.Segment;
     expect(schema.required).toEqual(
-      expect.arrayContaining(["start", "end", "text"]),
+      expect.arrayContaining(['start', 'end', 'text']),
     );
-    expect(schema.properties.start.type).toBe("number");
-    expect(schema.properties.end.type).toBe("number");
-    expect(schema.properties.text.type).toBe("string");
+    expect(schema.properties.start.type).toBe('number');
+    expect(schema.properties.end.type).toBe('number');
+    expect(schema.properties.text.type).toBe('string');
   });
 });

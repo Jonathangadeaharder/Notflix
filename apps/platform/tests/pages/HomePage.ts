@@ -1,4 +1,4 @@
-import type { Page, Locator } from "@playwright/test";
+import type { Locator, Page } from '@playwright/test';
 
 export class HomePage {
   readonly page: Page;
@@ -8,14 +8,14 @@ export class HomePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heroSection = page.locator("section").first();
-    this.trendingSection = page.locator("text=Trending");
-    this.navLinks = page.locator("nav a");
+    this.heroSection = page.locator('section').first();
+    this.trendingSection = page.locator('text=Trending');
+    this.navLinks = page.locator('nav a');
   }
 
   async goto() {
-    await this.page.goto("/");
-    await this.page.waitForLoadState("load");
+    await this.page.goto('/');
+    await this.page.waitForLoadState('load');
   }
 
   async getNavLinkTexts(): Promise<string[]> {

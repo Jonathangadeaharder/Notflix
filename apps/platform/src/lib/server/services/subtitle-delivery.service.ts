@@ -1,7 +1,7 @@
-import { HTTP_STATUS } from "$lib/constants";
-import type { SubtitleMode, SubtitleService } from "./subtitle.service";
+import { HTTP_STATUS } from '$lib/constants';
+import type { SubtitleMode, SubtitleService } from './subtitle.service';
 
-const SUBTITLE_MODES = ["native", "translated", "bilingual"] as const;
+const SUBTITLE_MODES = ['native', 'translated', 'bilingual'] as const;
 
 export class SubtitleDeliveryError extends Error {
   constructor(
@@ -20,7 +20,7 @@ export async function buildSubtitleResponse(
   if (!videoId) {
     throw new SubtitleDeliveryError(
       HTTP_STATUS.BAD_REQUEST,
-      "Video ID is required",
+      'Video ID is required',
     );
   }
 
@@ -29,28 +29,28 @@ export async function buildSubtitleResponse(
   if (!vttContent) {
     throw new SubtitleDeliveryError(
       HTTP_STATUS.NOT_FOUND,
-      "Subtitles not found",
+      'Subtitles not found',
     );
   }
 
   return new Response(vttContent, {
     headers: {
-      "Content-Type": "text/vtt",
-      "Cache-Control": "public, max-age=3600",
+      'Content-Type': 'text/vtt',
+      'Cache-Control': 'public, max-age=3600',
     },
   });
 }
 
 function normalizeMode(mode: string | null): SubtitleMode {
   if (!mode) {
-    return "native";
+    return 'native';
   }
   if (isSubtitleMode(mode)) {
     return mode;
   }
   throw new SubtitleDeliveryError(
     HTTP_STATUS.BAD_REQUEST,
-    "Invalid subtitle mode",
+    'Invalid subtitle mode',
   );
 }
 

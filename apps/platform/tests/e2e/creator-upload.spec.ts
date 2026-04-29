@@ -1,5 +1,5 @@
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import path from 'path';
 import { StudioPage } from '../pages/StudioPage';
 import { UploadPage } from '../pages/UploadPage';
 
