@@ -68,7 +68,6 @@ describe('PipelineOrchestrator Unit', () => {
     mockDb = { insert: dbInsert, select: dbSelect, update: dbUpdate };
     bus = new AppEventBus();
     orchestrator = new PipelineOrchestrator(mockDb, bus);
-    // Constructor side effect (registering handlers on bus) is the goal.
     new ProgressPersistenceService(mockDb, bus);
   });
 

@@ -52,7 +52,7 @@ export class PipelineOrchestrator {
     nativeLang: LanguageCode;
     userId: string;
   }) {
-    const { videoId, targetLang } = payload;
+    const { videoId, targetLang, nativeLang, userId } = payload;
     try {
       await this.executeVideoPipeline(payload);
       console.log(`[Pipeline] Processing fully complete for: ${videoId}.`);

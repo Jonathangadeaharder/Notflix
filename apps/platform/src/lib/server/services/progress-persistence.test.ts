@@ -29,7 +29,6 @@ describe('ProgressPersistenceService', () => {
 
     const mockDb = { insert: mockInsert, update: mockUpdate } as any;
     bus = new AppEventBus();
-    // Constructor side effect (registering handlers on bus) is the goal.
     new ProgressPersistenceService(mockDb, bus);
   });
 
