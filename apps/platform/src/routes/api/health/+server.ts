@@ -1,8 +1,8 @@
-import { json } from "@sveltejs/kit";
-import type { RequestHandler } from "./$types";
-import { db } from "$lib/server/infrastructure/database";
-import { sql } from "drizzle-orm";
-import { HTTP_STATUS } from "$lib/constants";
+import { json } from '@sveltejs/kit';
+import { sql } from 'drizzle-orm';
+import { HTTP_STATUS } from '$lib/constants';
+import { db } from '$lib/server/infrastructure/database';
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
   try {
@@ -10,18 +10,18 @@ export const GET: RequestHandler = async () => {
     await db.execute(sql`SELECT 1`);
 
     return json({
-      status: "ok",
+      status: 'ok',
       timestamp: Date.now(),
       services: {
-        database: "connected",
+        database: 'connected',
       },
     });
   } catch (error) {
     return json(
       {
-        status: "error",
+        status: 'error',
         timestamp: Date.now(),
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: HTTP_STATUS.SERVICE_UNAVAILABLE },
     );

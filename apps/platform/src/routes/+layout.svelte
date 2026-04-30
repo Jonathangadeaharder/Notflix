@@ -1,18 +1,17 @@
 <script lang="ts">
-  /* eslint-disable svelte/no-navigation-without-resolve */
   import "../app.css";
-  import { onMount } from "svelte";
-  import favicon from "$lib/assets/favicon.svg";
-  import Play from "lucide-svelte/icons/play";
-  import Search from "lucide-svelte/icons/search";
+  import BookOpen from "lucide-svelte/icons/book-open";
   import Home from "lucide-svelte/icons/home";
   import Library from "lucide-svelte/icons/library";
-  import BookOpen from "lucide-svelte/icons/book-open";
-  import Menu from "lucide-svelte/icons/menu";
-  import X from "lucide-svelte/icons/x";
   import LogOut from "lucide-svelte/icons/log-out";
+  import Menu from "lucide-svelte/icons/menu";
+  import Play from "lucide-svelte/icons/play";
+  import Search from "lucide-svelte/icons/search";
+  import X from "lucide-svelte/icons/x";
+  import { onMount } from "svelte";
   import { base } from "$app/paths";
   import { page } from "$app/stores";
+  import favicon from "$lib/assets/favicon.svg";
   import { signOut } from "$lib/auth-client";
 
   let { children } = $props();

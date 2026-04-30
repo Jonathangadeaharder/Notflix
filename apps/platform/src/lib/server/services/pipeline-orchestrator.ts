@@ -1,5 +1,5 @@
+import { dirname, join } from 'node:path';
 import { eq } from 'drizzle-orm';
-import { dirname, join } from 'path';
 import { video } from '$lib/server/db/schema';
 import type {
   LanguageCode,
@@ -52,58 +52,9 @@ export class PipelineOrchestrator {
     nativeLang: LanguageCode;
     userId: string;
   }) {
-    const { videoId, targetLang, nativeLang, userId } = payload;
+    const { videoId, targetLang } = payload;
     try {
-      const [record] = await this.db
-        .select()
-        .from(video)
-        .where(eq(video.id, videoId))
-        .limit(1);
-      if (!record) throw new Error(`Video not found: ${videoId}`);
-
-      // Extract audio first (skip if already an audio file)
-      const isAudio = record.filePath.match(/\.(mp3|wav|m4a|aac|ogg)$/i);
-      const audioPath = isAudio
-        ? record.filePath
-        : join(dirname(record.filePath), `${videoId}.mp3`);
-      await this.emitProgress(
-        videoId,
-        targetLang,
-        ProgressStage.TRANSCRIBING,
-        0,
-      );
-      if (!isAudio) {
-        await mediaChunker.extractAudio(record.filePath, audioPath);
-      }
-
-      const transcription = await this.transcribeWithProgress(
-        videoId,
-        targetLang,
-        audioPath,
-      );
-
-      await this.generateThumbnail(videoId, record);
-
-      const finalSegments = await this.analyzeSegments(
-        videoId,
-        targetLang,
-        transcription.data,
-      );
-
-      const translated = await this.translateAndFilter(
-        videoId,
-        targetLang,
-        nativeLang,
-        userId,
-        finalSegments,
-      );
-
-      await this.eventBus.emitAsync('video.processing.completed', {
-        videoId,
-        targetLang,
-        vttJson: translated,
-      });
-
+      await this.executeVideoPipeline(payload);
       console.log(`[Pipeline] Processing fully complete for: ${videoId}.`);
     } catch (err) {
       await this.eventBus.emitAsync('video.processing.failed', {
@@ -113,6 +64,58 @@ export class PipelineOrchestrator {
       });
       console.error(`[Pipeline Error] videoId=${videoId}:`, err);
     }
+  }
+
+  private async executeVideoPipeline(payload: {
+    videoId: string;
+    targetLang: LanguageCode;
+    nativeLang: LanguageCode;
+    userId: string;
+  }) {
+    const { videoId, targetLang, nativeLang, userId } = payload;
+    const [record] = await this.db
+      .select()
+      .from(video)
+      .where(eq(video.id, videoId))
+      .limit(1);
+    if (!record) throw new Error(`Video not found: ${videoId}`);
+
+    const isAudio = record.filePath.match(/\.(mp3|wav|m4a|aac|ogg)$/i);
+    const audioPath = isAudio
+      ? record.filePath
+      : join(dirname(record.filePath), `${videoId}.mp3`);
+    await this.emitProgress(videoId, targetLang, ProgressStage.TRANSCRIBING, 0);
+    if (!isAudio) {
+      await mediaChunker.extractAudio(record.filePath, audioPath);
+    }
+
+    const transcription = await this.transcribeWithProgress(
+      videoId,
+      targetLang,
+      audioPath,
+    );
+
+    await this.generateThumbnail(videoId, record);
+
+    const finalSegments = await this.analyzeSegments(
+      videoId,
+      targetLang,
+      transcription.data,
+    );
+
+    const translated = await this.translateAndFilter(
+      videoId,
+      targetLang,
+      nativeLang,
+      userId,
+      finalSegments,
+    );
+
+    await this.eventBus.emitAsync('video.processing.completed', {
+      videoId,
+      targetLang,
+      vttJson: translated,
+    });
   }
 
   private async emitProgress(

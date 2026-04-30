@@ -1,25 +1,25 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { db } from "../infrastructure/database";
+import { eq } from 'drizzle-orm';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  knownWords,
+  user,
   video,
   videoProcessing,
-  user,
-  knownWords,
-} from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import { generateDeck } from "./chunker.service";
-import type { VttSegment } from "../domain/translation-core";
+} from '$lib/server/db/schema';
+import type { VttSegment } from '../domain/translation-core';
+import { db } from '../infrastructure/database';
+import { generateDeck } from './chunker.service';
 
-describe("ChunkerService Integration (Real DB)", () => {
+describe('ChunkerService Integration (Real DB)', () => {
   const testUserId = crypto.randomUUID();
   const testVideoId = crypto.randomUUID();
-  const testTargetLang = "es";
+  const testTargetLang = 'es';
 
   beforeAll(async () => {
     // 1. Create a User (Required for Known Words FK)
     await db.insert(user).values({
       id: testUserId,
-      name: "Integration Test User",
+      name: 'Integration Test User',
       email: `test-${testUserId}@example.com`,
       emailVerified: true,
       image: null,
@@ -30,11 +30,9 @@ describe("ChunkerService Integration (Real DB)", () => {
     // 2. Create a Video
     await db.insert(video).values({
       id: testVideoId,
-      title: "Chunker Integration Video",
-      // eslint-disable-next-line sonarjs/publicly-writable-directories
-      filePath: "/tmp/chunker_test.mp4",
-      // eslint-disable-next-line sonarjs/publicly-writable-directories
-      thumbnailPath: "/tmp/thumb.jpg",
+      title: 'Chunker Integration Video',
+      filePath: '/tmp/chunker_test.mp4',
+      thumbnailPath: '/tmp/thumb.jpg',
       views: 0,
       published: true,
       createdAt: new Date(),
@@ -47,12 +45,12 @@ describe("ChunkerService Integration (Real DB)", () => {
       {
         start: 0,
         end: 5,
-        text: "El gato se sienta.",
+        text: 'El gato se sienta.',
         tokens: [
-          { text: "El", lemma: "el", pos: "DET", is_stop: true },
-          { text: "gato", lemma: "gato", pos: "NOUN", is_stop: false },
-          { text: "se", lemma: "se", pos: "PRON", is_stop: true },
-          { text: "sienta", lemma: "sentar", pos: "VERB", is_stop: false },
+          { text: 'El', lemma: 'el', pos: 'DET', is_stop: true },
+          { text: 'gato', lemma: 'gato', pos: 'NOUN', is_stop: false },
+          { text: 'se', lemma: 'se', pos: 'PRON', is_stop: true },
+          { text: 'sienta', lemma: 'sentar', pos: 'VERB', is_stop: false },
         ],
       },
     ];
@@ -60,7 +58,7 @@ describe("ChunkerService Integration (Real DB)", () => {
     await db.insert(videoProcessing).values({
       videoId: testVideoId,
       targetLang: testTargetLang,
-      status: "COMPLETED",
+      status: 'COMPLETED',
       vttJson: vttData,
     });
 
@@ -68,7 +66,7 @@ describe("ChunkerService Integration (Real DB)", () => {
     await db.insert(knownWords).values({
       userId: testUserId,
       lang: testTargetLang,
-      lemma: "sentar",
+      lemma: 'sentar',
     });
   });
 
@@ -82,7 +80,7 @@ describe("ChunkerService Integration (Real DB)", () => {
     await db.delete(user).where(eq(user.id, testUserId));
   });
 
-  it("should generate a deck from real DB data with correct known status", async () => {
+  it('should generate a deck from real DB data with correct known status', async () => {
     const CHUNK_END_SECONDS = 5;
     const EXPECTED_CONTENT_WORDS = 2;
     // Request chunk 0-5s
@@ -99,19 +97,19 @@ describe("ChunkerService Integration (Real DB)", () => {
     // 'el' and 'se' are stop words/not CONTENT_POS
     expect(deck).toHaveLength(EXPECTED_CONTENT_WORDS);
 
-    const gatoCard = deck.find((c) => c.lemma === "gato");
-    const sentarCard = deck.find((c) => c.lemma === "sentar");
+    const gatoCard = deck.find((c) => c.lemma === 'gato');
+    const sentarCard = deck.find((c) => c.lemma === 'sentar');
 
     expect(gatoCard).toBeDefined();
     expect(gatoCard?.isKnown).toBe(false); // Unknown
 
     expect(sentarCard).toBeDefined();
     expect(sentarCard?.isKnown).toBe(true); // Known via DB
-    expect(sentarCard?.original).toBe("sienta");
-    expect(sentarCard?.contextSentence).toBe("El gato se sienta."); // Context check
+    expect(sentarCard?.original).toBe('sienta');
+    expect(sentarCard?.contextSentence).toBe('El gato se sienta.'); // Context check
   });
 
-  it("should return empty deck for out-of-range chunk", async () => {
+  it('should return empty deck for out-of-range chunk', async () => {
     const OUT_OF_RANGE_START = 100;
     const OUT_OF_RANGE_END = 105;
     const deck = await generateDeck(

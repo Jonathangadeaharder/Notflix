@@ -1,28 +1,28 @@
-import { db } from "$lib/server/infrastructure/database";
-import { vocabReference, user, knownWords } from "$lib/server/db/schema";
-import { eq, and, sql, ilike, inArray, type SQL } from "drizzle-orm";
-import type { PageServerLoad } from "./$types";
-import { redirect } from "@sveltejs/kit";
-import { CefrLevels } from "$lib/types";
-import { HTTP_STATUS } from "$lib/constants";
+import { redirect } from '@sveltejs/kit';
+import { and, eq, ilike, inArray, type SQL, sql } from 'drizzle-orm';
+import { HTTP_STATUS } from '$lib/constants';
+import { knownWords, user, vocabReference } from '$lib/server/db/schema';
+import { db } from '$lib/server/infrastructure/database';
+import { CefrLevels } from '$lib/types';
+import type { PageServerLoad } from './$types';
 
 const ALLOWED_LEVELS: Set<string> = new Set(CefrLevels);
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(HTTP_STATUS.SEE_OTHER, "/login?next=/vocabulary");
+    throw redirect(HTTP_STATUS.SEE_OTHER, '/login?next=/vocabulary');
   }
   const userId = session.user.id;
 
   const lang = await resolveTargetLang(userId, url);
   const conditions = buildFilterConditions(
     lang,
-    url.searchParams.get("level"),
-    url.searchParams.get("search"),
+    url.searchParams.get('level'),
+    url.searchParams.get('search'),
   );
 
-  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
   const limit = 50;
   const offset = (page - 1) * limit;
 
@@ -47,8 +47,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     filters: {
       lang,
-      level: url.searchParams.get("level"),
-      search: url.searchParams.get("search"),
+      level: url.searchParams.get('level'),
+      search: url.searchParams.get('search'),
     },
     levelCounts,
     user: session.user,
@@ -57,7 +57,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 async function resolveTargetLang(userId: string, url: URL): Promise<string> {
-  const paramLang = url.searchParams.get("lang");
+  const paramLang = url.searchParams.get('lang');
   if (paramLang) return paramLang;
 
   const [profile] = await db
@@ -66,7 +66,7 @@ async function resolveTargetLang(userId: string, url: URL): Promise<string> {
     .where(eq(user.id, userId))
     .limit(1);
 
-  return profile?.targetLang || "es";
+  return profile?.targetLang || 'es';
 }
 
 function buildFilterConditions(
@@ -77,13 +77,13 @@ function buildFilterConditions(
   const conditions = [eq(vocabReference.lang, lang)];
 
   if (level) {
-    if (level === "untracked") {
+    if (level === 'untracked') {
       conditions.push(sql`${vocabReference.level} IS NULL`);
     } else if (ALLOWED_LEVELS.has(level)) {
       conditions.push(
         eq(
           vocabReference.level,
-          level as "A1" | "A2" | "B1" | "B2" | "C1" | "C2",
+          level as 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2',
         ),
       );
     }
@@ -142,7 +142,7 @@ async function fetchLevelCounts(lang: string): Promise<Record<string, number>> {
     untracked: 0,
   };
   for (const row of levelCounts) {
-    countsMap[row.level ?? "untracked"] = row.count;
+    countsMap[row.level ?? 'untracked'] = row.count;
   }
   return countsMap;
 }

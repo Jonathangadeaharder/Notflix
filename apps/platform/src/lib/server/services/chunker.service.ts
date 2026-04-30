@@ -64,7 +64,7 @@ async function fetchVttData(
     )
     .limit(1);
 
-  if (!processing || !processing.vttJson) return null;
+  if (!processing?.vttJson) return null;
   return processing.vttJson as VttSegment[];
 }
 

@@ -1,5 +1,5 @@
-import type { SubtitleMode, Subtitle } from "./types";
-import { INDICES } from "$lib/constants";
+import { INDICES } from '$lib/constants';
+import type { Subtitle, SubtitleMode } from './types';
 
 const SECONDS_IN_MINUTE = 60;
 const SECONDS_IN_HOUR = 3600;
@@ -10,28 +10,28 @@ const MEDIA_ERR_NETWORK = 2;
 const MEDIA_ERR_DECODE = 3;
 const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
 
-const SUBTITLE_MODES: SubtitleMode[] = ["OFF", "FILTERED", "DUAL", "ORIGINAL"];
+const SUBTITLE_MODES: SubtitleMode[] = ['OFF', 'FILTERED', 'DUAL', 'ORIGINAL'];
 
 const ERROR_MESSAGES: Record<number, string> = {
-  [MEDIA_ERR_ABORTED]: "Playback aborted by user.",
-  [MEDIA_ERR_NETWORK]: "Network error while downloading.",
+  [MEDIA_ERR_ABORTED]: 'Playback aborted by user.',
+  [MEDIA_ERR_NETWORK]: 'Network error while downloading.',
   [MEDIA_ERR_DECODE]:
-    "Video playback aborted due to a corruption problem or because the video used features your browser did not support.",
+    'Video playback aborted due to a corruption problem or because the video used features your browser did not support.',
   [MEDIA_ERR_SRC_NOT_SUPPORTED]:
-    "The video could not be loaded, either because the server or network failed or because the format is not supported (File might be missing).",
+    'The video could not be loaded, either because the server or network failed or because the format is not supported (File might be missing).',
 };
 
-const DEFAULT_ERROR_MESSAGE = "Unknown error occurred";
+const DEFAULT_ERROR_MESSAGE = 'Unknown error occurred';
 
-const AUDIO_EXTENSIONS = [".m4a", ".mp3", ".wav", ".aac", ".ogg"];
+const AUDIO_EXTENSIONS = ['.m4a', '.mp3', '.wav', '.aac', '.ogg'];
 
 const PROGRESS_REPORT_INTERVAL_SECONDS = 5;
 const PERCENTAGE_BASE = 100;
 
 export {
   MEDIA_ERR_ABORTED,
-  MEDIA_ERR_NETWORK,
   MEDIA_ERR_DECODE,
+  MEDIA_ERR_NETWORK,
   MEDIA_ERR_SRC_NOT_SUPPORTED,
 };
 
@@ -41,7 +41,7 @@ export {
  */
 export function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
-    return "0:00";
+    return '0:00';
   }
 
   const totalSeconds = Math.floor(seconds);
@@ -50,10 +50,10 @@ export function formatTime(seconds: number): string {
   const secs = totalSeconds % SECONDS_IN_MINUTE;
 
   if (hours > 0) {
-    return `${hours}:${mins.toString().padStart(PAD_LENGTH, "0")}:${secs.toString().padStart(PAD_LENGTH, "0")}`;
+    return `${hours}:${mins.toString().padStart(PAD_LENGTH, '0')}:${secs.toString().padStart(PAD_LENGTH, '0')}`;
   }
 
-  return `${mins}:${secs.toString().padStart(PAD_LENGTH, "0")}`;
+  return `${mins}:${secs.toString().padStart(PAD_LENGTH, '0')}`;
 }
 
 /**
@@ -76,7 +76,7 @@ export function getNextSubtitleMode(current: SubtitleMode): SubtitleMode {
  * Returns true if the file path is an audio-only file (mp3/m4a).
  */
 export function isAudioFile(filePath: string): boolean {
-  const lower = (filePath ?? "").toLowerCase().split(/[?#]/, 1)[INDICES.FIRST];
+  const lower = (filePath ?? '').toLowerCase().split(/[?#]/, 1)[INDICES.FIRST];
   return AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 
@@ -102,18 +102,18 @@ export function getTranscriptItemClass(
   const isCurrent = currentTime >= subtitle.start && currentTime < subtitle.end;
 
   if (isCurrent) {
-    return "border-amber-400/70 bg-white/10";
+    return 'border-amber-400/70 bg-white/10';
   }
 
-  if (subtitle.classification === "LEARNING") {
-    return "border-amber-500/30";
+  if (subtitle.classification === 'LEARNING') {
+    return 'border-amber-500/30';
   }
 
-  if (subtitle.classification === "HARD") {
-    return "border-red-500/30";
+  if (subtitle.classification === 'HARD') {
+    return 'border-red-500/30';
   }
 
-  return "border-white/10";
+  return 'border-white/10';
 }
 
 /**
@@ -127,7 +127,7 @@ export function markWordKnown(
     ...subtitle,
     words: subtitle.words?.map((word) =>
       word.lemma === lemma
-        ? { ...word, isKnown: true, difficulty: "easy" as const }
+        ? { ...word, isKnown: true, difficulty: 'easy' as const }
         : word,
     ),
   }));

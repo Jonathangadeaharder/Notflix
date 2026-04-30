@@ -1,25 +1,26 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
   import GameOverlay from "$lib/components/GameOverlay.svelte";
+  import { GAME } from "$lib/constants";
+  import type { GameCard } from "$lib/types";
+  import { getUpcomingGameWindow } from "$lib/utils/game-window";
   import SubtitleDisplay from "./SubtitleDisplay.svelte";
   import type {
-    PlayerVideo,
     PlayerSettings,
+    PlayerVideo,
     Subtitle,
     SubtitleMode,
   } from "./types";
-  import { GAME } from "$lib/constants";
-  import { getUpcomingGameWindow } from "$lib/utils/game-window";
   import {
+    calcProgressPercent,
+    calculateNextInterrupt,
     formatTime,
     getMediaErrorMessage,
     getNextSubtitleMode,
+    getTranscriptItemClass,
     isAudioFile,
-    calculateNextInterrupt,
-    getTranscriptItemClass as getTranscriptItemClassPure,
     markWordKnown,
     shouldReportProgress,
-    calcProgressPercent,
   } from "./video-player-utils";
 
   let {
@@ -30,12 +31,13 @@
     onRequestGameCards,
     onProgressUpdate,
     onAnswerSubmitted,
+    onReady,
+    onError,
   } = $props<{
     video: PlayerVideo;
     subtitles: Subtitle[];
     settings: PlayerSettings;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    gameCards: any[];
+    gameCards: GameCard[];
     onRequestGameCards?: (
       chunkIndex: number,
       start: number,
@@ -51,6 +53,8 @@
       lang: string;
       isKnown: boolean;
     }) => void;
+    onReady?: () => void;
+    onError?: (error: { code: number; message: string }) => void;
   }>();
 
   const NO_PROGRESS_REPORTED = -1;
@@ -151,13 +155,15 @@
       videoElement.currentTime = Math.min(video.videoProgress, duration);
       currentTime = videoElement.currentTime;
     }
+
+    onReady?.();
   }
 
   function handleVideoError(e: Event) {
     console.error("[Player] Video Error Event:", e);
     const target = e.target as HTMLVideoElement;
 
-    if (target && target.error) {
+    if (target?.error) {
       const code = target.error.code;
       const message = getMediaErrorMessage(code);
 
@@ -167,6 +173,8 @@
     } else {
       errorState = { code: 0, message: "Unknown error occurred" };
     }
+
+    onError?.(errorState);
   }
 
   function handleTimeUpdate() {
@@ -304,10 +312,10 @@
   <!-- Force hide native controls -->
   <style>
     video::-webkit-media-controls {
-      display: none !important;
+      display: none;
     }
     video::-webkit-media-controls-enclosure {
-      display: none !important;
+      display: none;
     }
   </style>
 
@@ -344,7 +352,7 @@
         {#each subtitleEntries as subtitle, index (index)}
           <button
             type="button"
-            class="w-full rounded-xl border p-3 text-left transition-colors hover:bg-white/5 {getTranscriptItemClassPure(
+            class="w-full rounded-xl border p-3 text-left transition-colors hover:bg-white/5 {getTranscriptItemClass(
               currentTime,
               subtitle,
             )}"

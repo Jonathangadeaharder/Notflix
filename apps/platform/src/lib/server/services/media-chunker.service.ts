@@ -1,6 +1,6 @@
-import { spawn } from 'child_process';
-import { mkdir } from 'fs/promises';
-import { dirname, join } from 'path';
+import { spawn } from 'node:child_process';
+import { mkdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 export interface ChunkMetadata {
   index: number;

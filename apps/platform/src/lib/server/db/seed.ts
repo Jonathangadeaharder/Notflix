@@ -1,23 +1,23 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { vocabReference } from "./schema";
-import { parseLemmasFromCsv } from "./seed-csv";
-import { INDICES } from "$lib/constants";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { INDICES } from '$lib/constants';
+import { vocabReference } from './schema';
+import { parseLemmasFromCsv } from './seed-csv';
 
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgres://admin:password@127.0.0.1:5432/main_db";
+  'postgres://admin:password@127.0.0.1:5432/main_db';
 const client = postgres(connectionString);
 const db = drizzle(client);
 
-const LEVELS = ["A1", "A2", "B1", "B2", "C1"] as const;
+const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'] as const;
 const BATCH_SIZE = 500;
 
 async function seed() {
-  console.log("Seeding vocab_reference...");
+  console.log('Seeding vocab_reference...');
 
   for (const level of LEVELS) {
     const csvPath = path.resolve(process.cwd(), `assets/vocab/es/${level}.csv`);
@@ -32,18 +32,18 @@ async function seed() {
     for (let i = 0; i < lemmas.length; i += BATCH_SIZE) {
       const batch = lemmas.slice(i, i + BATCH_SIZE).map((lemma) => ({
         lemma,
-        lang: "es",
+        lang: 'es',
         level,
         isProperNoun: false,
       }));
       await db.insert(vocabReference).values(batch).onConflictDoNothing();
-      process.stdout.write(".");
+      process.stdout.write('.');
     }
 
     console.log(` ${level}: ${lemmas.length} words`);
   }
 
-  console.log("\nSeeding complete!");
+  console.log('\nSeeding complete!');
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,7 +56,7 @@ if (
       await seed();
       process.exitCode = 0;
     } catch (err) {
-      console.error("Seeding failed:", err);
+      console.error('Seeding failed:', err);
       process.exitCode = 1;
     } finally {
       await client.end();

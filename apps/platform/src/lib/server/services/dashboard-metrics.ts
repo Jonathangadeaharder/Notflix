@@ -1,6 +1,6 @@
-import type { DbVttSegment } from "$lib/server/db/schema";
-import { ProcessingStatus } from "../infrastructure/config";
-import { INDICES } from "$lib/constants";
+import { INDICES } from '$lib/constants';
+import type { DbVttSegment } from '$lib/server/db/schema';
+import { ProcessingStatus } from '../infrastructure/config';
 
 const COMPREHENSION_WEIGHTS: Record<string, number> = {
   EASY: 1,
@@ -86,16 +86,16 @@ export function getDashboardStatusLabel(
   watchPercent: number,
 ): string {
   if (status === ProcessingStatus.ERROR) {
-    return "Needs Attention";
+    return 'Needs Attention';
   }
 
   if (status !== ProcessingStatus.COMPLETED) {
-    return "Processing";
+    return 'Processing';
   }
 
   if (watchPercent > 0 && watchPercent < MAX_PERCENT) {
-    return "Continue Watching";
+    return 'Continue Watching';
   }
 
-  return "Ready";
+  return 'Ready';
 }

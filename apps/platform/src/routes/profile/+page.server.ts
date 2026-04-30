@@ -1,19 +1,19 @@
-import { db } from "$lib/server/infrastructure/database";
-import { user } from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import type { PageServerLoad, Actions } from "./$types";
-import { redirect, fail } from "@sveltejs/kit";
-import { z } from "zod";
-import { GAME, HTTP_STATUS } from "$lib/constants";
+import { fail, redirect } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { GAME, HTTP_STATUS } from '$lib/constants';
+import { user } from '$lib/server/db/schema';
+import { db } from '$lib/server/infrastructure/database';
+import type { Actions, PageServerLoad } from './$types';
 
 const profileSchema = z.object({
   gameInterval: z.string().refine(
     (val) => {
       const num = parseInt(val, 10);
-      return !isNaN(num) && num >= 0 && num <= GAME.MAX_INTERVAL_MINUTES;
+      return !Number.isNaN(num) && num >= 0 && num <= GAME.MAX_INTERVAL_MINUTES;
     },
     {
-      message: "Interval must be between 0 and 60 minutes",
+      message: 'Interval must be between 0 and 60 minutes',
     },
   ),
 });
@@ -21,7 +21,7 @@ const profileSchema = z.object({
 export const load: PageServerLoad = async ({ locals }) => {
   const session = await locals.auth();
   if (!session) {
-    throw redirect(HTTP_STATUS.SEE_OTHER, "/login?next=/profile");
+    throw redirect(HTTP_STATUS.SEE_OTHER, '/login?next=/profile');
   }
 
   const [profile] = await db
@@ -31,7 +31,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     .limit(1);
 
   if (!profile) {
-    throw new Error("User profile not found");
+    throw new Error('User profile not found');
   }
 
   return {
@@ -51,7 +51,7 @@ export const actions: Actions = {
     const session = await locals.auth();
     if (!session) {
       return fail(HTTP_STATUS.UNAUTHORIZED, {
-        errors: { auth: ["Unauthorized"] },
+        errors: { auth: ['Unauthorized'] },
         data: {},
       });
     }
@@ -75,5 +75,26 @@ export const actions: Actions = {
       .where(eq(user.id, session.user.id));
 
     return { success: true, data: result.data };
+  },
+
+  updateLanguages: async ({ request, locals }) => {
+    const session = await locals.auth();
+    if (!session) {
+      return fail(HTTP_STATUS.UNAUTHORIZED, {
+        errors: { auth: ['Unauthorized'] },
+        data: {},
+      });
+    }
+
+    const formData = await request.formData();
+    const nativeLang = (formData.get('nativeLang') as string) || 'en';
+    const targetLang = (formData.get('targetLang') as string) || 'es';
+
+    await db
+      .update(user)
+      .set({ nativeLang, targetLang })
+      .where(eq(user.id, session.user.id));
+
+    return { success: true, data: { nativeLang, targetLang } };
   },
 };

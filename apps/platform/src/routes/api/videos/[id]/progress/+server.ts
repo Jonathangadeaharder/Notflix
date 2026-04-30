@@ -1,21 +1,21 @@
-import { json, type RequestEvent } from "@sveltejs/kit";
-import { videoProcessing, watchProgress } from "$lib/server/db/schema";
-import { and, eq } from "drizzle-orm";
-import { db } from "$lib/server/infrastructure/database";
-import { CONFIG, ProcessingStatus } from "$lib/server/infrastructure/config";
-import { HTTP_STATUS } from "$lib/constants";
-import { ProgressStage } from "$lib/types";
+import { json, type RequestEvent } from '@sveltejs/kit';
+import { and, eq } from 'drizzle-orm';
+import { HTTP_STATUS } from '$lib/constants';
+import { videoProcessing, watchProgress } from '$lib/server/db/schema';
+import { CONFIG, ProcessingStatus } from '$lib/server/infrastructure/config';
+import { db } from '$lib/server/infrastructure/database';
+import { ProgressStage } from '$lib/types';
 
 const MAX_PROGRESS_PERCENT = 100;
 
 async function validateRequest(
-  locals: RequestEvent["locals"],
-  params: RequestEvent["params"],
+  locals: RequestEvent['locals'],
+  params: RequestEvent['params'],
 ) {
   if (!params.id) {
     return {
       errorResponse: json(
-        { error: "Video not found" },
+        { error: 'Video not found' },
         { status: HTTP_STATUS.NOT_FOUND },
       ),
     };
@@ -25,7 +25,7 @@ async function validateRequest(
   if (!session?.user) {
     return {
       errorResponse: json(
-        { error: "Unauthorized" },
+        { error: 'Unauthorized' },
         { status: HTTP_STATUS.UNAUTHORIZED },
       ),
     };
@@ -38,7 +38,7 @@ export const GET = async ({ params, locals, url }: RequestEvent) => {
   if (errorResponse) return errorResponse;
 
   const targetLang =
-    url.searchParams.get("targetLang") || CONFIG.DEFAULT_TARGET_LANG;
+    url.searchParams.get('targetLang') || CONFIG.DEFAULT_TARGET_LANG;
 
   const [[processing], [progress]] = await Promise.all([
     db
@@ -85,7 +85,7 @@ export const POST = async ({ params, request, locals }: RequestEvent) => {
   if (errorResponse) return errorResponse;
 
   const body = await parseProgressBody(request);
-  if ("errorResponse" in body) return body.errorResponse;
+  if ('errorResponse' in body) return body.errorResponse;
 
   await db
     .insert(watchProgress)
@@ -111,22 +111,22 @@ export const POST = async ({ params, request, locals }: RequestEvent) => {
 };
 
 async function parseProgressBody(request: Request) {
-  let body;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return {
       errorResponse: json(
-        { error: "Invalid JSON" },
+        { error: 'Invalid JSON' },
         { status: HTTP_STATUS.BAD_REQUEST },
       ),
     };
   }
 
-  if (!body || typeof body !== "object") {
+  if (!body || typeof body !== 'object') {
     return {
       errorResponse: json(
-        { error: "Invalid JSON body" },
+        { error: 'Invalid JSON body' },
         { status: HTTP_STATUS.BAD_REQUEST },
       ),
     };
@@ -149,7 +149,7 @@ async function parseProgressBody(request: Request) {
   ) {
     return {
       errorResponse: json(
-        { error: "Invalid progress payload" },
+        { error: 'Invalid progress payload' },
         { status: HTTP_STATUS.BAD_REQUEST },
       ),
     };

@@ -1,5 +1,5 @@
-import { expect } from "@playwright/test";
-import type { Page, Locator } from "@playwright/test";
+import type { Locator, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 export class ProfilePage {
   readonly page: Page;
@@ -10,15 +10,15 @@ export class ProfilePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.locator("h1");
+    this.heading = page.locator('h1');
     this.gameIntervalInput = page.locator('input[name="gameInterval"]');
-    this.saveButton = page.locator('button[type="submit"]');
-    this.successIndicator = page.locator("text=saved");
+    this.saveButton = page.getByRole('button', { name: 'Save settings' });
+    this.successIndicator = page.locator('text=saved');
   }
 
   async goto() {
-    await this.page.goto("/profile");
-    await this.page.waitForLoadState("load");
+    await this.page.goto('/profile');
+    await this.page.waitForLoadState('load');
   }
 
   async getGameInterval(): Promise<string> {
@@ -26,8 +26,8 @@ export class ProfilePage {
   }
 
   async setGameInterval(value: string) {
-    const label = value === "0" ? "Off" : `${value} min`;
-    const btn = this.page.getByRole("button", { name: label, exact: true });
+    const label = value === '0' ? 'Off' : `${value} min`;
+    const btn = this.page.getByRole('button', { name: label, exact: true });
     await btn.click();
   }
 
@@ -37,6 +37,6 @@ export class ProfilePage {
   }
 
   async expectHeadingVisible() {
-    await expect(this.heading).toContainText("Profile");
+    await expect(this.heading).toContainText('Profile');
   }
 }

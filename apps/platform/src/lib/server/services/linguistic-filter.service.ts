@@ -1,14 +1,14 @@
-import { db as defaultDb } from "../infrastructure/database";
-import type { TokenAnalysis } from "../domain/translation-core";
-import { getKnownLemmas } from "./knowledge.service";
-import { LIMITS } from "$lib/constants";
+import { LIMITS } from '$lib/constants';
+import type { TokenAnalysis } from '../domain/translation-core';
+import { db as defaultDb } from '../infrastructure/database';
+import { getKnownLemmas } from './knowledge.service';
 
 const DEFAULT_LEMMA_QUERY_BATCH_SIZE = 500;
 
 export enum SegmentClassification {
-  EASY = "EASY", // Majority of words are known
-  LEARNING = "LEARNING", // Contains unknown words worth learning
-  HARD = "HARD", // Too many unknown words, likely confusing
+  EASY = 'EASY', // Majority of words are known
+  LEARNING = 'LEARNING', // Contains unknown words worth learning
+  HARD = 'HARD', // Too many unknown words, likely confusing
 }
 
 export type FilteredSegment = {
@@ -24,7 +24,7 @@ export class SmartFilter {
 
   private isLearnerContentToken(t: TokenAnalysis): boolean {
     return (
-      (!t.is_stop || t.pos === "PRON" || t.pos === "ADP") && t.pos !== "PUNCT"
+      (!t.is_stop || t.pos === 'PRON' || t.pos === 'ADP') && t.pos !== 'PUNCT'
     );
   }
 
@@ -71,12 +71,12 @@ export class SmartFilter {
     // Include functional categories that are often stop words but hard for learners (Pronouns, Prepositions)
     const contentTokens = tokens.filter(
       (t) =>
-        (!t.is_stop || ["PRON", "ADP"].includes(t.pos)) && t.pos !== "PUNCT",
+        (!t.is_stop || ['PRON', 'ADP'].includes(t.pos)) && t.pos !== 'PUNCT',
     );
 
     const enrichedTokens = tokens.map((t) => ({
       ...t,
-      isKnown: t.is_stop || t.pos === "PUNCT" || knownSet.has(t.lemma),
+      isKnown: t.is_stop || t.pos === 'PUNCT' || knownSet.has(t.lemma),
     }));
 
     const unknownCount = contentTokens.filter(

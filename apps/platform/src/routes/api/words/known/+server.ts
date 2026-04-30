@@ -1,10 +1,10 @@
-import { json } from "@sveltejs/kit";
-import { db } from "$lib/server/infrastructure/database";
-import { knownWords } from "$lib/server/db/schema";
-import type { RequestHandler } from "./$types";
-import { z } from "zod";
-import { eq, and } from "drizzle-orm";
-import { HTTP_STATUS } from "$lib/constants";
+import { json } from '@sveltejs/kit';
+import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { HTTP_STATUS } from '$lib/constants';
+import { knownWords } from '$lib/server/db/schema';
+import { db } from '$lib/server/infrastructure/database';
+import type { RequestHandler } from './$types';
 
 const MAX_LEMMA_LENGTH = 200;
 
@@ -12,7 +12,7 @@ const knownWordSchema = z.object({
   lemma: z.string().min(1).max(MAX_LEMMA_LENGTH),
   lang: z
     .string()
-    .regex(/^[a-z]{2,5}$/i, "lang must be a 2-5 letter language code"),
+    .regex(/^[a-z]{2,5}$/i, 'lang must be a 2-5 letter language code'),
 });
 
 type ParseResult =
@@ -20,35 +20,35 @@ type ParseResult =
   | { ok: true; lemma: string; lang: string };
 
 async function parseKnownWordRequest(request: Request): Promise<ParseResult> {
-  let body;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return {
       ok: false,
       errorResponse: json(
-        { error: "Invalid JSON" },
+        { error: 'Invalid JSON' },
         { status: HTTP_STATUS.BAD_REQUEST },
       ),
     };
   }
 
-  if (!body || typeof body !== "object") {
+  if (!body || typeof body !== 'object') {
     return {
       ok: false,
       errorResponse: json(
-        { error: "Invalid JSON body" },
+        { error: 'Invalid JSON body' },
         { status: HTTP_STATUS.BAD_REQUEST },
       ),
     };
   }
 
   const { lemma, lang } = body as Record<string, unknown>;
-  if (typeof lemma !== "string" || typeof lang !== "string") {
+  if (typeof lemma !== 'string' || typeof lang !== 'string') {
     return {
       ok: false,
       errorResponse: json(
-        { error: "Missing lemma or lang" },
+        { error: 'Missing lemma or lang' },
         { status: HTTP_STATUS.BAD_REQUEST },
       ),
     };
@@ -59,7 +59,7 @@ async function parseKnownWordRequest(request: Request): Promise<ParseResult> {
     return {
       ok: false,
       errorResponse: json(
-        { error: parsed.error.issues.map((i) => i.message).join(", ") },
+        { error: parsed.error.issues.map((i) => i.message).join(', ') },
         { status: HTTP_STATUS.BAD_REQUEST },
       ),
     };
@@ -72,7 +72,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const session = await locals.auth();
   if (!session?.user) {
     return json(
-      { error: "Unauthorized" },
+      { error: 'Unauthorized' },
       { status: HTTP_STATUS.UNAUTHORIZED },
     );
   }
@@ -93,9 +93,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     return json({ success: true }, { status: HTTP_STATUS.OK });
   } catch (e) {
-    console.error("Failed to save known word:", e);
+    console.error('Failed to save known word:', e);
     return json(
-      { error: "Database error" },
+      { error: 'Database error' },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
@@ -105,7 +105,7 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
   const session = await locals.auth();
   if (!session?.user) {
     return json(
-      { error: "Unauthorized" },
+      { error: 'Unauthorized' },
       { status: HTTP_STATUS.UNAUTHORIZED },
     );
   }
@@ -127,16 +127,16 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 
     if (result.length === 0) {
       return json(
-        { error: "Word not found in known_words" },
+        { error: 'Word not found in known_words' },
         { status: HTTP_STATUS.NOT_FOUND },
       );
     }
 
     return json({ success: true }, { status: HTTP_STATUS.OK });
   } catch (e) {
-    console.error("Failed to delete known word:", e);
+    console.error('Failed to delete known word:', e);
     return json(
-      { error: "Database error" },
+      { error: 'Database error' },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }

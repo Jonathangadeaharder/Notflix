@@ -1,25 +1,25 @@
-import path from "path";
-import fs from "fs";
-import { HTTP_STATUS } from "$lib/constants";
+import fs from 'node:fs';
+import path from 'node:path';
+import { HTTP_STATUS } from '$lib/constants';
 
 const CONTENT_TYPE_MAP: Record<string, string> = {
-  ".mp4": "video/mp4",
-  ".webm": "video/webm",
-  ".mkv": "video/x-matroska",
-  ".avi": "video/x-msvideo",
-  ".mov": "video/quicktime",
-  ".mp3": "audio/mpeg",
-  ".m4a": "audio/mp4",
-  ".aac": "audio/aac",
-  ".ogg": "audio/ogg",
-  ".wav": "audio/wav",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".webp": "image/webp",
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mkv': 'video/x-matroska',
+  '.avi': 'video/x-msvideo',
+  '.mov': 'video/quicktime',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac',
+  '.ogg': 'audio/ogg',
+  '.wav': 'audio/wav',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
 };
 
-const DEFAULT_CONTENT_TYPE = "application/octet-stream";
+const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 
 export interface ResolvedMediaPath {
   fullPath: string;
@@ -39,7 +39,7 @@ export function resolveMediaPath(
   mediaRoot: string,
 ): ResolvedMediaPath {
   if (!filePath) {
-    throw new MediaPathError(HTTP_STATUS.BAD_REQUEST, "Missing file path");
+    throw new MediaPathError(HTTP_STATUS.BAD_REQUEST, 'Missing file path');
   }
 
   const resolvedMediaRoot = path.resolve(mediaRoot);
@@ -50,8 +50,8 @@ export function resolveMediaPath(
   try {
     canonicalPath = fs.realpathSync(fullPath);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw new MediaPathError(HTTP_STATUS.NOT_FOUND, "File not found");
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw new MediaPathError(HTTP_STATUS.NOT_FOUND, 'File not found');
     }
     try {
       const parentDir = path.dirname(fullPath);
@@ -64,12 +64,12 @@ export function resolveMediaPath(
 
   const relativePath = path.relative(canonicalRoot, canonicalPath);
   if (
-    relativePath === ".." ||
+    relativePath === '..' ||
     relativePath.startsWith(`${path.sep}..`) ||
     relativePath.startsWith(`..${path.sep}`) ||
     path.isAbsolute(relativePath)
   ) {
-    throw new MediaPathError(HTTP_STATUS.FORBIDDEN, "Forbidden");
+    throw new MediaPathError(HTTP_STATUS.FORBIDDEN, 'Forbidden');
   }
 
   const ext = path.extname(fullPath).toLowerCase();

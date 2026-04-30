@@ -1,10 +1,11 @@
 import { and, eq } from 'drizzle-orm';
-import { videoProcessing } from '$lib/server/db/schema';
-import { ProgressStage } from '$lib/types';
+import { type DbVttSegment, videoProcessing } from '$lib/server/db/schema';
+import { ProgressStage, type ProgressStageType } from '$lib/types';
 import { ProcessingStatus } from '../infrastructure/config';
 import { db as defaultDb } from '../infrastructure/database';
 import {
   type AppEventBus,
+  type AppEventPayloads,
   eventBus as defaultEventBus,
 } from '../infrastructure/event-bus';
 
@@ -33,10 +34,9 @@ export class ProgressPersistenceService {
     );
   }
 
-  private async handleStarted(payload: {
-    videoId: string;
-    targetLang: string;
-  }) {
+  private async handleStarted(
+    payload: AppEventPayloads['video.processing.started'],
+  ) {
     await this.db
       .insert(videoProcessing)
       .values({
@@ -57,17 +57,14 @@ export class ProgressPersistenceService {
       });
   }
 
-  private async handleProgress(payload: {
-    videoId: string;
-    targetLang: string;
-    stage: string;
-    percent: number;
-  }) {
+  private async handleProgress(
+    payload: AppEventPayloads['video.processing.progress'],
+  ) {
     await this.db
       .update(videoProcessing)
       .set({
         status: ProcessingStatus.PROCESSING,
-        progressStage: payload.stage as any,
+        progressStage: payload.stage as ProgressStageType,
         progressPercent: payload.percent,
       })
       .where(
@@ -78,18 +75,16 @@ export class ProgressPersistenceService {
       );
   }
 
-  private async handleCompleted(payload: {
-    videoId: string;
-    targetLang: string;
-    vttJson: any;
-  }) {
+  private async handleCompleted(
+    payload: AppEventPayloads['video.processing.completed'],
+  ) {
     await this.db
       .update(videoProcessing)
       .set({
         status: ProcessingStatus.COMPLETED,
         progressStage: ProgressStage.READY,
         progressPercent: 100,
-        vttJson: payload.vttJson,
+        vttJson: payload.vttJson as DbVttSegment[],
       })
       .where(
         and(
@@ -99,11 +94,9 @@ export class ProgressPersistenceService {
       );
   }
 
-  private async handleFailed(payload: {
-    videoId: string;
-    targetLang: string;
-    error: string;
-  }) {
+  private async handleFailed(
+    payload: AppEventPayloads['video.processing.failed'],
+  ) {
     await this.db
       .update(videoProcessing)
       .set({

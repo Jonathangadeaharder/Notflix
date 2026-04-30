@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { resolve } from "$app/paths";
-  import Play from "lucide-svelte/icons/play";
-  import Info from "lucide-svelte/icons/info";
-  import Plus from "lucide-svelte/icons/plus";
   import ArrowRight from "lucide-svelte/icons/arrow-right";
+  import Info from "lucide-svelte/icons/info";
+  import Play from "lucide-svelte/icons/play";
+  import Plus from "lucide-svelte/icons/plus";
+  import { resolve } from "$app/paths";
+  import Chip from "$lib/components/brand/Chip.svelte";
   import ComprehensionRing from "$lib/components/brand/ComprehensionRing.svelte";
   import Poster from "$lib/components/brand/Poster.svelte";
-  import Chip from "$lib/components/brand/Chip.svelte";
   import RailHeader from "$lib/components/brand/RailHeader.svelte";
   import type { DashboardVideo } from "$lib/server/services/dashboard-metrics";
   import type {

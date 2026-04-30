@@ -7,9 +7,7 @@
     "@biomejs/biome": "^2.4.13",
     "drizzle-orm": "0.45.2",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
-    "prettier": "^3.8.1",
-    "prettier-plugin-svelte": "^3.5.1"
+    "lint-staged": "^16.2.7"
   },
   "scripts": {
     "prepare": "husky",

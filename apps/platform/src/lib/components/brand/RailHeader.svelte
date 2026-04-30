@@ -34,7 +34,6 @@
     {/if}
   </div>
   {#if seeAllHref}
-    <!-- eslint-disable svelte/no-navigation-without-resolve -->
     <a
       href={seeAllHref}
       class="text-xs flex items-center gap-1 hover:opacity-80"
@@ -42,7 +41,6 @@
     >
       See all <ChevronRight class="h-3 w-3" />
     </a>
-    <!-- eslint-enable svelte/no-navigation-without-resolve -->
   {:else if onSeeAll}
     <button
       type="button"

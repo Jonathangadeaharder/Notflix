@@ -1,6 +1,6 @@
 export interface WordData {
   text: string;
-  difficulty: "easy" | "learning" | "hard";
+  difficulty: 'easy' | 'learning' | 'hard';
   lemma?: string;
   translation?: string;
   breakdown?: string;
@@ -9,14 +9,14 @@ export interface WordData {
   partOfSpeech?: string;
 }
 
-export type SubtitleMode = "OFF" | "FILTERED" | "DUAL" | "ORIGINAL";
+export type SubtitleMode = 'OFF' | 'FILTERED' | 'DUAL' | 'ORIGINAL';
 
 export interface Subtitle {
   start: number;
   end: number;
   text: string;
   translation: string;
-  classification?: "EASY" | "LEARNING" | "HARD";
+  classification?: 'EASY' | 'LEARNING' | 'HARD';
   words?: WordData[];
 }
 

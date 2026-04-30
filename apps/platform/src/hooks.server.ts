@@ -1,6 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import type { Handle } from '@sveltejs/kit';
 import { json, redirect } from '@sveltejs/kit';
-import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { building } from '$app/environment';
 import { HTTP_STATUS, INDICES } from '$lib/constants';
@@ -74,10 +74,29 @@ export const handle: Handle = async ({ event, resolve }) => {
   let sessionCache: Session | null | undefined;
   event.locals.auth = async () => {
     if (sessionCache !== undefined) return sessionCache;
+
+    // Only attempt real Supabase auth if cookies indicate a prior session
+    const hasAuthCookies = event.cookies
+      .getAll()
+      .some((c) => c.name.startsWith('sb-'));
+
+    if (hasAuthCookies && process.env.PUBLIC_SUPABASE_URL) {
+      try {
+        const realSession = await resolveSession(event);
+        if (realSession) {
+          sessionCache = realSession;
+          return sessionCache;
+        }
+      } catch {
+        // Auth service unreachable — fall through to E2E fallback
+      }
+    }
+
     if (process.env.PLAYWRIGHT_TEST === 'true') {
       sessionCache = await resolveE2eSession();
       return sessionCache;
     }
+
     sessionCache = await resolveSession(event);
     return sessionCache;
   };

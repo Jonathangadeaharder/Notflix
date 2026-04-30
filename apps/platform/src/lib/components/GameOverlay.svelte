@@ -1,7 +1,7 @@
 <script lang="ts">
-  import X from "lucide-svelte/icons/x";
   import Check from "lucide-svelte/icons/check";
   import Keyboard from "lucide-svelte/icons/keyboard";
+  import X from "lucide-svelte/icons/x";
 
   let {
     cards = [],
@@ -188,7 +188,6 @@
 
       <!-- Progress strip -->
       <div class="flex gap-1.5 mb-9">
-        <!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -->
         {#each cards as _, i (i)}
           <div
             class="flex-1 rounded-[2px] transition-colors duration-300"

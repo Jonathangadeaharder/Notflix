@@ -1,60 +1,73 @@
-import { test, expect } from "@playwright/test";
+import http from 'node:http';
+import { expect, test } from '@playwright/test';
 
 const TEST_EMAIL = `e2e-auth-${Date.now()}@test.local`;
-// eslint-disable-next-line sonarjs/no-hardcoded-passwords -- test-only credential
-const TEST_PASSWORD = "TestPass123!";
-const TEST_NAME = "E2E Auth Test";
+const TEST_PASSWORD = 'TestPass123!';
+const TEST_NAME = 'E2E Auth Test';
 
-test.describe("Auth Flow: Register → Login → Logout → Login", () => {
-  test("should complete full auth cycle", async ({ page }) => {
-    test.skip(process.env.PLAYWRIGHT_TEST === "true" || !!process.env.CI, "Skipped in CI/PLAYWRIGHT_TEST mode");
+async function isGoTrueReachable(): Promise<boolean> {
+  const url = process.env.PUBLIC_SUPABASE_URL || 'http://localhost:8002';
+  return new Promise((resolve) => {
+    const req = http.get(`${url}/auth/v1/health`, (res) => {
+      res.resume();
+      resolve(res.statusCode === 200);
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(3000, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+test.describe('Auth Flow: Register → Login → Logout → Login', () => {
+  test('should complete full auth cycle', async ({ page }) => {
+    const gotrueUp = await isGoTrueReachable();
+    // biome-ignore lint/suspicious/noSkippedTests: skip when GoTrue unavailable — intentional conditional skip
+    test.skip(!gotrueUp, 'GoTrue auth service not available');
     test.setTimeout(120_000);
 
-    page.on("console", (msg) => {
-      if (msg.type() === "error") console.error(`[Browser] ${msg.text()}`);
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') console.error(`[Browser] ${msg.text()}`);
     });
 
     // ─── Step 1: Register a new account ───
-    await page.goto("/register");
-    await expect(page.locator("h2, [data-slot='card-title']")).toContainText(
-      "Create Account",
-    );
+    await page.goto('/register');
+    await expect(page.locator('h2')).toContainText('Create your library');
 
-    await page.locator("input#name").fill(TEST_NAME);
-    await page.locator("input#email").fill(TEST_EMAIL);
-    await page.locator("input#password").fill(TEST_PASSWORD);
-    await page.locator("input#confirmPassword").fill(TEST_PASSWORD);
+    await page.locator('input#name').fill(TEST_NAME);
+    await page.locator('input#email').fill(TEST_EMAIL);
+    await page.locator('input#password').fill(TEST_PASSWORD);
+    await page.locator('input#confirmPassword').fill(TEST_PASSWORD);
     await page.locator('button[type="submit"]').click();
 
-    // signUpEmail auto-signs-in and navigates to "/"
-    await page.waitForURL("/", { timeout: 30_000 });
+    // signUpEmail auto-signs-in and navigates to "/profile?welcome=1"
+    await page.waitForURL('**/profile**', { timeout: 30_000 });
 
-    // ─── Step 2: Verify we are logged in (logout button visible) ───
-    await expect(page.locator('[data-testid="logout-btn"]')).toBeVisible({
+    // ─── Step 2: Verify we are logged in (sign out button visible) ───
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({
       timeout: 10_000,
     });
 
     // ─── Step 3: Logout ───
-    await page.locator('[data-testid="logout-btn"]').click();
+    await page.getByRole('button', { name: 'Sign out' }).click();
 
     // After signOut, Supabase clears cookies and navigates to "/"
     await page.waitForTimeout(2000);
 
     // ─── Step 4: Navigate to login page and log in again ───
-    await page.goto("/login");
-    await expect(page.locator("h2, [data-slot='card-title']")).toContainText(
-      "Welcome Back",
-    );
+    await page.goto('/login');
+    await expect(page.locator('h2')).toContainText('Welcome back');
 
-    await page.locator("input#email").fill(TEST_EMAIL);
-    await page.locator("input#password").fill(TEST_PASSWORD);
+    await page.locator('input#email').fill(TEST_EMAIL);
+    await page.locator('input#password').fill(TEST_PASSWORD);
     await page.locator('button[type="submit"]').click();
 
     // Should be redirected to home
-    await page.waitForURL("/", { timeout: 30_000 });
+    await page.waitForURL('/', { timeout: 30_000 });
 
     // ─── Step 5: Verify logged in again ───
-    await expect(page.locator('[data-testid="logout-btn"]')).toBeVisible({
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({
       timeout: 10_000,
     });
   });

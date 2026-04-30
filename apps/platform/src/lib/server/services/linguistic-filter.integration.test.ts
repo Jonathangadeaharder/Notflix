@@ -1,29 +1,29 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { db } from "../infrastructure/database";
-import { user, knownWords } from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq } from 'drizzle-orm';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { knownWords, user } from '$lib/server/db/schema';
+import type { TokenAnalysis } from '../domain/translation-core';
+import { db } from '../infrastructure/database';
 import {
-  SmartFilter,
   SegmentClassification,
-} from "./linguistic-filter.service";
-import type { TokenAnalysis } from "../domain/translation-core";
+  SmartFilter,
+} from './linguistic-filter.service';
 
-describe("SmartFilter Integration (Real DB)", () => {
+describe('SmartFilter Integration (Real DB)', () => {
   const testUserId = crypto.randomUUID();
-  const testTargetLang = "es";
+  const testTargetLang = 'es';
 
   beforeAll(async () => {
     // 1. Create User
     await db.insert(user).values({
       id: testUserId,
-      name: "Filter Integration User",
+      name: 'Filter Integration User',
       email: `filter-${testUserId}@example.com`,
       emailVerified: true,
       image: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       targetLang: testTargetLang,
-      nativeLang: "en",
+      nativeLang: 'en',
     });
 
     // 2. Insert Known Words (only required fields per schema)
@@ -33,12 +33,12 @@ describe("SmartFilter Integration (Real DB)", () => {
       {
         userId: testUserId,
         lang: testTargetLang,
-        lemma: "gato", // Known
+        lemma: 'gato', // Known
       },
       {
         userId: testUserId,
         lang: testTargetLang,
-        lemma: "comer", // Known
+        lemma: 'comer', // Known
       },
     ]);
   });
@@ -48,17 +48,17 @@ describe("SmartFilter Integration (Real DB)", () => {
     await db.delete(user).where(eq(user.id, testUserId));
   });
 
-  it("should correctly filter segment using real DB (EASY)", async () => {
+  it('should correctly filter segment using real DB (EASY)', async () => {
     const filter = new SmartFilter(db);
 
     // Segment: "El gato come." (The cat eats)
     // Tokens: El (stop), gato (known), come->comer (known), . (punct)
     // All content words known -> EASY
     const tokens: TokenAnalysis[] = [
-      { text: "El", lemma: "el", pos: "DET", is_stop: true },
-      { text: "gato", lemma: "gato", pos: "NOUN", is_stop: false },
-      { text: "come", lemma: "comer", pos: "VERB", is_stop: false },
-      { text: ".", lemma: ".", pos: "PUNCT", is_stop: false },
+      { text: 'El', lemma: 'el', pos: 'DET', is_stop: true },
+      { text: 'gato', lemma: 'gato', pos: 'NOUN', is_stop: false },
+      { text: 'come', lemma: 'comer', pos: 'VERB', is_stop: false },
+      { text: '.', lemma: '.', pos: 'PUNCT', is_stop: false },
     ];
 
     const result = await filter.filterSegment(
@@ -71,23 +71,23 @@ describe("SmartFilter Integration (Real DB)", () => {
     expect(result.unknownCount).toBe(0);
 
     // precise verification
-    expect(result.tokens[1].lemma).toBe("gato");
+    expect(result.tokens[1].lemma).toBe('gato');
     expect(result.tokens[1].isKnown).toBe(true);
-    expect(result.tokens[2].lemma).toBe("comer");
+    expect(result.tokens[2].lemma).toBe('comer');
     expect(result.tokens[2].isKnown).toBe(true);
   });
 
-  it("should correctly filter segment using real DB (LEARNING)", async () => {
+  it('should correctly filter segment using real DB (LEARNING)', async () => {
     const filter = new SmartFilter(db);
 
     // Segment: "El perro come." (The dog eats)
     // Tokens: El (stop), perro (unknown), come->comer (known), . (punct)
     // 1 unknown (perro) -> LEARNING (assuming limits fit)
     const tokens: TokenAnalysis[] = [
-      { text: "El", lemma: "el", pos: "DET", is_stop: true },
-      { text: "perro", lemma: "perro", pos: "NOUN", is_stop: false }, // Unknown in DB
-      { text: "come", lemma: "comer", pos: "VERB", is_stop: false }, // Known
-      { text: ".", lemma: ".", pos: "PUNCT", is_stop: false },
+      { text: 'El', lemma: 'el', pos: 'DET', is_stop: true },
+      { text: 'perro', lemma: 'perro', pos: 'NOUN', is_stop: false }, // Unknown in DB
+      { text: 'come', lemma: 'comer', pos: 'VERB', is_stop: false }, // Known
+      { text: '.', lemma: '.', pos: 'PUNCT', is_stop: false },
     ];
 
     const result = await filter.filterSegment(
@@ -101,8 +101,8 @@ describe("SmartFilter Integration (Real DB)", () => {
     // Let's check constants if needed, but assuming LEARNING for 1 unknown word is standard.
     // Actually, let's just assert classification and check isKnown flags.
 
-    expect(result.tokens.find((t) => t.lemma === "perro")?.isKnown).toBe(false);
-    expect(result.tokens.find((t) => t.lemma === "comer")?.isKnown).toBe(true);
+    expect(result.tokens.find((t) => t.lemma === 'perro')?.isKnown).toBe(false);
+    expect(result.tokens.find((t) => t.lemma === 'comer')?.isKnown).toBe(true);
 
     // If classification logic is strict on ratio, it might be HARD.
     // 1 unknown / 2 total = 50%.

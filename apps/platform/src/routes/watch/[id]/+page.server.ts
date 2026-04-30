@@ -1,18 +1,18 @@
-import { db } from "$lib/server/infrastructure/database";
+import type { InferSelectModel } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { mapSegmentsToPlayerSubtitles } from '$lib/components/player/subtitle-mapper';
+import type { Subtitle } from '$lib/components/player/types';
 import {
-  video,
-  user,
-  videoProcessing,
   type DbVttSegment,
   DEFAULT_GAME_INTERVAL_MINUTES,
-} from "$lib/server/db/schema";
-import { eq, and } from "drizzle-orm";
-import type { PageServerLoad } from "./$types";
-import { toMediaUrl } from "$lib/server/utils/media-utils";
-import type { Session } from "$lib/server/infrastructure/auth";
-import type { InferSelectModel } from "drizzle-orm";
-import { mapSegmentsToPlayerSubtitles } from "$lib/components/player/subtitle-mapper";
-import type { Subtitle } from "$lib/components/player/types";
+  user,
+  video,
+  videoProcessing,
+} from '$lib/server/db/schema';
+import type { Session } from '$lib/server/infrastructure/auth';
+import { db } from '$lib/server/infrastructure/database';
+import { toMediaUrl } from '$lib/server/utils/media-utils';
+import type { PageServerLoad } from './$types';
 
 type HeatmapSegment = { start: number; end: number; type: string };
 type User = InferSelectModel<typeof user>;
@@ -33,10 +33,10 @@ function isValidVttSegments(v: unknown): v is DbVttSegment[] {
   if (!Array.isArray(v)) return false;
   return v.every(
     (s) =>
-      typeof s === "object" &&
+      typeof s === 'object' &&
       s !== null &&
-      typeof s.start === "number" &&
-      typeof s.end === "number" &&
+      typeof s.start === 'number' &&
+      typeof s.end === 'number' &&
       Array.isArray(s.tokens),
   );
 }
@@ -94,7 +94,7 @@ async function getGameInterval(
   const userProfile = await fetchUserProfile(session.user.id);
 
   if (
-    process.env.PLAYWRIGHT_TEST === "true" &&
+    process.env.PLAYWRIGHT_TEST === 'true' &&
     process.env.TEST_GAME_INTERVAL
   ) {
     return {
@@ -111,7 +111,7 @@ async function getGameInterval(
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
   const session = await locals.auth();
-  const targetLang = url.searchParams.get("lang") || "es";
+  const targetLang = url.searchParams.get('lang') || 'es';
 
   const result = await fetchVideoWithProcessing(params.id, targetLang);
   if (!result?.video) return emptyVideoResponse(session);
@@ -136,5 +136,6 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
     gameInterval: interval,
     user: session?.user ?? null,
     session,
+    processingStatus: result.processing?.status ?? null,
   };
 };

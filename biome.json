@@ -25,12 +25,18 @@
         "noExplicitAny": "warn",
         "noFocusedTests": "error",
         "noSkippedTests": "warn",
-        "noDuplicateTestHooks": "error"
+        "noDuplicateTestHooks": "error",
+        "useIterableCallbackReturn": "off",
+        "noImplicitAnyLet": "warn"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": "warn",
         "noExcessiveLinesPerFunction": "warn",
         "noUselessUndefined": "off"
+      },
+      "a11y": {
+        "useButtonType": "off",
+        "noSvgWithoutTitle": "off"
       },
       "style": {
         "noMagicNumbers": "warn"
@@ -83,6 +89,11 @@
       "quoteStyle": "single",
       "attributePosition": "auto",
       "bracketSpacing": true
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "html": {

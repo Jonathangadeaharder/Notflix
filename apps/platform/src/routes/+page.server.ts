@@ -1,25 +1,25 @@
-import type { RequestEvent } from "@sveltejs/kit";
-import { db } from "$lib/server/infrastructure/database";
-import { ProcessingStatus } from "$lib/server/infrastructure/config";
-import {
-  computeComprehensionPercent,
-  getDashboardStatusLabel,
-  pickFeaturedVideo,
-  type DashboardVideo,
-} from "$lib/server/services/dashboard-metrics";
-import { toMediaUrl } from "$lib/server/utils/media-utils";
+import type { RequestEvent } from '@sveltejs/kit';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
   type DbVttSegment,
   video,
   videoProcessing,
   watchProgress,
-} from "$lib/server/db/schema";
-import { and, desc, eq, inArray } from "drizzle-orm";
-import { getKnowledgeGapStats } from "$lib/server/services/knowledge-stats.service";
+} from '$lib/server/db/schema';
+import { ProcessingStatus } from '$lib/server/infrastructure/config';
+import { db } from '$lib/server/infrastructure/database';
+import {
+  computeComprehensionPercent,
+  type DashboardVideo,
+  getDashboardStatusLabel,
+  pickFeaturedVideo,
+} from '$lib/server/services/dashboard-metrics';
+import { getKnowledgeGapStats } from '$lib/server/services/knowledge-stats.service';
+import { toMediaUrl } from '$lib/server/utils/media-utils';
 
 const DASHBOARD_VIDEO_LIMIT = 12;
-const DEFAULT_TARGET_LANGUAGE = "es";
-const DEFAULT_PROGRESS_STAGE = "QUEUED";
+const DEFAULT_TARGET_LANGUAGE = 'es';
+const DEFAULT_PROGRESS_STAGE = 'QUEUED';
 
 type DashboardRow = {
   id: string;
